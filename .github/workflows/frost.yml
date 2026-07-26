@@ -1,0 +1,26 @@
+name: Frostvarning
+
+# Kollar SMHI:s prognos en gång per kväll (18:00 svensk tid) för kommande
+# dygns lägsta temperatur, och skickar push via ntfy om frostrisk finns.
+on:
+  schedule:
+    - cron: "0 16 * * *" # 18:00 svensk sommartid / 17:00 vintertid
+  workflow_dispatch: {}
+
+jobs:
+  frost:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Kolla frostrisk
+        env:
+          GEO_LAT: ${{ secrets.GEO_LAT }}
+          GEO_LON: ${{ secrets.GEO_LON }}
+          FROST_TROSKEL: ${{ vars.FROST_TROSKEL }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: node src/frost.js

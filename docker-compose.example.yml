@@ -1,0 +1,14 @@
+services:
+  tradgardsbevakning:
+    build: .
+    container_name: tradgardsbevakning
+    restart: unless-stopped
+    network_mode: host # samma som homeassistant/bostadsvakt-api/hushallsekonomi
+    environment:
+      - PORT=8097
+      - HA_URL=http://localhost:8123
+      - HA_TOKEN=            # samma långlivade token som för hushallsekonomi funkar fint
+      - GEO_LAT=              # er trädgårds koordinater, t.ex. 59.85
+      - GEO_LON=              # t.ex. 17.63
+    volumes:
+      - ./data:/data

@@ -1,0 +1,13 @@
+{
+  "name": "tradgardsbevakning",
+  "version": "1.0.0",
+  "description": "Bevakar frostrisk via SMHI och skickar push-notiser via ntfy – plus en panel för odlingsjournal och HA-enheter.",
+  "type": "module",
+  "scripts": {
+    "frost": "node src/frost.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT"
+}
