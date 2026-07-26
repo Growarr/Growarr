@@ -68,6 +68,30 @@
   @media (max-width:820px) { .lagg-till { grid-template-columns:1fr 1fr; } }
   .lagg-till-enhet { display:grid; grid-template-columns:1.3fr 1fr auto; gap:10px; align-items:end; }
   @media (max-width:600px) { .lagg-till-enhet { grid-template-columns:1fr; } }
+  .lagg-till-zon { display:grid; grid-template-columns:2fr 1fr auto; gap:10px; align-items:end; }
+  @media (max-width:600px) { .lagg-till-zon { grid-template-columns:1fr; } }
+
+  .karta-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; margin-top:4px; }
+  .zon-kort { border-radius:var(--r-sm); padding:18px; color:#fff; position:relative; overflow:hidden;
+    box-shadow:0 10px 24px -10px rgba(0,0,0,.3); }
+  .zon-kort.okategoriserat { background:var(--surface2); color:var(--text); }
+  .zon-head { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+  .zon-head .ikon { font-size:1.4rem; }
+  .zon-head .namn { font-weight:700; font-size:1rem; flex:1; }
+  .zon-head .typ { font-size:.72rem; opacity:.85; text-transform:uppercase; letter-spacing:.05em; }
+  .zon-ta-bort { position:absolute; top:14px; right:14px; background:rgba(255,255,255,.2); border:0; box-shadow:none;
+    color:#fff; cursor:pointer; font-size:.95rem; width:24px; height:24px; border-radius:50%; padding:0;
+    display:flex; align-items:center; justify-content:center; line-height:1; }
+  .zon-ta-bort:hover { background:rgba(255,255,255,.35); transform:none; }
+  .vaxt-chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .vaxt-chip { background:rgba(255,255,255,.18); backdrop-filter:blur(4px); border-radius:99px; padding:6px 12px 6px 8px;
+    display:flex; align-items:center; gap:6px; font-size:.84rem; cursor:default; position:relative; }
+  .zon-kort.okategoriserat .vaxt-chip { background:var(--surface); border:1px solid var(--border); }
+  .vaxt-chip .emoji { font-size:1.05rem; }
+  .vaxt-chip .chip-ta-bort { background:none; border:0; box-shadow:none; color:inherit; opacity:.6; cursor:pointer;
+    font-size:.9rem; padding:0 0 0 2px; line-height:1; }
+  .vaxt-chip .chip-ta-bort:hover { opacity:1; transform:none; }
+  .zon-tom { font-size:.82rem; opacity:.75; }
 
   button { border:0; border-radius:99px; padding:10px 20px; font-size:.88rem; font-weight:600;
     font-family:inherit; cursor:pointer; background:var(--grad); color:#04140e;
@@ -124,10 +148,28 @@
   </div>
 
   <div class="card">
+    <h2>Lägg till zon (bädd, växthus, odlingslåda …)</h2>
+    <div class="lagg-till-zon">
+      <div><label class="lbl">Namn</label><input type="text" id="zNamn" placeholder="t.ex. Stora växthuset"></div>
+      <div><label class="lbl">Typ</label>
+        <select id="zTyp">
+          <option value="vaxthus">Växthus</option>
+          <option value="utomhus">Utomhusbädd</option>
+          <option value="inomhus">Inomhus</option>
+          <option value="odlingslada">Odlingslåda</option>
+          <option value="annat">Annat</option>
+        </select>
+      </div>
+      <button id="zLaggTillBtn">Lägg till zon</button>
+    </div>
+    <div class="status" id="zStatus"></div>
+  </div>
+
+  <div class="card">
     <h2>Lägg till odling</h2>
     <div class="lagg-till">
       <div><label class="lbl">Namn</label><input type="text" id="oNamn" placeholder="t.ex. Tomater"></div>
-      <div><label class="lbl">Plats</label><input type="text" id="oPlats" placeholder="t.ex. Växthus"></div>
+      <div><label class="lbl">Zon</label><select id="oZon"><option value="">Ingen zon</option></select></div>
       <div><label class="lbl">Planterad</label><input type="date" id="oPlanterad"></div>
       <div><label class="lbl">Skördemånad</label><input type="month" id="oSkordManad"></div>
       <button id="oLaggTillBtn">Lägg till</button>
@@ -139,7 +181,10 @@
     <div class="status" id="oStatus"></div>
   </div>
 
-  <div id="odlingKort" class="grid-kort"></div>
+  <div class="card">
+    <h2>Trädgårdskarta</h2>
+    <div id="tradgardKarta" class="karta-grid"></div>
+  </div>
 
   <div class="card">
     <h2>HA-enheter (jordfuktighet, ventiler m.m. – lägg till när ni har dem)</h2>
@@ -171,7 +216,29 @@ function fargForNamn(namn) {
   for (const c of namn) h = (h * 31 + c.charCodeAt(0)) >>> 0;
   return FARGPALETT[h % FARGPALETT.length];
 }
+const ZON_TYPER = {
+  vaxthus: { namn: "Växthus", ikon: "🏡", grad: "linear-gradient(135deg, #f59e0b, #f97316)" },
+  utomhus: { namn: "Utomhusbädd", ikon: "🌤️", grad: "linear-gradient(135deg, #34d399, #22c1c3)" },
+  inomhus: { namn: "Inomhus", ikon: "🪴", grad: "linear-gradient(135deg, #a78bfa, #f472b6)" },
+  odlingslada: { namn: "Odlingslåda", ikon: "📦", grad: "linear-gradient(135deg, #d97706, #7c4a12)" },
+  annat: { namn: "Annat", ikon: "📍", grad: "linear-gradient(135deg, #64748b, #334155)" },
+};
+// Enkel nyckelordsmatchning mot växtnamnet för en passande emoji på kartan –
+// helt kosmetiskt, ingen växtdatabas, bara ett trevligt visuellt tillskott.
+const VAXT_IKONER = [
+  [/tomat/i, "🍅"], [/morot|morötter/i, "🥕"], [/sallad|sallat/i, "🥬"], [/gurk/i, "🥒"],
+  [/jordgubb/i, "🍓"], [/potatis/i, "🥔"], [/vitlök/i, "🧄"], [/lök/i, "🧅"],
+  [/paprika|chili/i, "🌶️"], [/äpple|päron|frukt|träd/i, "🌳"], [/blomm/i, "🌸"],
+  [/kryddor|basilika|persilja|dill|mynta|timjan|rosmarin/i, "🌿"], [/druv/i, "🍇"],
+  [/pumpa|squash/i, "🎃"], [/mais|majs/i, "🌽"], [/bär|hallon|blåbär|vinbär|krusbär/i, "🫐"],
+  [/ärt/i, "🫛"], [/böna/i, "🫘"], [/svamp/i, "🍄"],
+];
+function ikonForVaxt(namn) {
+  for (const [regex, ikon] of VAXT_IKONER) if (regex.test(namn)) return ikon;
+  return "🌱";
+}
 let odlingar = [];
+let zoner = [];
 let senasteVader = null;
 
 function esc(s) { return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
@@ -226,33 +293,76 @@ async function laddaOdlingar() {
     const res = await fetch(`${BAS}api/odlingar`, { cache: "no-store" });
     const data = await res.json();
     odlingar = data.odlingar ?? [];
-  } catch { odlingar = []; }
-  renderaOdlingar();
+    zoner = data.zoner ?? [];
+  } catch { odlingar = []; zoner = []; }
+  uppdateraZonVal();
+  renderaKarta();
 }
 function manadNamn(m) {
   // "2026-09" -> "september 2026"
   const [ar, man] = m.split("-").map(Number);
   return new Date(Date.UTC(ar, man - 1, 1)).toLocaleDateString("sv-SE", { month: "long", year: "numeric", timeZone: "UTC" });
 }
-function renderaOdlingar() {
-  $("odlingKort").innerHTML = odlingar.length ? odlingar.map((o) => {
-    const farg = fargForNamn(o.namn);
-    return `
-    <div class="odling-kort" data-id="${o.id}">
-      <button class="ta-bort odling-ta-bort" data-id="${o.id}" title="Ta bort">×</button>
-      <div class="kort-head">
-        <span class="avatar" style="background:${farg}">${esc(o.namn.charAt(0).toUpperCase())}</span>
-        <span class="namn">${esc(o.namn)}</span>
-      </div>
-      ${o.plats ? `<div class="rad">📍 ${esc(o.plats)}</div>` : ""}
-      ${o.planterad ? `<div class="rad">Planterad: ${esc(o.planterad)}</div>` : ""}
-      ${o.skordManad ? `<div class="rad">🌾 Skörd: ${esc(manadNamn(o.skordManad))}</div>` : ""}
-      ${o.skordFonster ? `<div class="rad">${esc(o.skordFonster)}</div>` : ""}
-      ${o.anteckning ? `<div class="anteckning">${esc(o.anteckning)}</div>` : ""}
-    </div>`;
-  }).join("")
-    : '<div class="card"><div class="tom">Inga odlingar ännu – lägg till en ovan.</div></div>';
+function uppdateraZonVal() {
+  const val = $("oZon").value;
+  $("oZon").innerHTML = '<option value="">Ingen zon</option>' +
+    zoner.map((z) => `<option value="${esc(z.id)}">${ZON_TYPER[z.typ]?.ikon ?? "📍"} ${esc(z.namn)}</option>`).join("");
+  if (zoner.some((z) => z.id === val)) $("oZon").value = val;
 }
+function vaxtChip(o) {
+  const nuManad = new Date().toISOString().slice(0, 7);
+  const skordSnart = o.skordManad === nuManad;
+  const detaljer = [o.planterad ? `Planterad ${o.planterad}` : "", o.skordManad ? `Skörd ${manadNamn(o.skordManad)}` : "", o.skordFonster, o.anteckning].filter(Boolean).join(" · ");
+  return `<span class="vaxt-chip" data-id="${o.id}" title="${esc(detaljer)}">
+    <span class="emoji">${ikonForVaxt(o.namn)}</span>${esc(o.namn)}${skordSnart ? " 🌾" : ""}
+    <button class="chip-ta-bort odling-ta-bort" data-id="${o.id}" title="Ta bort">×</button>
+  </span>`;
+}
+function renderaKarta() {
+  if (!odlingar.length && !zoner.length) {
+    $("tradgardKarta").innerHTML = '<div class="tom">Inga zoner eller odlingar ännu – börja med att lägga till en zon ovan.</div>';
+    return;
+  }
+  const grupper = new Map(zoner.map((z) => [z.id, []]));
+  const okategoriserade = [];
+  for (const o of odlingar) {
+    if (o.zonId && grupper.has(o.zonId)) grupper.get(o.zonId).push(o);
+    else okategoriserade.push(o);
+  }
+  const zonKort = zoner.map((z) => {
+    const info = ZON_TYPER[z.typ] ?? ZON_TYPER.annat;
+    const lista = grupper.get(z.id) ?? [];
+    return `<div class="zon-kort" style="background:${info.grad}" data-id="${z.id}">
+      <button class="zon-ta-bort" data-id="${z.id}" title="Ta bort zon">×</button>
+      <div class="zon-head">
+        <span class="ikon">${info.ikon}</span>
+        <span class="namn">${esc(z.namn)}</span>
+      </div>
+      <div class="vaxt-chips">${lista.length ? lista.map(vaxtChip).join("") : '<span class="zon-tom">Inget planterat än</span>'}</div>
+    </div>`;
+  }).join("");
+  const okategoriseratKort = okategoriserade.length ? `<div class="zon-kort okategoriserat">
+      <div class="zon-head"><span class="ikon">📍</span><span class="namn">Okategoriserat</span></div>
+      <div class="vaxt-chips">${okategoriserade.map(vaxtChip).join("")}</div>
+    </div>` : "";
+  $("tradgardKarta").innerHTML = zonKort + okategoriseratKort;
+}
+
+$("zLaggTillBtn").addEventListener("click", async () => {
+  const st = $("zStatus");
+  const namn = $("zNamn").value.trim();
+  if (!namn) { st.textContent = "Namn krävs."; st.className = "status err"; return; }
+  $("zLaggTillBtn").disabled = true; st.textContent = ""; st.className = "status";
+  try {
+    await fetch(`${BAS}api/zoner`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ namn, typ: $("zTyp").value }),
+    });
+    $("zNamn").value = "";
+    await laddaOdlingar();
+  } catch (e) { st.textContent = "Kunde inte spara: " + e.message; st.className = "status err"; }
+  finally { $("zLaggTillBtn").disabled = false; }
+});
 
 $("oLaggTillBtn").addEventListener("click", async () => {
   const st = $("oStatus");
@@ -263,11 +373,11 @@ $("oLaggTillBtn").addEventListener("click", async () => {
     await fetch(`${BAS}api/odlingar`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        namn, plats: $("oPlats").value.trim(), planterad: $("oPlanterad").value,
+        namn, zonId: $("oZon").value, planterad: $("oPlanterad").value,
         skordManad: $("oSkordManad").value, skordFonster: $("oSkord").value.trim(), anteckning: $("oAnteckning").value.trim(),
       }),
     });
-    $("oNamn").value = ""; $("oPlats").value = ""; $("oPlanterad").value = ""; $("oSkordManad").value = ""; $("oSkord").value = ""; $("oAnteckning").value = "";
+    $("oNamn").value = ""; $("oPlanterad").value = ""; $("oSkordManad").value = ""; $("oSkord").value = ""; $("oAnteckning").value = "";
     await laddaOdlingar();
   } catch (e) { st.textContent = "Kunde inte spara: " + e.message; st.className = "status err"; }
   finally { $("oLaggTillBtn").disabled = false; }
@@ -319,6 +429,13 @@ document.addEventListener("click", async (e) => {
   if (enhetTaBort) {
     await fetch(`${BAS}api/enheter/ta-bort`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: enhetTaBort.dataset.id }) });
     await laddaEnheter();
+    return;
+  }
+  const zonTaBort = e.target.closest(".zon-ta-bort");
+  if (zonTaBort) {
+    if (!confirm("Ta bort zonen? Odlingar i den blir okategoriserade.")) return;
+    await fetch(`${BAS}api/zoner/ta-bort`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: zonTaBort.dataset.id }) });
+    await laddaOdlingar();
   }
 });
 

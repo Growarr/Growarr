@@ -15,6 +15,7 @@ const HA_TOKEN = process.env.HA_TOKEN || "";
 const GEO_LAT = process.env.GEO_LAT || "";
 const GEO_LON = process.env.GEO_LON || "";
 const NTFY_TOPIC = process.env.NTFY_TOPIC || "";
+const WEBHOOK_URL = process.env.WEBHOOK_URL || "";
 const PANEL_HTML = join(dirname(fileURLToPath(import.meta.url)), "index.html");
 
 function stockholmManad(d = new Date()) {
@@ -26,13 +27,13 @@ function lokalTimme(iso) {
   return Number(new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Stockholm", hour: "2-digit", hour12: false }).format(new Date(iso)));
 }
 
-// ---- Lagring: odlingsjournal + bevakade HA-enheter ----
+// ---- Lagring: zoner, odlingsjournal + bevakade HA-enheter ----
 async function lasData() {
   try {
     const d = JSON.parse(await readFile(DATA_PATH, "utf8"));
-    return { odlingar: d.odlingar ?? [], enheter: d.enheter ?? [] };
+    return { zoner: d.zoner ?? [], odlingar: d.odlingar ?? [], enheter: d.enheter ?? [] };
   } catch {
-    return { odlingar: [], enheter: [] };
+    return { zoner: [], odlingar: [], enheter: [] };
   }
 }
 async function skrivData(data) {
@@ -117,16 +118,34 @@ async function hamtaEntitetStatus(entityId) {
 // Körs internt i containern (inte via GitHub Actions) eftersom journalen
 // bara finns lokalt i den här datafilen – ingen anledning att exponera den
 // mot internet bara för att en cron-tjänst ska kunna läsa den.
-async function skickaNtfy(titel, meddelande) {
-  if (!NTFY_TOPIC) { console.log(`[ingen NTFY_TOPIC satt] ${titel}: ${meddelande}`); return; }
-  try {
-    const res = await fetch("https://ntfy.sh", {
-      method: "POST",
-      body: JSON.stringify({ topic: NTFY_TOPIC, title: titel, message: meddelande, priority: 3 }),
-    });
-    if (!res.ok) console.warn(`ntfy svarade ${res.status}`);
-  } catch (err) {
-    console.warn(`ntfy misslyckades: ${err.message}`);
+// Skickar till ntfy (push till mobilen) och, om WEBHOOK_URL är satt, även
+// till en Home Assistant-webhook – samma dubbla mönster som Bostadsvakts
+// notify.js. En automation i HA kan då göra vad ni vill med notisen
+// (visa på en skärm, säga den högt, blinka en lampa) utöver ntfy-pushen.
+async function skickaNotis(titel, meddelande) {
+  if (!NTFY_TOPIC) console.log(`[ingen NTFY_TOPIC satt] ${titel}: ${meddelande}`);
+  else {
+    try {
+      const res = await fetch("https://ntfy.sh", {
+        method: "POST",
+        body: JSON.stringify({ topic: NTFY_TOPIC, title: titel, message: meddelande, priority: 3 }),
+      });
+      if (!res.ok) console.warn(`ntfy svarade ${res.status}`);
+    } catch (err) {
+      console.warn(`ntfy misslyckades: ${err.message}`);
+    }
+  }
+  if (WEBHOOK_URL) {
+    try {
+      const res = await fetch(WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "User-Agent": "tradgardsbevakning-bot/1.0 (+github.com/mathiasmholm/tradgardsbevakning)" },
+        body: JSON.stringify({ title: titel, message: meddelande }),
+      });
+      if (!res.ok) console.warn(`HA-webhook svarade ${res.status}`);
+    } catch (err) {
+      console.warn(`HA-webhook nåddes inte: ${err.message}`);
+    }
   }
 }
 async function kollaSkordepaminnelser() {
@@ -134,7 +153,7 @@ async function kollaSkordepaminnelser() {
   const { odlingar } = await lasData();
   for (const o of odlingar) {
     if (o.skordManad === nuManad && !(o.paminntManader ?? []).includes(nuManad)) {
-      await skickaNtfy("🌾 Dags att skörda", `${o.namn}${o.plats ? " (" + o.plats + ")" : ""} har skördemånad nu.`);
+      await skickaNotis("🌾 Dags att skörda", `${o.namn} har skördemånad nu.`);
       await muteraData((d) => {
         const post = d.odlingar.find((x) => x.id === o.id);
         if (post) post.paminntManader = [...(post.paminntManader ?? []), nuManad];
@@ -167,12 +186,13 @@ const server = createServer(async (req, res) => {
       return skickaJson(res, 200, await lasData());
     }
     if (req.method === "POST" && p.endsWith("/api/odlingar")) {
-      const { namn, plats, planterad, skordFonster, skordManad, anteckning } = await lasBody(req);
+      const { namn, planterad, skordFonster, skordManad, anteckning, zonId } = await lasBody(req);
       if (!namn) return skickaJson(res, 400, { fel: "namn saknas" });
       const data = await muteraData((d) => {
         d.odlingar.push({
-          id: randomUUID(), namn, plats: plats || "", planterad: planterad || "",
+          id: randomUUID(), namn, planterad: planterad || "",
           skordFonster: skordFonster || "", skordManad: skordManad || "", anteckning: anteckning || "",
+          zonId: zonId || "",
         });
       });
       return skickaJson(res, 200, data);
@@ -180,6 +200,23 @@ const server = createServer(async (req, res) => {
     if (req.method === "POST" && p.endsWith("/api/odlingar/ta-bort")) {
       const { id } = await lasBody(req);
       const data = await muteraData((d) => { d.odlingar = d.odlingar.filter((o) => o.id !== id); });
+      return skickaJson(res, 200, data);
+    }
+    if (req.method === "POST" && p.endsWith("/api/zoner")) {
+      const { namn, typ } = await lasBody(req);
+      if (!namn) return skickaJson(res, 400, { fel: "namn saknas" });
+      const data = await muteraData((d) => {
+        d.zoner.push({ id: randomUUID(), namn, typ: typ || "annat" });
+      });
+      return skickaJson(res, 200, data);
+    }
+    if (req.method === "POST" && p.endsWith("/api/zoner/ta-bort")) {
+      const { id } = await lasBody(req);
+      const data = await muteraData((d) => {
+        d.zoner = d.zoner.filter((z) => z.id !== id);
+        // Odlingar i borttagen zon blir "okategoriserade" istället för att pekas ut i tomma intet.
+        for (const o of d.odlingar) if (o.zonId === id) o.zonId = "";
+      });
       return skickaJson(res, 200, data);
     }
     if (req.method === "POST" && p.endsWith("/api/enheter")) {

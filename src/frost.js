@@ -8,6 +8,7 @@ const LAT = process.env.GEO_LAT;
 const LON = process.env.GEO_LON;
 const TROSKEL = Number(process.env.FROST_TROSKEL ?? 3);
 const NTFY_TOPIC = process.env.NTFY_TOPIC;
+const WEBHOOK_URL = process.env.WEBHOOK_URL;
 const TIMMAR_FRAMAT = 36;
 
 if (!LAT || !LON) {
@@ -47,22 +48,36 @@ if (lagst.temp > TROSKEL) {
 }
 
 const tidText = lagst.tid.toLocaleString("sv-SE", { weekday: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Stockholm" });
-if (!NTFY_TOPIC) {
-  console.log(`[TORRKÖRNING – ingen NTFY_TOPIC satt] Frostrisk! Ner mot ${lagst.temp}°C ${tidText}.`);
+const titel = "❄️ Frostrisk i trädgården";
+const meddelande = `Ner mot ${lagst.temp}°C ${tidText}. Täck ömtåliga plantor i tid.`;
+
+if (!NTFY_TOPIC && !WEBHOOK_URL) {
+  console.log(`[TORRKÖRNING – ingen NTFY_TOPIC/WEBHOOK_URL satt] ${titel}: ${meddelande}`);
   process.exit(0);
 }
 
-const res2 = await fetch("https://ntfy.sh", {
-  method: "POST",
-  body: JSON.stringify({
-    topic: NTFY_TOPIC,
-    title: "❄️ Frostrisk i trädgården",
-    message: `Ner mot ${lagst.temp}°C ${tidText}. Täck ömtåliga plantor i tid.`,
-    priority: 4,
-  }),
-});
-if (!res2.ok) {
-  console.warn(`ntfy svarade ${res2.status}: ${(await res2.text()).slice(0, 200)}`);
-} else {
-  console.log("Frostvarning skickad.");
+if (NTFY_TOPIC) {
+  const res2 = await fetch("https://ntfy.sh", {
+    method: "POST",
+    body: JSON.stringify({ topic: NTFY_TOPIC, title: titel, message: meddelande, priority: 4 }),
+  });
+  if (!res2.ok) console.warn(`ntfy svarade ${res2.status}: ${(await res2.text()).slice(0, 200)}`);
+  else console.log("Frostvarning skickad via ntfy.");
+}
+
+// Skickas även till en Home Assistant-webhook om satt, samma dubbla mönster
+// som Bostadsvakts notify.js – en HA-automation kan göra vad ni vill med den
+// (visa på en skärm, säga den högt osv) utöver ntfy-pushen.
+if (WEBHOOK_URL) {
+  try {
+    const res3 = await fetch(WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "User-Agent": "tradgardsbevakning-bot/1.0 (+github.com/mathiasmholm/tradgardsbevakning)" },
+      body: JSON.stringify({ title: titel, message: meddelande }),
+    });
+    if (!res3.ok) console.warn(`HA-webhook svarade ${res3.status}`);
+    else console.log("Frostvarning skickad via HA-webhook.");
+  } catch (err) {
+    console.warn(`HA-webhook nåddes inte: ${err.message}`);
+  }
 }

@@ -13,5 +13,6 @@ services:
       - GEO_LAT=              # er trädgårds koordinater, t.ex. 59.85
       - GEO_LON=              # t.ex. 17.63
       - NTFY_TOPIC=           # samma ämne som Bostadsvakt/frostvarningen, för skördepåminnelser
+      - WEBHOOK_URL=          # valfri HA-webhook (samma mönster som Bostadsvakts HA_WEBHOOK_URL), skickas till utöver ntfy
     volumes:
       - ./data:/data

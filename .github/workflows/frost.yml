@@ -23,4 +23,5 @@ jobs:
           GEO_LON: ${{ secrets.GEO_LON }}
           FROST_TROSKEL: ${{ vars.FROST_TROSKEL }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
         run: node src/frost.js
