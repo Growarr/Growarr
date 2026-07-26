@@ -49,7 +49,10 @@ async function hamtaVader() {
   if (!GEO_LAT || !GEO_LON) return { fel: "GEO_LAT och/eller GEO_LON är inte konfigurerat." };
   if (vaderCache && Date.now() - vaderCache.tid < VADER_CACHE_MS) return vaderCache.resultat;
 
-  const url = `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${GEO_LON}/lat/${GEO_LAT}/data.json`;
+  // SMHI stängde av gamla pmp3g-API:t 31 mars 2026 – snow1g ersatte det, med
+  // ett annat svarsformat ("time" istället för "validTime", platt "data"-
+  // objekt istället för en parameters-array).
+  const url = `https://opendata-download-metfcst.smhi.se/api/category/snow1g/version/1/geotype/point/lon/${GEO_LON}/lat/${GEO_LAT}/data.json`;
   const res = await fetch(url, { headers: { "User-Agent": "tradgardsbevakning (github.com/mathiasmholm/tradgardsbevakning)" } });
   if (!res.ok) return { fel: `SMHI svarade ${res.status}` };
   const data = await res.json();
@@ -58,9 +61,9 @@ async function hamtaVader() {
   // mest sannolika nederbörd) för de kommande fem dagarna.
   const perDag = new Map();
   for (const t of data.timeSeries) {
-    const dag = t.validTime.slice(0, 10);
-    const temp = t.parameters.find((p) => p.name === "t")?.values?.[0];
-    const nederbord = t.parameters.find((p) => p.name === "pmean")?.values?.[0];
+    const dag = t.time.slice(0, 10);
+    const temp = t.data?.air_temperature;
+    const nederbord = t.data?.precipitation_amount_mean;
     if (temp == null) continue;
     const post = perDag.get(dag) ?? { dag, min: temp, max: temp, nederbord: 0 };
     post.min = Math.min(post.min, temp);

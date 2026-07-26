@@ -15,7 +15,10 @@ if (!LAT || !LON) {
   process.exit(1);
 }
 
-const url = `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${LON}/lat/${LAT}/data.json`;
+// SMHI stängde av gamla pmp3g-API:t 31 mars 2026 – snow1g ersatte det, med
+// ett annat svarsformat ("time" istället för "validTime", platt "data"-
+// objekt istället för en parameters-array).
+const url = `https://opendata-download-metfcst.smhi.se/api/category/snow1g/version/1/geotype/point/lon/${LON}/lat/${LAT}/data.json`;
 const res = await fetch(url, { headers: { "User-Agent": "tradgardsbevakning (github.com/mathiasmholm/tradgardsbevakning)" } });
 if (!res.ok) {
   console.error(`SMHI svarade ${res.status}`);
@@ -25,8 +28,8 @@ const data = await res.json();
 const nu = Date.now();
 const kommande = data.timeSeries
   .map((t) => ({
-    tid: new Date(t.validTime),
-    temp: t.parameters.find((p) => p.name === "t")?.values?.[0],
+    tid: new Date(t.time),
+    temp: t.data?.air_temperature,
   }))
   .filter((p) => p.temp != null && p.tid.getTime() >= nu && p.tid.getTime() <= nu + TIMMAR_FRAMAT * 3600 * 1000);
 
