@@ -1,0 +1,38 @@
+name: Publish Docker image
+
+# Bygger och pushar en image till GitHub Container Registry vid varje push
+# till main, så Watchtower kan hitta och dra den senaste versionen precis
+# som för era andra containrar – ingen manuell git pull + docker compose
+# up --build behövs längre.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Logga in på GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sätt upp Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Bygg och pusha
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

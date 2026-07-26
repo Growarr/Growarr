@@ -1,9 +1,11 @@
 services:
   tradgardsbevakning:
-    build: .
+    image: ghcr.io/mathiasmholm/tradgardsbevakning:latest # byggs och pushas automatiskt av GitHub Actions, se .github/workflows/docker-publish.yml
     container_name: tradgardsbevakning
     restart: unless-stopped
     network_mode: host # samma som homeassistant/bostadsvakt-api/hushallsekonomi
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
     environment:
       - PORT=8097
       - HA_URL=http://localhost:8123
