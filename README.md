@@ -16,11 +16,23 @@ Två delar i ett repo:
      ska skördas (med automatisk skördepåminnelse, se nedan).
    - **Trädgårdskarta** — en visuell karta som grupperar alla odlingar per
      zon (färgad efter zontyp, med ett auto-gissat växtemoji per planta).
-     Odlingar utan zon hamnar i en egen "Okategoriserat"-grupp.
+     Odlingar utan zon hamnar i en egen "Okategoriserat"-grupp. Klicka på en
+     zon eller en planta för att öppna en popup där ni kan skriva jordtyp och
+     fria anteckningar, samt koppla valfritt antal HA-entiteter till just den
+     zonen/plantan — deras senaste värde visas sen direkt som en badge på
+     kartan (t.ex. 💧 42 % jordfuktighet på ett växthus, eller på en enskild
+     kruka).
+   - **Historik** — varje HA-entitet som är kopplad till en zon eller odling
+     loggas en gång i timmen, och panelen ritar en trendkurva (senaste,
+     min/max) per koppling. Byggs upp av sig själv från den dag ni kopplar en
+     entitet — ingen bakåtgående data.
    - **HA-enheter** — lägg till valfri Home Assistant-entitet (namn +
      `entity_id`) och se dess nuvarande värde. Tänkt att växa: den dagen ni
      har jordfuktighetssensorer, ventiler eller annat i HA, lägg bara in
-     `entity_id` här — ingen kodändring behövs.
+     `entity_id` här — ingen kodändring behövs, sen kopplar ni den till en
+     zon/odling via Trädgårdskartans popup.
+   - **⚙️ Notisinställningar** — ntfy-ämne och HA-webhook-URL för
+     skördepåminnelser, satt direkt i panelen (uppe till höger).
 
 Ingen inloggning i panelen – samma modell som de andra apparna: skyddet
 ligger i att den bara är nåbar via ert eget nätverk/VPN eller bakom samma
@@ -28,16 +40,28 @@ Zero Trust-lager som resten av er Home Assistant-domän.
 
 ## Notiser (skördepåminnelser + frostvarning)
 
-Båda notiskällorna (den dagliga skördepåminnelse-kollen i panelen och
-frostvarnings-jobbet på GitHub Actions) skickar till **ntfy** och/eller en
-**Home Assistant-webhook**, samma dubbla mönster som Bostadsvakt:
+Båda notiskällorna skickar till **ntfy** och/eller en **Home Assistant-
+webhook**, samma dubbla mönster som Bostadsvakt:
 
-- **`NTFY_TOPIC`** — push till mobilen via [ntfy.sh](https://ntfy.sh).
-- **`WEBHOOK_URL`** — valfritt, POSTar `{ title, message }` till en HA-
-  webhook-URL (**Inställningar → Automationer → Webhook-utlösare**). En
-  HA-automation kan sen göra vad ni vill med notisen (visa på en skärm, säga
-  den högt, blinka en lampa) utöver ntfy-pushen. Helt valfritt att sätta
-  en av dem, båda, eller ingen (loggas då bara till containerns loggar).
+- **ntfy-ämne** — push till mobilen via [ntfy.sh](https://ntfy.sh).
+- **HA-webhook-URL** — valfritt, POSTar `{ title, message }` till en HA-
+  webhook-URL (**Inställningar → Automationer → Webhook-utlösare** i Home
+  Assistant ger er URL:en). En HA-automation kan sen göra vad ni vill med
+  notisen (visa på en skärm, säga den högt, blinka en lampa) utöver
+  ntfy-pushen. Helt valfritt att sätta en av dem, båda, eller ingen.
+
+**Den dagliga skördepåminnelse-kollen i panelen** ställs in direkt i
+gränssnittet — klicka på ⚙️-knappen uppe till höger i panelen och fyll i
+ntfy-ämne/webhook-URL, ingen SSH eller docker-compose behövs. Värdet sparas
+i panelens datafil. Miljövariablerna `NTFY_TOPIC`/`WEBHOOK_URL` i
+docker-compose fungerar fortfarande som förvalda värden om ni hellre vill
+sätta dem där (t.ex. innan ni hunnit öppna panelen första gången) — det som
+sparats via ⚙️ i panelen vinner om båda är satta.
+
+**Frostvarnings-jobbet på GitHub Actions** är en fristående, schemalagd
+process som körs på GitHubs servrar och saknar åtkomst till panelens
+datafil — den kan alltså *inte* styras via ⚙️-knappen, utan behöver egna
+repo-secrets enligt nedan.
 
 ## Frostvarning – kom igång
 
@@ -62,8 +86,10 @@ sudo git clone https://github.com/mathiasmholm/tradgardsbevakning.git .
 ```
 
 Fyll i `HA_TOKEN` (samma långlivade token som för `hushallsekonomi` funkar
-fint, eller skapa en ny), `GEO_LAT`/`GEO_LON`, `NTFY_TOPIC`/`WEBHOOK_URL` i
-`docker-compose.example.yml`, döp om och starta:
+fint, eller skapa en ny) och `GEO_LAT`/`GEO_LON` i
+`docker-compose.example.yml` (ntfy-ämne/webhook-URL kan lämnas tomma här och
+istället sättas via ⚙️ i panelen efter start, se "Notiser" ovan), döp om och
+starta:
 
 ```bash
 sudo mv docker-compose.example.yml docker-compose.yml
@@ -103,12 +129,17 @@ på fel ställe.
 | GET | `/api/vader` | – | 5-dagars väderprognos från SMHI |
 | GET | `/api/odlingar` | – | Hämtar zoner + odlingsjournalen |
 | POST | `/api/odlingar` | `{ namn, zonId?, planterad?, skordFonster?, skordManad?, anteckning? }` | Lägger till en odling |
+| POST | `/api/odlingar/uppdatera` | `{ id, planterad?, skordFonster?, skordManad?, anteckning?, jord?, enhetIds? }` | Uppdaterar en odling (via popupen i Trädgårdskartan) |
 | POST | `/api/odlingar/ta-bort` | `{ id }` | Tar bort en odling |
 | POST | `/api/zoner` | `{ namn, typ? }` | Lägger till en zon (`typ`: `vaxthus`/`utomhus`/`inomhus`/`odlingslada`/`annat`) |
+| POST | `/api/zoner/uppdatera` | `{ id, jord?, anteckning?, enhetIds? }` | Uppdaterar en zon (via popupen i Trädgårdskartan) |
 | POST | `/api/zoner/ta-bort` | `{ id }` | Tar bort en zon (odlingar i den blir okategoriserade) |
 | GET | `/api/enheter/status` | – | Hämtar nuvarande tillstånd för alla bevakade HA-entiteter |
 | POST | `/api/enheter` | `{ entityId, namn? }` | Lägger till en bevakad HA-entitet |
 | POST | `/api/enheter/ta-bort` | `{ id }` | Tar bort en bevakad enhet |
+| GET | `/api/historik` | – | Hämtar loggad historik för entiteter kopplade till zoner/odlingar |
+| GET | `/api/installningar` | – | Hämtar sparat ntfy-ämne/webhook-URL |
+| POST | `/api/installningar` | `{ ntfyTopic?, webhookUrl? }` | Sparar ntfy-ämne/webhook-URL (via ⚙️ i panelen) |
 
 ## Framtida utbyggnad
 

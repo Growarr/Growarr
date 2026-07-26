@@ -38,6 +38,11 @@
     display:flex; align-items:center; justify-content:center; color:#fff; flex:0 0 auto;
     box-shadow:0 6px 16px -4px color-mix(in srgb, var(--accent) 60%, transparent); }
   .brand-text { font-weight:700; font-size:1.05rem; letter-spacing:-.01em; }
+  .installningar-btn { margin-left:auto; width:38px; height:38px; padding:0; border-radius:10px; flex:0 0 auto;
+    background:var(--surface2); border:1px solid var(--border); color:var(--muted);
+    display:flex; align-items:center; justify-content:center; font-size:1.1rem; cursor:pointer;
+    box-shadow:none; transform:none; }
+  .installningar-btn:hover { color:var(--text); border-color:var(--accent); transform:none; box-shadow:none; }
 
   .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r);
     padding:24px; margin-top:20px; box-shadow:var(--shadow); transition:transform .18s ease, box-shadow .18s ease; }
@@ -74,24 +79,60 @@
   .karta-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; margin-top:4px; }
   .zon-kort { border-radius:var(--r-sm); padding:18px; color:#fff; position:relative; overflow:hidden;
     box-shadow:0 10px 24px -10px rgba(0,0,0,.3); }
+  .zon-kort:not(.okategoriserat) { cursor:pointer; }
+  .zon-kort:not(.okategoriserat):hover { transform:translateY(-2px); box-shadow:0 14px 30px -10px rgba(0,0,0,.4); }
   .zon-kort.okategoriserat { background:var(--surface2); color:var(--text); }
-  .zon-head { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+  .zon-head { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
   .zon-head .ikon { font-size:1.4rem; }
   .zon-head .namn { font-weight:700; font-size:1rem; flex:1; }
   .zon-head .typ { font-size:.72rem; opacity:.85; text-transform:uppercase; letter-spacing:.05em; }
+  .zon-enhet { background:rgba(255,255,255,.22); border-radius:99px; padding:4px 10px; font-size:.76rem;
+    font-weight:600; white-space:nowrap; }
+  .zon-kort.okategoriserat .zon-enhet { background:var(--surface); border:1px solid var(--border); }
   .zon-ta-bort { position:absolute; top:14px; right:14px; background:rgba(255,255,255,.2); border:0; box-shadow:none;
     color:#fff; cursor:pointer; font-size:.95rem; width:24px; height:24px; border-radius:50%; padding:0;
-    display:flex; align-items:center; justify-content:center; line-height:1; }
+    display:flex; align-items:center; justify-content:center; line-height:1; z-index:1; }
   .zon-ta-bort:hover { background:rgba(255,255,255,.35); transform:none; }
   .vaxt-chips { display:flex; flex-wrap:wrap; gap:8px; }
   .vaxt-chip { background:rgba(255,255,255,.18); backdrop-filter:blur(4px); border-radius:99px; padding:6px 12px 6px 8px;
-    display:flex; align-items:center; gap:6px; font-size:.84rem; cursor:default; position:relative; }
+    display:flex; align-items:center; gap:6px; font-size:.84rem; cursor:pointer; position:relative; }
   .zon-kort.okategoriserat .vaxt-chip { background:var(--surface); border:1px solid var(--border); }
   .vaxt-chip .emoji { font-size:1.05rem; }
+  .vaxt-chip .chip-enhet { opacity:.85; font-size:.82rem; }
   .vaxt-chip .chip-ta-bort { background:none; border:0; box-shadow:none; color:inherit; opacity:.6; cursor:pointer;
     font-size:.9rem; padding:0 0 0 2px; line-height:1; }
   .vaxt-chip .chip-ta-bort:hover { opacity:1; transform:none; }
   .zon-tom { font-size:.82rem; opacity:.75; }
+
+  .historik-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin-top:4px; }
+  .historik-kort { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r-sm); padding:16px; }
+  .historik-head { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .historik-head .ikon { font-size:1.3rem; flex:0 0 auto; }
+  .historik-head .info { flex:1; min-width:0; }
+  .historik-head .namn { font-weight:650; font-size:.92rem; }
+  .historik-head .sub { font-size:.74rem; color:var(--muted); }
+  .historik-head .nu { font-weight:700; font-variant-numeric:tabular-nums; font-size:.98rem; color:var(--accent); white-space:nowrap; }
+  .sparkline { width:100%; height:60px; display:block; }
+  .historik-minmax { display:flex; justify-content:space-between; font-size:.74rem; color:var(--muted); margin-top:6px; }
+
+  .modal-bakgrund { position:fixed; inset:0; background:rgba(4,10,7,.6); backdrop-filter:blur(3px);
+    display:flex; align-items:center; justify-content:center; z-index:50; padding:20px; }
+  .modal { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:26px;
+    max-width:480px; width:100%; max-height:86vh; overflow-y:auto; box-shadow:var(--shadow); position:relative; }
+  .modal h3 { font-size:1.1rem; margin-bottom:2px; }
+  .modal .modal-sub { font-size:.8rem; color:var(--muted); margin-bottom:18px; }
+  .modal .falt { margin-bottom:14px; }
+  .modal textarea { width:100%; min-height:70px; padding:10px 12px; border-radius:var(--r-sm);
+    border:1px solid var(--border); background:var(--surface2); color:var(--text); font:inherit;
+    font-family:inherit; resize:vertical; }
+  .modal textarea:focus { outline:none; border-color:var(--accent);
+    box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+  .modal-entiteter { margin-top:22px; padding-top:18px; border-top:1px solid var(--border); }
+  .modal-entitet-rad { display:flex; align-items:center; gap:8px; padding:6px 0; font-size:.86rem; }
+  .modal-entitet-rad .namn { flex:1; min-width:0; }
+  .modal-entitet-rad .varde { font-variant-numeric:tabular-nums; color:var(--muted); }
+  .modal-lagg-entitet { display:flex; gap:8px; margin-top:10px; }
+  .modal-lagg-entitet select { flex:1; }
 
   button { border:0; border-radius:99px; padding:10px 20px; font-size:.88rem; font-weight:600;
     font-family:inherit; cursor:pointer; background:var(--grad); color:#04140e;
@@ -101,6 +142,7 @@
   button:disabled { opacity:.55; cursor:wait; transform:none; }
   .status { font-size:.84rem; margin-top:10px; color:var(--muted); }
   .status.err { color:var(--err); }
+  .status.ok { color:var(--ok); }
   .tom { color:var(--muted); font-size:.86rem; padding:8px 0; }
 
   .grid-kort { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin-top:16px; }
@@ -132,9 +174,23 @@
 <div class="topbar"><div class="wrap">
   <div class="brand-mark"><svg width="18" height="18" viewBox="0 0 24 24"><use href="#i-blad"/></svg></div>
   <div class="brand-text">Trädgårdsbevakning</div>
+  <button class="installningar-btn" id="installningarBtn" title="Notisinställningar">⚙️</button>
 </div></div>
 
 <div class="wrap">
+
+  <div class="card" id="installningarKort" style="display:none">
+    <h2>Notiser (skördepåminnelser)</h2>
+    <p class="lbl" style="margin-bottom:10px">Skickas när en odling når sin skördemånad. Ntfy-ämnet och webhooken sparas
+      här i panelen – ingen SSH eller docker-compose behövs. (Den separata nattliga frostvarningen på GitHub Actions
+      har egna secrets och styrs inte härifrån.)</p>
+    <div class="lagg-till-zon">
+      <div><label class="lbl">Ntfy-ämne</label><input type="text" id="nNtfy" placeholder="t.ex. samma som Bostadsvakt"></div>
+      <div><label class="lbl">HA-webhook-URL</label><input type="text" id="nWebhook" placeholder="https://.../api/webhook/..."></div>
+      <button id="nSparaBtn">Spara</button>
+    </div>
+    <div class="status" id="nStatus"></div>
+  </div>
 
   <div class="card">
     <h2>Väder, kommande dagar</h2>
@@ -145,6 +201,16 @@
   <div class="card">
     <h2>Bevattning</h2>
     <div class="insikt" id="bevattningInnehall">Laddar …</div>
+  </div>
+
+  <div class="card">
+    <h2>Trädgårdskarta</h2>
+    <div id="tradgardKarta" class="karta-grid"></div>
+  </div>
+
+  <div class="card">
+    <h2>Historik</h2>
+    <div id="historikInnehall" class="historik-grid">Laddar …</div>
   </div>
 
   <div class="card">
@@ -178,12 +244,8 @@
       <div><label class="lbl">Skördefönster (fritext)</label><input type="text" id="oSkord" placeholder="t.ex. aug–sep, om ni vill vara mer specifika"></div>
       <div><label class="lbl">Anteckning</label><input type="text" id="oAnteckning" placeholder="valfritt"></div>
     </div>
+    <p class="lbl" style="margin-top:10px">Tips: klicka på en zon eller planta i Trädgårdskartan nedan för att lägga till jordtyp, anteckningar och koppla HA-entiteter.</p>
     <div class="status" id="oStatus"></div>
-  </div>
-
-  <div class="card">
-    <h2>Trädgårdskarta</h2>
-    <div id="tradgardKarta" class="karta-grid"></div>
   </div>
 
   <div class="card">
@@ -197,6 +259,10 @@
     <div class="status" id="eStatus"></div>
   </div>
 
+</div>
+
+<div class="modal-bakgrund" id="modalBakgrund" style="display:none">
+  <div class="modal" id="modalInnehall"></div>
 </div>
 
 <script>
@@ -240,6 +306,19 @@ function ikonForVaxt(namn) {
 let odlingar = [];
 let zoner = [];
 let senasteVader = null;
+let enheterStatus = [];
+let historik = [];
+let modalKontext = null; // { typ: "zon"|"odling", id }
+
+// Väljer en rimlig ikon för en HA-entitets enhet, rent kosmetiskt.
+function ikonForEnhet(enhet) {
+  const e = (enhet || "").toLowerCase();
+  if (e.includes("%")) return "💧";
+  if (e.includes("°")) return "🌡️";
+  if (e.includes("lx") || e.includes("lux")) return "☀️";
+  if (e.includes("ppm")) return "🌬️";
+  return "📟";
+}
 
 function esc(s) { return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 
@@ -297,6 +376,7 @@ async function laddaOdlingar() {
   } catch { odlingar = []; zoner = []; }
   uppdateraZonVal();
   renderaKarta();
+  renderaHistorik();
 }
 function manadNamn(m) {
   // "2026-09" -> "september 2026"
@@ -309,12 +389,17 @@ function uppdateraZonVal() {
     zoner.map((z) => `<option value="${esc(z.id)}">${ZON_TYPER[z.typ]?.ikon ?? "📍"} ${esc(z.namn)}</option>`).join("");
   if (zoner.some((z) => z.id === val)) $("oZon").value = val;
 }
+function entiteterFor(idLista) {
+  return (idLista ?? []).map((id) => enheterStatus.find((e) => e.id === id)).filter(Boolean);
+}
 function vaxtChip(o) {
   const nuManad = new Date().toISOString().slice(0, 7);
   const skordSnart = o.skordManad === nuManad;
-  const detaljer = [o.planterad ? `Planterad ${o.planterad}` : "", o.skordManad ? `Skörd ${manadNamn(o.skordManad)}` : "", o.skordFonster, o.anteckning].filter(Boolean).join(" · ");
+  const detaljer = [o.planterad ? `Planterad ${o.planterad}` : "", o.skordManad ? `Skörd ${manadNamn(o.skordManad)}` : "", o.skordFonster, o.jord ? `Jord: ${o.jord}` : "", o.anteckning].filter(Boolean).join(" · ");
+  const enheter = entiteterFor(o.enhetIds);
+  const enhetText = enheter.filter((e) => !e.fel).map((e) => ` · ${ikonForEnhet(e.enhet)} ${esc(e.state)}${e.enhet ? esc(e.enhet) : ""}`).join("");
   return `<span class="vaxt-chip" data-id="${o.id}" title="${esc(detaljer)}">
-    <span class="emoji">${ikonForVaxt(o.namn)}</span>${esc(o.namn)}${skordSnart ? " 🌾" : ""}
+    <span class="emoji">${ikonForVaxt(o.namn)}</span>${esc(o.namn)}${skordSnart ? " 🌾" : ""}<span class="chip-enhet">${enhetText}</span>
     <button class="chip-ta-bort odling-ta-bort" data-id="${o.id}" title="Ta bort">×</button>
   </span>`;
 }
@@ -332,11 +417,14 @@ function renderaKarta() {
   const zonKort = zoner.map((z) => {
     const info = ZON_TYPER[z.typ] ?? ZON_TYPER.annat;
     const lista = grupper.get(z.id) ?? [];
+    const enhetBadges = entiteterFor(z.enhetIds).filter((e) => !e.fel)
+      .map((e) => `<span class="zon-enhet">${ikonForEnhet(e.enhet)} ${esc(e.state)}${e.enhet ? " " + esc(e.enhet) : ""}</span>`).join("");
     return `<div class="zon-kort" style="background:${info.grad}" data-id="${z.id}">
       <button class="zon-ta-bort" data-id="${z.id}" title="Ta bort zon">×</button>
       <div class="zon-head">
         <span class="ikon">${info.ikon}</span>
         <span class="namn">${esc(z.namn)}</span>
+        ${enhetBadges}
       </div>
       <div class="vaxt-chips">${lista.length ? lista.map(vaxtChip).join("") : '<span class="zon-tom">Inget planterat än</span>'}</div>
     </div>`;
@@ -387,7 +475,11 @@ async function laddaEnheter() {
   try {
     const res = await fetch(`${BAS}api/enheter/status`, { cache: "no-store" });
     const lista = await res.json();
+    enheterStatus = lista;
     renderaEnheter(lista);
+    renderaKarta();
+    renderaHistorik();
+    if (modalKontext) renderaModal();
   } catch (e) {
     $("enheterLista").innerHTML = `<div class="status err">Kunde inte hämta enheter: ${e.message}</div>`;
   }
@@ -400,6 +492,151 @@ function renderaEnheter(lista) {
       <button class="ta-bort enhet-ta-bort" data-id="${e.id}" title="Ta bort" style="position:static">×</button>
     </div>`).join("")
     : '<div class="tom">Inga enheter tillagda ännu – lägg till HA-entiteter nedan (t.ex. jordfuktighetssensorer) när ni har dem.</div>';
+}
+
+// ---- Historik ----
+async function laddaHistorikData() {
+  try {
+    const res = await fetch(`${BAS}api/historik`, { cache: "no-store" });
+    historik = await res.json();
+  } catch { historik = []; }
+  renderaHistorik();
+}
+function historikMal() {
+  const mal = [];
+  for (const z of zoner) for (const enhetId of z.enhetIds ?? []) {
+    const enhet = enheterStatus.find((e) => e.id === enhetId);
+    if (enhet) mal.push({ label: z.namn, ikon: (ZON_TYPER[z.typ] ?? ZON_TYPER.annat).ikon, enhetId, enhet });
+  }
+  for (const o of odlingar) for (const enhetId of o.enhetIds ?? []) {
+    const enhet = enheterStatus.find((e) => e.id === enhetId);
+    if (enhet) mal.push({ label: o.namn, ikon: ikonForVaxt(o.namn), enhetId, enhet });
+  }
+  return mal;
+}
+function sparkline(punkter) {
+  if (punkter.length < 2) return '<div class="tom" style="padding:18px 0">Samlar data … kolla tillbaka om ett tag.</div>';
+  const varden = punkter.map((p) => p.varde);
+  const min = Math.min(...varden), max = Math.max(...varden);
+  const spann = (max - min) || 1;
+  const W = 300, H = 60;
+  const pts = punkter.map((p, i) => {
+    const x = (i / (punkter.length - 1)) * W;
+    const y = H - ((p.varde - min) / spann) * H;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  return `<svg viewBox="0 0 ${W} ${H}" class="sparkline" preserveAspectRatio="none">
+    <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+function renderaHistorik() {
+  const mal = historikMal();
+  if (!mal.length) {
+    $("historikInnehall").innerHTML = '<div class="tom">Koppla en HA-entitet till en zon eller odling (klicka på den i Trädgårdskartan) för att se historik här.</div>';
+    return;
+  }
+  $("historikInnehall").innerHTML = mal.map((m) => {
+    const punkter = historik.filter((p) => p.enhetId === m.enhetId).sort((a, b) => new Date(a.tid) - new Date(b.tid));
+    const enhetText = m.enhet.enhet ? ` ${m.enhet.enhet}` : "";
+    const senaste = punkter.length ? punkter[punkter.length - 1].varde : null;
+    const min = punkter.length ? Math.min(...punkter.map((p) => p.varde)) : null;
+    const max = punkter.length ? Math.max(...punkter.map((p) => p.varde)) : null;
+    return `<div class="historik-kort">
+      <div class="historik-head">
+        <span class="ikon">${m.ikon}</span>
+        <div class="info">
+          <div class="namn">${esc(m.label)}</div>
+          <div class="sub">${esc(m.enhet.namn)}</div>
+        </div>
+        ${senaste != null ? `<div class="nu">${esc(senaste)}${esc(enhetText)}</div>` : ""}
+      </div>
+      ${sparkline(punkter)}
+      ${punkter.length >= 2 ? `<div class="historik-minmax"><span>Min ${esc(min)}${esc(enhetText)}</span><span>Max ${esc(max)}${esc(enhetText)}</span></div>` : ""}
+    </div>`;
+  }).join("");
+}
+
+// ---- Popup med anteckningar, jord och kopplade entiteter ----
+async function sparaZon(id, patch) {
+  const z = zoner.find((x) => x.id === id);
+  if (!z) return;
+  const body = { id, jord: z.jord ?? "", anteckning: z.anteckning ?? "", enhetIds: z.enhetIds ?? [], ...patch };
+  await fetch(`${BAS}api/zoner/uppdatera`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  await laddaOdlingar();
+  if (modalKontext?.typ === "zon" && modalKontext.id === id) renderaModal();
+}
+async function sparaOdling(id, patch) {
+  const o = odlingar.find((x) => x.id === id);
+  if (!o) return;
+  const body = {
+    id, planterad: o.planterad ?? "", skordManad: o.skordManad ?? "", skordFonster: o.skordFonster ?? "",
+    jord: o.jord ?? "", anteckning: o.anteckning ?? "", enhetIds: o.enhetIds ?? [], ...patch,
+  };
+  await fetch(`${BAS}api/odlingar/uppdatera`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  await laddaOdlingar();
+  if (modalKontext?.typ === "odling" && modalKontext.id === id) renderaModal();
+}
+function kopplaEntiteterHtml(idLista) {
+  const kopplade = entiteterFor(idLista);
+  const lediga = enheterStatus.filter((e) => !(idLista ?? []).includes(e.id));
+  return `<div class="modal-entiteter">
+    <label class="lbl">Kopplade entiteter</label>
+    ${kopplade.length ? kopplade.map((e) => `
+      <div class="modal-entitet-rad">
+        <span>${ikonForEnhet(e.enhet)}</span>
+        <span class="namn">${esc(e.namn)}</span>
+        <span class="varde">${e.fel ? esc(e.fel) : esc(e.state) + (e.enhet ? " " + esc(e.enhet) : "")}</span>
+        <button class="ta-bort modal-enhet-ta-bort" data-id="${e.id}" title="Koppla bort" style="position:static">×</button>
+      </div>`).join("") : '<div class="tom">Inga entiteter kopplade.</div>'}
+    ${lediga.length ? `
+    <div class="modal-lagg-entitet">
+      <select id="mEnhetVal">${lediga.map((e) => `<option value="${esc(e.id)}">${esc(e.namn)}</option>`).join("")}</select>
+      <button id="mEnhetLaggTillBtn">Koppla</button>
+    </div>` : ""}
+  </div>`;
+}
+function oppnaModal(typ, id) {
+  modalKontext = { typ, id };
+  renderaModal();
+  $("modalBakgrund").style.display = "flex";
+}
+function stangModal() {
+  $("modalBakgrund").style.display = "none";
+  modalKontext = null;
+}
+function renderaModal() {
+  if (!modalKontext) return;
+  const { typ, id } = modalKontext;
+  if (typ === "zon") {
+    const z = zoner.find((x) => x.id === id);
+    if (!z) return stangModal();
+    const info = ZON_TYPER[z.typ] ?? ZON_TYPER.annat;
+    $("modalInnehall").innerHTML = `
+      <button class="ta-bort" id="modalStangBtn" title="Stäng" style="position:absolute; top:16px; right:16px">×</button>
+      <h3>${info.ikon} ${esc(z.namn)}</h3>
+      <div class="modal-sub">${esc(info.namn)}</div>
+      <div class="falt"><label class="lbl">Jord</label><input type="text" id="mJord" placeholder="t.ex. näringsrik potatisjord + kompost" value="${esc(z.jord ?? "")}"></div>
+      <div class="falt"><label class="lbl">Anteckning</label><textarea id="mAnteckning" placeholder="fritt att skriva">${esc(z.anteckning ?? "")}</textarea></div>
+      <button id="mSparaBtn">Spara</button>
+      <div class="status" id="mStatus"></div>
+      ${kopplaEntiteterHtml(z.enhetIds)}`;
+  } else {
+    const o = odlingar.find((x) => x.id === id);
+    if (!o) return stangModal();
+    const zon = o.zonId ? zoner.find((z) => z.id === o.zonId) : null;
+    $("modalInnehall").innerHTML = `
+      <button class="ta-bort" id="modalStangBtn" title="Stäng" style="position:absolute; top:16px; right:16px">×</button>
+      <h3>${ikonForVaxt(o.namn)} ${esc(o.namn)}</h3>
+      <div class="modal-sub">${zon ? esc(zon.namn) : "Okategoriserat"}</div>
+      <div class="falt"><label class="lbl">Planterad</label><input type="date" id="mPlanterad" value="${esc(o.planterad ?? "")}"></div>
+      <div class="falt"><label class="lbl">Skördemånad</label><input type="month" id="mSkordManad" value="${esc(o.skordManad ?? "")}"></div>
+      <div class="falt"><label class="lbl">Skördefönster (fritext)</label><input type="text" id="mSkordFonster" value="${esc(o.skordFonster ?? "")}"></div>
+      <div class="falt"><label class="lbl">Jord</label><input type="text" id="mJord" placeholder="t.ex. kruka med kaktusjord" value="${esc(o.jord ?? "")}"></div>
+      <div class="falt"><label class="lbl">Anteckning</label><textarea id="mAnteckning" placeholder="fritt att skriva">${esc(o.anteckning ?? "")}</textarea></div>
+      <button id="mSparaBtn">Spara</button>
+      <div class="status" id="mStatus"></div>
+      ${kopplaEntiteterHtml(o.enhetIds)}`;
+  }
 }
 
 $("eLaggTillBtn").addEventListener("click", async () => {
@@ -436,13 +673,100 @@ document.addEventListener("click", async (e) => {
     if (!confirm("Ta bort zonen? Odlingar i den blir okategoriserade.")) return;
     await fetch(`${BAS}api/zoner/ta-bort`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: zonTaBort.dataset.id }) });
     await laddaOdlingar();
+    return;
   }
+
+  // Popup: spara jord/anteckning
+  const mSpara = e.target.closest("#mSparaBtn");
+  if (mSpara && modalKontext) {
+    const st = $("mStatus");
+    st.textContent = ""; st.className = "status";
+    try {
+      if (modalKontext.typ === "zon") {
+        await sparaZon(modalKontext.id, { jord: $("mJord").value.trim(), anteckning: $("mAnteckning").value.trim() });
+      } else {
+        await sparaOdling(modalKontext.id, {
+          planterad: $("mPlanterad").value, skordManad: $("mSkordManad").value,
+          skordFonster: $("mSkordFonster").value.trim(), jord: $("mJord").value.trim(), anteckning: $("mAnteckning").value.trim(),
+        });
+      }
+      $("mStatus").textContent = "Sparat."; $("mStatus").className = "status ok";
+    } catch (err) { $("mStatus").textContent = "Kunde inte spara: " + err.message; $("mStatus").className = "status err"; }
+    return;
+  }
+  // Popup: koppla en entitet
+  const mEnhetLaggTill = e.target.closest("#mEnhetLaggTillBtn");
+  if (mEnhetLaggTill && modalKontext) {
+    const valtId = $("mEnhetVal").value;
+    if (valtId) {
+      if (modalKontext.typ === "zon") {
+        const z = zoner.find((x) => x.id === modalKontext.id);
+        await sparaZon(modalKontext.id, { enhetIds: [...(z.enhetIds ?? []), valtId] });
+      } else {
+        const o = odlingar.find((x) => x.id === modalKontext.id);
+        await sparaOdling(modalKontext.id, { enhetIds: [...(o.enhetIds ?? []), valtId] });
+      }
+    }
+    return;
+  }
+  // Popup: koppla bort en entitet
+  const modalEnhetTaBort = e.target.closest(".modal-enhet-ta-bort");
+  if (modalEnhetTaBort && modalKontext) {
+    const bortId = modalEnhetTaBort.dataset.id;
+    if (modalKontext.typ === "zon") {
+      const z = zoner.find((x) => x.id === modalKontext.id);
+      await sparaZon(modalKontext.id, { enhetIds: (z.enhetIds ?? []).filter((eid) => eid !== bortId) });
+    } else {
+      const o = odlingar.find((x) => x.id === modalKontext.id);
+      await sparaOdling(modalKontext.id, { enhetIds: (o.enhetIds ?? []).filter((eid) => eid !== bortId) });
+    }
+    return;
+  }
+  // Popup: stäng
+  if (e.target.closest("#modalStangBtn")) { stangModal(); return; }
+  if (e.target.id === "modalBakgrund") { stangModal(); return; }
+
+  // Öppna popup: klick på en planta (chip) väger tyngre än klick på hela zon-kortet
+  const chipEl = e.target.closest(".vaxt-chip");
+  if (chipEl) { oppnaModal("odling", chipEl.dataset.id); return; }
+  const zonKortEl = e.target.closest(".zon-kort");
+  if (zonKortEl && !zonKortEl.classList.contains("okategoriserat")) { oppnaModal("zon", zonKortEl.dataset.id); return; }
+});
+
+async function laddaInstallningar() {
+  try {
+    const res = await fetch(`${BAS}api/installningar`, { cache: "no-store" });
+    const inst = await res.json();
+    $("nNtfy").value = inst.ntfyTopic ?? "";
+    $("nWebhook").value = inst.webhookUrl ?? "";
+  } catch { /* ok att inte kunna hämta – fälten blir bara tomma */ }
+}
+
+$("installningarBtn").addEventListener("click", () => {
+  const kort = $("installningarKort");
+  kort.style.display = kort.style.display === "none" ? "" : "none";
+  if (kort.style.display !== "none") kort.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+$("nSparaBtn").addEventListener("click", async () => {
+  const st = $("nStatus");
+  $("nSparaBtn").disabled = true; st.textContent = ""; st.className = "status";
+  try {
+    await fetch(`${BAS}api/installningar`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ntfyTopic: $("nNtfy").value.trim(), webhookUrl: $("nWebhook").value.trim() }),
+    });
+    st.textContent = "Sparat."; st.className = "status ok";
+  } catch (e) { st.textContent = "Kunde inte spara: " + e.message; st.className = "status err"; }
+  finally { $("nSparaBtn").disabled = false; }
 });
 
 (async () => {
   await laddaVader();
   await laddaOdlingar();
   await laddaEnheter();
+  await laddaInstallningar();
+  await laddaHistorikData();
 })();
 </script>
 </body>
