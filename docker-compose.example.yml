@@ -12,5 +12,6 @@ services:
       - HA_TOKEN=            # samma långlivade token som för hushallsekonomi funkar fint
       - GEO_LAT=              # er trädgårds koordinater, t.ex. 59.85
       - GEO_LON=              # t.ex. 17.63
+      - NTFY_TOPIC=           # samma ämne som Bostadsvakt/frostvarningen, för skördepåminnelser
     volumes:
       - ./data:/data

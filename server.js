@@ -14,7 +14,17 @@ const HA_URL = process.env.HA_URL || "http://localhost:8123";
 const HA_TOKEN = process.env.HA_TOKEN || "";
 const GEO_LAT = process.env.GEO_LAT || "";
 const GEO_LON = process.env.GEO_LON || "";
+const NTFY_TOPIC = process.env.NTFY_TOPIC || "";
 const PANEL_HTML = join(dirname(fileURLToPath(import.meta.url)), "index.html");
+
+function stockholmManad(d = new Date()) {
+  const delar = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Stockholm", year: "numeric", month: "2-digit" }).formatToParts(d);
+  const f = Object.fromEntries(delar.map((p) => [p.type, p.value]));
+  return `${f.year}-${f.month}`;
+}
+function lokalTimme(iso) {
+  return Number(new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Stockholm", hour: "2-digit", hour12: false }).format(new Date(iso)));
+}
 
 // ---- Lagring: odlingsjournal + bevakade HA-enheter ----
 async function lasData() {
@@ -58,21 +68,26 @@ async function hamtaVader() {
   const data = await res.json();
 
   // Grupperar timprognosen till en per-dag-sammanfattning (min/max temp,
-  // mest sannolika nederbörd) för de kommande fem dagarna.
+  // mest sannolika nederbörd) för de kommande fem dagarna. Väderikonen för
+  // dagen tas från den timme som ligger närmast kl 12 lokal tid – bättre
+  // representativ bild av dagen än t.ex. en tidig morgontimme.
   const perDag = new Map();
   for (const t of data.timeSeries) {
     const dag = t.time.slice(0, 10);
     const temp = t.data?.air_temperature;
     const nederbord = t.data?.precipitation_amount_mean;
+    const symbol = t.data?.symbol_code;
     if (temp == null) continue;
-    const post = perDag.get(dag) ?? { dag, min: temp, max: temp, nederbord: 0 };
+    const diffFran12 = Math.abs(lokalTimme(t.time) - 12);
+    const post = perDag.get(dag) ?? { dag, min: temp, max: temp, nederbord: 0, symbol, symbolDiff: Infinity };
     post.min = Math.min(post.min, temp);
     post.max = Math.max(post.max, temp);
     post.nederbord += nederbord ?? 0;
+    if (symbol != null && diffFran12 < post.symbolDiff) { post.symbol = symbol; post.symbolDiff = diffFran12; }
     perDag.set(dag, post);
   }
   const dagar = [...perDag.values()].slice(0, 5).map((d) => ({
-    dag: d.dag, min: Math.round(d.min), max: Math.round(d.max), nederbord: Math.round(d.nederbord * 10) / 10,
+    dag: d.dag, min: Math.round(d.min), max: Math.round(d.max), nederbord: Math.round(d.nederbord * 10) / 10, symbol: d.symbol ?? null,
   }));
   const resultat = { dagar };
   vaderCache = { tid: Date.now(), resultat };
@@ -98,6 +113,38 @@ async function hamtaEntitetStatus(entityId) {
   }
 }
 
+// ---- Skördepåminnelser ----
+// Körs internt i containern (inte via GitHub Actions) eftersom journalen
+// bara finns lokalt i den här datafilen – ingen anledning att exponera den
+// mot internet bara för att en cron-tjänst ska kunna läsa den.
+async function skickaNtfy(titel, meddelande) {
+  if (!NTFY_TOPIC) { console.log(`[ingen NTFY_TOPIC satt] ${titel}: ${meddelande}`); return; }
+  try {
+    const res = await fetch("https://ntfy.sh", {
+      method: "POST",
+      body: JSON.stringify({ topic: NTFY_TOPIC, title: titel, message: meddelande, priority: 3 }),
+    });
+    if (!res.ok) console.warn(`ntfy svarade ${res.status}`);
+  } catch (err) {
+    console.warn(`ntfy misslyckades: ${err.message}`);
+  }
+}
+async function kollaSkordepaminnelser() {
+  const nuManad = stockholmManad();
+  const { odlingar } = await lasData();
+  for (const o of odlingar) {
+    if (o.skordManad === nuManad && !(o.paminntManader ?? []).includes(nuManad)) {
+      await skickaNtfy("🌾 Dags att skörda", `${o.namn}${o.plats ? " (" + o.plats + ")" : ""} har skördemånad nu.`);
+      await muteraData((d) => {
+        const post = d.odlingar.find((x) => x.id === o.id);
+        if (post) post.paminntManader = [...(post.paminntManader ?? []), nuManad];
+      });
+    }
+  }
+}
+const EN_DAG_MS = 24 * 3600 * 1000;
+setInterval(() => kollaSkordepaminnelser().catch((err) => console.warn("Skördepåminnelse-koll misslyckades:", err.message)), EN_DAG_MS);
+
 // ---- HTTP ----
 function skickaJson(res, status, body) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
@@ -120,10 +167,13 @@ const server = createServer(async (req, res) => {
       return skickaJson(res, 200, await lasData());
     }
     if (req.method === "POST" && p.endsWith("/api/odlingar")) {
-      const { namn, plats, planterad, skordFonster, anteckning } = await lasBody(req);
+      const { namn, plats, planterad, skordFonster, skordManad, anteckning } = await lasBody(req);
       if (!namn) return skickaJson(res, 400, { fel: "namn saknas" });
       const data = await muteraData((d) => {
-        d.odlingar.push({ id: randomUUID(), namn, plats: plats || "", planterad: planterad || "", skordFonster: skordFonster || "", anteckning: anteckning || "" });
+        d.odlingar.push({
+          id: randomUUID(), namn, plats: plats || "", planterad: planterad || "",
+          skordFonster: skordFonster || "", skordManad: skordManad || "", anteckning: anteckning || "",
+        });
       });
       return skickaJson(res, 200, data);
     }
@@ -165,3 +215,4 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => console.log(`tradgardsbevakning lyssnar på :${PORT}, data i ${DATA_PATH}`));
+kollaSkordepaminnelser().catch((err) => console.warn("Skördepåminnelse-koll misslyckades:", err.message));
