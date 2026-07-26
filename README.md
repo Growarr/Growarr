@@ -7,13 +7,12 @@ Två delar i ett repo:
    behövs) och skickar push via [ntfy.sh](https://ntfy.sh) om frostrisk
    väntas kommande dygn. Samma mönster som Bostadsvakt.
 2. **En panel** (Docker, körs på home-vm som `bostadsvakt-api`/
-   `hushallsekonomi`) med:
+   `hushallsekonomi`), uppdelad i två vyer (⚙️-knappen uppe till höger växlar
+   mellan dem, styrt av URL-hash så bakåtknappen i webbläsaren fungerar):
+
+   **Översikten** (`/`) — en ren visuell dashboard, inget att fylla i:
    - **Väderprognos**, 5 dagar framåt med riktiga väderikoner, frostrisk
      markerad, plus en enkel bevattningsinsikt baserad på väntad nederbörd.
-   - **Zoner** — bäddar, växthus, odlingslådor, inomhus/utomhus, vad ni vill.
-     Varje zon har en egen typ (med ikon/färg) och ett fritt namn.
-   - **Odlingsjournal** — vad som planterats, i vilken zon, när, och när det
-     ska skördas (med automatisk skördepåminnelse, se nedan).
    - **Trädgårdskarta** — en visuell karta som grupperar alla odlingar per
      zon (färgad efter zontyp, med ett auto-gissat växtemoji per planta).
      Odlingar utan zon hamnar i en egen "Okategoriserat"-grupp. Klicka på en
@@ -26,13 +25,17 @@ Två delar i ett repo:
      loggas en gång i timmen, och panelen ritar en trendkurva (senaste,
      min/max) per koppling. Byggs upp av sig själv från den dag ni kopplar en
      entitet — ingen bakåtgående data.
+
+   **Inställningar** (`/#installningar`) — allt ni fyller i eller lägger till:
+   - **⚙️ Notiser** — ntfy-ämne och HA-webhook-URL för skördepåminnelser.
+   - **Zoner** — lägg till nya bäddar, växthus, odlingslådor, inomhus/utomhus.
+   - **Odlingsjournal** — lägg till vad som planterats, i vilken zon, när, och
+     när det ska skördas (med automatisk skördepåminnelse, se nedan).
    - **HA-enheter** — lägg till valfri Home Assistant-entitet (namn +
      `entity_id`) och se dess nuvarande värde. Tänkt att växa: den dagen ni
      har jordfuktighetssensorer, ventiler eller annat i HA, lägg bara in
      `entity_id` här — ingen kodändring behövs, sen kopplar ni den till en
-     zon/odling via Trädgårdskartans popup.
-   - **⚙️ Notisinställningar** — ntfy-ämne och HA-webhook-URL för
-     skördepåminnelser, satt direkt i panelen (uppe till höger).
+     zon/odling via Trädgårdskartans popup på översikten.
 
 Ingen inloggning i panelen – samma modell som de andra apparna: skyddet
 ligger i att den bara är nåbar via ert eget nätverk/VPN eller bakom samma
