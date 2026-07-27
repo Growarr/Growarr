@@ -28,6 +28,12 @@ Två delar i ett repo:
      väljer om blocket ska ligga i den breda huvudkolumnen eller i
      sidokolumnen (under Historik). På varje block finns ↑/↓ för att ändra
      ordning och ⇄ för att flytta det till den andra kolumnen.
+   - **🌿 AI-chatt** — en bubbla nere till höger där ni kan fråga fritt och
+     **bifoga foton** ("varför ser den här plantan ut så här?"). Claude får med
+     sig era zoner, plantor, kopplade sensorers värden, sensorhistorik och
+     väderprognosen, och väger ihop bilden med mätdatan i svaret. Kräver
+     `ANTHROPIC_API_KEY` (se "Smart bevattning" nedan). Foton skalas ner i
+     webbläsaren innan de skickas och sparas aldrig på servern.
    - **Trädgårdskarta** — en fritt placerbar karta. Klicka **Redigera layout**
      för att slå på flytt-läge (✥-handtag dyker upp på varje zon, dra dit ni
      vill ha dem), klicka **Klar, lås positionerna** när ni är nöjda för att
@@ -184,6 +190,7 @@ på fel ställe.
 | GET | `/api/ha-entiteter` | – | Hela HA:s entitetslista, för sökbar autocomplete (kräver `HA_TOKEN`) |
 | GET | `/api/historik` | – | Hämtar loggad historik för entiteter kopplade till zoner/odlingar |
 | GET | `/api/bevattning` | – | Hämtar den Claude-genererade bevattningsinsikten (cachad 4h) |
+| POST | `/api/chatt` | `{ meddelanden: [{ roll, text, bild? }] }` | AI-chatt med valfritt foto (`bild: { typ, data }`, base64) |
 | GET | `/api/installningar` | – | Hämtar sparat ntfy-ämne/webhook-URL |
 | POST | `/api/installningar` | `{ ntfyTopic?, webhookUrl? }` | Sparar ntfy-ämne/webhook-URL (via ⚙️ i panelen) |
 

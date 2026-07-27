@@ -40,6 +40,19 @@
   @media (max-width:1120px) { .dash-grid { grid-template-columns:1fr; } }
   .dash-kol { min-width:0; }
 
+  .vy-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding-top:22px; }
+  .vy-titel { font-size:1.3rem; font-weight:700; letter-spacing:-.01em; }
+  .skapa-btn { display:flex; align-items:center; gap:7px; padding:10px 18px 10px 14px; font-size:.86rem; }
+
+  .modal-bred { max-width:620px; }
+  .skapa-flikar { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
+  .skapa-flik { padding:8px 16px; border-radius:99px; font-size:.82rem; font-weight:600; cursor:pointer;
+    background:var(--surface2); color:var(--muted); border:1px solid var(--border); box-shadow:none; }
+  .skapa-flik:hover { color:var(--text); transform:none; box-shadow:none; }
+  .skapa-flik.aktiv { background:var(--grad); color:#04140e; border-color:transparent; }
+  .skapa-rad { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width:560px) { .skapa-rad { grid-template-columns:1fr; } }
+
   .app-shell { display:flex; align-items:stretch; min-height:100vh; }
   .sidebar { width:76px; flex:0 0 auto; background:var(--surface); border-right:1px solid var(--border);
     display:flex; flex-direction:column; align-items:center; gap:14px; padding:22px 0;
@@ -146,38 +159,86 @@
   .karta-canvas:not(.redigerar) .zon-kort:not(.okategoriserat) { cursor:pointer; }
   .karta-canvas.redigerar .zon-kort { cursor:grab; }
   .karta-canvas.redigerar .zon-kort-canvas.dragging { cursor:grabbing; }
-  .zon-drag { cursor:grab; background:rgba(255,255,255,.25); border:0; box-shadow:none; color:#fff;
-    width:30px; height:30px; padding:0; display:flex; align-items:center; justify-content:center;
-    border-radius:9px; font-size:.9rem; line-height:1; flex:0 0 auto; touch-action:none; pointer-events:none; }
+  .zon-drag { cursor:grab; background:var(--surface2); border:1px solid var(--border); box-shadow:none;
+    color:var(--muted); width:26px; height:26px; padding:0; display:flex; align-items:center; justify-content:center;
+    border-radius:8px; font-size:.85rem; line-height:1; flex:0 0 auto; touch-action:none; pointer-events:none; }
   .karta-tom { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
     text-align:center; padding:20px; color:var(--muted); font-size:.9rem; }
-  .zon-kort { border-radius:var(--r-sm); padding:18px; color:#fff; position:relative; overflow:hidden;
-    box-shadow:0 10px 24px -10px rgba(0,0,0,.3); }
-  .zon-kort:not(.okategoriserat)::before { content:""; position:absolute; inset:0; pointer-events:none;
-    background:linear-gradient(165deg, rgba(255,255,255,.22), transparent 45%); }
-  .zon-kort:not(.okategoriserat):hover { box-shadow:0 14px 30px -10px rgba(0,0,0,.4); }
-  .zon-kort.okategoriserat { background:var(--surface2); color:var(--text); }
-  .zon-head { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
-  .zon-head .ikon { font-size:1.4rem; }
-  .zon-head .namn { font-weight:700; font-size:1rem; flex:1; }
-  .zon-head .typ { font-size:.72rem; opacity:.85; text-transform:uppercase; letter-spacing:.05em; }
-  .zon-enhet { background:rgba(255,255,255,.22); border-radius:99px; padding:4px 10px; font-size:.76rem;
-    font-weight:600; white-space:nowrap; }
-  .zon-kort.okategoriserat .zon-enhet { background:var(--surface); border:1px solid var(--border); }
-  .zon-ta-bort { position:absolute; top:14px; right:14px; background:rgba(255,255,255,.2); border:0; box-shadow:none;
-    color:#fff; cursor:pointer; font-size:.95rem; width:24px; height:24px; border-radius:50%; padding:0;
-    display:flex; align-items:center; justify-content:center; line-height:1; z-index:1; }
-  .zon-ta-bort:hover { background:rgba(255,255,255,.35); transform:none; }
-  .vaxt-chips { display:flex; flex-wrap:wrap; gap:8px; }
-  .vaxt-chip { background:rgba(255,255,255,.18); backdrop-filter:blur(4px); border-radius:99px; padding:6px 12px 6px 8px;
-    display:flex; align-items:center; gap:6px; font-size:.84rem; cursor:pointer; position:relative; }
-  .zon-kort.okategoriserat .vaxt-chip { background:var(--surface); border:1px solid var(--border); }
-  .vaxt-chip .emoji { font-size:1.05rem; }
-  .vaxt-chip .chip-enhet { opacity:.85; font-size:.82rem; }
-  .vaxt-chip .chip-ta-bort { background:none; border:0; box-shadow:none; color:inherit; opacity:.6; cursor:pointer;
-    font-size:.9rem; padding:0 0 0 2px; line-height:1; }
-  .vaxt-chip .chip-ta-bort:hover { opacity:1; transform:none; }
-  .zon-tom { font-size:.82rem; opacity:.75; }
+  /* Zonkortet är en neutral, ljus platta – identiteten ligger i "ytan"
+     nedan, som ritas uppifrån beroende på zontyp. Betydligt lugnare än
+     tidigare färgade gradient-kort. */
+  /* OBS: sätt inte position här – .zon-kort-canvas ovan sätter position:absolute
+     och deklareras tidigare, så en position här skulle vinna på lika specificitet
+     och göra att korten staplas istället för att placeras på kartan. */
+  .zon-kort { border-radius:16px; padding:12px; background:var(--surface);
+    border:1px solid var(--border); color:var(--text);
+    box-shadow:0 10px 26px -14px rgba(0,0,0,.4); transition:box-shadow .15s ease; }
+  .zon-kort:hover { box-shadow:0 16px 34px -14px rgba(0,0,0,.5); }
+  .zon-kort.vald { box-shadow:0 0 0 2px var(--accent), 0 16px 34px -14px rgba(0,0,0,.5); }
+  .zon-kort.okategoriserat { background:var(--surface2); }
+
+  .zon-topp { display:flex; align-items:center; gap:8px; margin-bottom:10px; padding:0 2px; }
+  .zon-topp .ikon { font-size:1.05rem; flex:0 0 auto; }
+  .zon-topp .namn { font-weight:650; font-size:.9rem; flex:1; min-width:0; overflow:hidden;
+    text-overflow:ellipsis; white-space:nowrap; }
+  .zon-enhet { background:var(--surface2); border:1px solid var(--border); border-radius:99px;
+    padding:3px 9px; font-size:.72rem; font-weight:600; white-space:nowrap; flex:0 0 auto; }
+  .zon-ta-bort { background:var(--surface2); border:1px solid var(--border); box-shadow:none;
+    color:var(--muted); cursor:pointer; font-size:.85rem; width:22px; height:22px; border-radius:50%; padding:0;
+    display:flex; align-items:center; justify-content:center; line-height:1; flex:0 0 auto; }
+  .zon-ta-bort:hover { color:var(--err); border-color:var(--err); transform:none; }
+
+  /* ---- Ytan: zonen sedd uppifrån ---- */
+  .zon-yta { position:relative; border-radius:12px; min-height:92px; padding:12px; overflow:hidden; }
+  .zon-plantor { display:flex; flex-wrap:wrap; gap:8px; position:relative; z-index:1; }
+  .vaxt-punkt { position:relative; width:34px; height:34px; border-radius:50%; display:flex; align-items:center;
+    justify-content:center; font-size:1.05rem; cursor:pointer; flex:0 0 auto; background:rgba(255,255,255,.92);
+    box-shadow:0 2px 6px rgba(0,0,0,.28), inset 0 0 0 1px rgba(255,255,255,.7); transition:transform .12s ease; }
+  .vaxt-punkt:hover { transform:scale(1.1); }
+  .vaxt-punkt.vald { box-shadow:0 0 0 2px var(--accent), 0 2px 6px rgba(0,0,0,.28); }
+  .vaxt-punkt.skord::after { content:""; position:absolute; width:9px; height:9px; border-radius:50%;
+    background:var(--warn); transform:translate(13px,-13px); box-shadow:0 0 0 2px var(--surface); }
+  .zon-tom { font-size:.76rem; color:rgba(255,255,255,.85); text-shadow:0 1px 2px rgba(0,0,0,.35); }
+  .zon-yta.inomhus .zon-tom, .zon-yta.annat .zon-tom { color:var(--muted); text-shadow:none; }
+
+  /* Växthus: glasparti uppifrån med takås och rutindelning */
+  .zon-yta.vaxthus { border:2px solid #93cbb4;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,.15)),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.55) 0 1.5px, transparent 1.5px 30px),
+      linear-gradient(150deg, #cdeadd, #a9dcc6);
+    box-shadow:inset 0 0 0 3px rgba(255,255,255,.4); }
+  .zon-yta.vaxthus::before { content:""; position:absolute; left:8px; right:8px; top:50%;
+    height:2px; background:rgba(255,255,255,.75); border-radius:2px; }
+
+  /* Odlingslåda: träram runt mörk jord */
+  .zon-yta.odlingslada { border:6px solid #b07c46; border-radius:10px;
+    background:
+      repeating-linear-gradient(90deg, rgba(0,0,0,.07) 0 1.5px, transparent 1.5px 22px),
+      radial-gradient(circle at 30% 25%, rgba(255,255,255,.06), transparent 60%),
+      linear-gradient(160deg, #6d4c31, #573c26);
+    box-shadow:inset 0 3px 10px rgba(0,0,0,.35); }
+
+  /* Utomhusbädd: mjuk, organisk jordform */
+  .zon-yta.utomhus { border:2px solid #8d6848;
+    border-radius:42% 46% 40% 48% / 46% 40% 48% 42%;
+    background:
+      radial-gradient(circle at 28% 28%, rgba(0,0,0,.14), transparent 62%),
+      radial-gradient(circle at 72% 70%, rgba(0,0,0,.12), transparent 58%),
+      linear-gradient(155deg, #7c5838, #614228); }
+
+  /* Inomhus / krukor: ljus hylla med varmt trä nedtill */
+  .zon-yta.inomhus { border:2px solid #d3c0e2; border-radius:12px;
+    background:linear-gradient(170deg, #faf5fd, #ece0f4); }
+  .zon-yta.inomhus::before { content:""; position:absolute; left:0; right:0; bottom:0; height:12px;
+    background:linear-gradient(180deg, #d8b98f, #c2a072); }
+  .zon-yta.inomhus .vaxt-punkt { border-radius:8px 8px 12px 12px;
+    background:linear-gradient(170deg, #e9a06a, #cf7f48);
+    box-shadow:0 2px 5px rgba(0,0,0,.2), inset 0 0 0 1px rgba(255,255,255,.35); }
+
+  /* Annat: neutral platta */
+  .zon-yta.annat { border:2px dashed var(--border); border-radius:12px; background:var(--surface2); }
+  .zon-yta.annat .vaxt-punkt { background:var(--surface); box-shadow:0 2px 5px rgba(0,0,0,.15), inset 0 0 0 1px var(--border); }
 
   .historik-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin-top:4px; }
   .historik-kort { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r-sm); padding:16px; }
@@ -189,6 +250,43 @@
   .historik-head .nu { font-weight:700; font-variant-numeric:tabular-nums; font-size:.98rem; color:var(--accent); white-space:nowrap; }
   .sparkline { width:100%; height:60px; display:block; }
   .historik-minmax { display:flex; justify-content:space-between; font-size:.74rem; color:var(--muted); margin-top:6px; }
+
+  /* ---- AI-chatt ---- */
+  .chatt-knapp { position:fixed; right:24px; bottom:24px; width:56px; height:56px; border-radius:50%;
+    padding:0; display:flex; align-items:center; justify-content:center; z-index:40;
+    box-shadow:0 10px 26px -8px color-mix(in srgb, var(--accent) 70%, transparent); }
+  .chatt-panel { position:fixed; right:24px; bottom:92px; width:min(400px, calc(100vw - 48px));
+    max-height:min(620px, calc(100vh - 140px)); display:none; flex-direction:column; z-index:41;
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--r);
+    box-shadow:0 24px 60px -18px rgba(0,0,0,.5); overflow:hidden; }
+  .chatt-panel.oppen { display:flex; }
+  .chatt-topp { display:flex; align-items:center; gap:10px; padding:16px 18px; border-bottom:1px solid var(--border); }
+  .chatt-topp .titel { font-weight:650; font-size:.95rem; flex:1; font-family:"Outfit","Inter",sans-serif; }
+  .chatt-logg { flex:1; overflow-y:auto; padding:16px 18px; display:flex; flex-direction:column; gap:12px; }
+  .chatt-tom { color:var(--muted); font-size:.86rem; line-height:1.5; }
+  .chatt-rad { display:flex; }
+  .chatt-rad.fran-du { justify-content:flex-end; }
+  .chatt-bubbla { max-width:85%; padding:10px 14px; border-radius:16px; font-size:.9rem; white-space:pre-wrap;
+    word-break:break-word; }
+  .chatt-rad.fran-du .chatt-bubbla { background:var(--grad); color:#04140e; border-bottom-right-radius:5px; }
+  .chatt-rad.fran-ai .chatt-bubbla { background:var(--surface2); border:1px solid var(--border); border-bottom-left-radius:5px; }
+  .chatt-bubbla img { max-width:100%; border-radius:10px; margin-bottom:8px; display:block; }
+  .chatt-bubbla.fel { background:color-mix(in srgb, var(--err) 14%, var(--surface2)); border-color:var(--err); }
+  .chatt-botten { border-top:1px solid var(--border); padding:12px 14px; }
+  .chatt-forhandsvisning { display:none; align-items:center; gap:8px; margin-bottom:8px; font-size:.78rem; color:var(--muted); }
+  .chatt-forhandsvisning.visas { display:flex; }
+  .chatt-forhandsvisning img { width:38px; height:38px; object-fit:cover; border-radius:8px; }
+  .chatt-input-rad { display:flex; align-items:flex-end; gap:8px; }
+  .chatt-input-rad textarea { flex:1; min-height:40px; max-height:120px; padding:10px 12px; border-radius:var(--r-sm);
+    border:1px solid var(--border); background:var(--surface2); color:var(--text); font:inherit; resize:none; }
+  .chatt-input-rad textarea:focus { outline:none; border-color:var(--accent);
+    box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+  .chatt-ikonknapp { width:40px; height:40px; padding:0; border-radius:10px; flex:0 0 auto; box-shadow:none;
+    background:var(--surface2); border:1px solid var(--border); color:var(--muted);
+    display:flex; align-items:center; justify-content:center; }
+  .chatt-ikonknapp:hover { color:var(--text); border-color:var(--accent); transform:none; box-shadow:none; }
+  .chatt-skicka { width:40px; height:40px; padding:0; border-radius:10px; flex:0 0 auto;
+    display:flex; align-items:center; justify-content:center; }
 
   .modal-bakgrund { position:fixed; inset:0; background:rgba(4,10,7,.6); backdrop-filter:blur(3px);
     display:flex; align-items:center; justify-content:center; z-index:50; padding:20px; }
@@ -204,7 +302,14 @@
     box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
   .modal-entiteter { margin-top:22px; padding-top:18px; border-top:1px solid var(--border); }
   .modal-lagg-entitet { display:flex; gap:8px; margin-top:14px; }
-  .modal-lagg-entitet select { flex:1; }
+  .modal-lagg-entitet select, .modal-lagg-entitet input { flex:1; }
+  .plant-lista { display:flex; flex-direction:column; gap:2px; }
+  .plant-rad { display:flex; align-items:center; gap:10px; padding:7px 0; font-size:.88rem;
+    border-top:1px solid var(--border); }
+  .plant-rad:first-child { border-top:0; }
+  .plant-rad .plant-ikon { font-size:1.1rem; flex:0 0 auto; }
+  .plant-rad .namn { flex:1; min-width:0; }
+  .plant-rad .varde { font-size:.76rem; color:var(--muted); }
 
   .metrik-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; margin-top:10px; }
   .metrik-tile { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r-sm);
@@ -280,6 +385,14 @@
 
 <div class="wrap" id="dashboardVy">
 
+  <div class="vy-header">
+    <h1 class="vy-titel">Översikt</h1>
+    <button class="skapa-btn" id="skapaBtn" title="Skapa nytt">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      Skapa nytt
+    </button>
+  </div>
+
   <div class="dash-grid">
 
     <div class="dash-kol">
@@ -349,82 +462,6 @@
   </div>
 
   <div class="card">
-    <h2>Lägg till zon (bädd, växthus, odlingslåda …)</h2>
-    <div class="lagg-till-zon">
-      <div><label class="lbl">Namn</label><input type="text" id="zNamn" placeholder="t.ex. Stora växthuset"></div>
-      <div><label class="lbl">Typ</label>
-        <select id="zTyp">
-          <option value="vaxthus">Växthus</option>
-          <option value="utomhus">Utomhusbädd</option>
-          <option value="inomhus">Inomhus</option>
-          <option value="odlingslada">Odlingslåda</option>
-          <option value="annat">Annat</option>
-        </select>
-      </div>
-      <button id="zLaggTillBtn">Lägg till zon</button>
-    </div>
-    <div class="status" id="zStatus"></div>
-  </div>
-
-  <div class="card">
-    <h2>Lägg till odling</h2>
-    <div class="lagg-till">
-      <div><label class="lbl">Namn</label><input type="text" id="oNamn" placeholder="t.ex. Tomater"></div>
-      <div><label class="lbl">Zon</label><select id="oZon"><option value="">Ingen zon</option></select></div>
-      <div><label class="lbl">Planterad</label><input type="date" id="oPlanterad"></div>
-      <div><label class="lbl">Skördemånad</label><input type="month" id="oSkordManad"></div>
-      <button id="oLaggTillBtn">Lägg till</button>
-    </div>
-    <div class="lagg-till" style="grid-template-columns:1fr 2fr; margin-top:10px">
-      <div><label class="lbl">Skördefönster (fritext)</label><input type="text" id="oSkord" placeholder="t.ex. aug–sep, om ni vill vara mer specifika"></div>
-      <div><label class="lbl">Anteckning</label><input type="text" id="oAnteckning" placeholder="valfritt"></div>
-    </div>
-    <p class="lbl" style="margin-top:10px">Tips: klicka på en zon eller planta i Trädgårdskartan på översikten för att lägga till jordtyp, anteckningar och koppla HA-entiteter.</p>
-    <div class="status" id="oStatus"></div>
-  </div>
-
-  <div class="card">
-    <h2>Egna block på översikten</h2>
-    <p class="lbl" style="margin-bottom:10px">Lägg till egna kort på översikten – antingen en samling HA-entiteter
-      (visas som mätvärdesrutor) eller en kamerabild. Välj om blocket ska ligga i den breda huvudkolumnen eller i
-      sidokolumnen (där hamnar det under Historik). Ordningen ändrar ni sen med ↑/↓ direkt på korten.</p>
-    <div class="lagg-till" style="grid-template-columns:1.3fr .9fr .9fr 1.5fr auto">
-      <div><label class="lbl">Rubrik</label><input type="text" id="wTitel" placeholder="t.ex. Växthusklimat"></div>
-      <div><label class="lbl">Typ</label>
-        <select id="wTyp">
-          <option value="entiteter">Entiteter</option>
-          <option value="kamera">Kamera</option>
-        </select>
-      </div>
-      <div><label class="lbl">Placering</label>
-        <select id="wKolumn">
-          <option value="sido">Sidokolumn</option>
-          <option value="huvud">Huvudkolumn</option>
-        </select>
-      </div>
-      <div>
-        <label class="lbl" id="wMalLbl">Entiteter (håll ctrl/cmd för flera)</label>
-        <select id="wEnheter" multiple size="1" style="height:42px"></select>
-        <input type="text" id="wKamera" list="haEntiteterList" autocomplete="off" placeholder="t.ex. camera.vaxthus" style="display:none">
-      </div>
-      <button id="wLaggTillBtn">Lägg till block</button>
-    </div>
-    <div class="status" id="wStatus"></div>
-  </div>
-
-  <div class="card">
-    <h2>Trädgårdskartor</h2>
-    <p class="lbl" style="margin-bottom:10px">Flera kartor låter er dela upp trädgården, t.ex. "Framsidan",
-      "Baksidan" och "Växthuset". Ni växlar mellan dem med flikarna ovanför kartan på översikten.</p>
-    <div class="lagg-till-zon">
-      <div><label class="lbl">Namn på ny karta</label><input type="text" id="kNamn" placeholder="t.ex. Baksidan"></div>
-      <div></div>
-      <button id="kLaggTillBtn">Lägg till karta</button>
-    </div>
-    <div class="status" id="kStatus"></div>
-  </div>
-
-  <div class="card">
     <h2>HA-enheter (jordfuktighet, ventiler m.m. – lägg till när ni har dem)</h2>
     <div id="enheterLista"></div>
     <div class="lagg-till-enhet" style="margin-top:14px">
@@ -444,8 +481,124 @@
 </div>
 </div>
 
+<button class="chatt-knapp" id="chattKnapp" title="Fråga trädgårdsrådgivaren">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.9 8.9 0 0 1-3.8-.9L3 21l1.9-5A8.4 8.4 0 0 1 4 11.5 8.4 8.4 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg>
+</button>
+
+<div class="chatt-panel" id="chattPanel">
+  <div class="chatt-topp">
+    <span style="font-size:1.1rem">🌿</span>
+    <span class="titel">Trädgårdsrådgivaren</span>
+    <button class="chatt-ikonknapp" id="chattStangBtn" title="Stäng" style="width:30px;height:30px">×</button>
+  </div>
+  <div class="chatt-logg" id="chattLogg">
+    <div class="chatt-tom">Fråga vad du vill om odlingen – t.ex. <em>"varför ser den här plantan ut så här?"</em> och bifoga ett foto.
+      Jag ser dina zoner, plantor, sensorvärden och väderprognos, och väger in dem i svaret.</div>
+  </div>
+  <div class="chatt-botten">
+    <div class="chatt-forhandsvisning" id="chattBildForhands">
+      <img id="chattBildMini" alt="">
+      <span style="flex:1" id="chattBildNamn"></span>
+      <button class="chatt-ikonknapp" id="chattBildTaBort" title="Ta bort bild" style="width:26px;height:26px">×</button>
+    </div>
+    <div class="chatt-input-rad">
+      <button class="chatt-ikonknapp" id="chattBildBtn" title="Bifoga foto">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+      </button>
+      <input type="file" id="chattBildFil" accept="image/*" style="display:none">
+      <textarea id="chattText" rows="1" placeholder="Skriv din fråga …"></textarea>
+      <button class="chatt-skicka" id="chattSkickaBtn" title="Skicka">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-bakgrund" id="modalBakgrund" style="display:none">
   <div class="modal" id="modalInnehall"></div>
+</div>
+
+<div class="modal-bakgrund" id="skapaBakgrund" style="display:none">
+  <div class="modal modal-bred">
+    <button class="ta-bort" id="skapaStangBtn" title="Stäng" style="position:absolute; top:16px; right:16px">×</button>
+    <h3>Skapa nytt</h3>
+    <div class="modal-sub">Zoner, plantor, kartor och egna block</div>
+
+    <div class="skapa-flikar">
+      <button class="skapa-flik aktiv" data-mal="skapaZon">Zon</button>
+      <button class="skapa-flik" data-mal="skapaOdling">Planta</button>
+      <button class="skapa-flik" data-mal="skapaKarta">Karta</button>
+      <button class="skapa-flik" data-mal="skapaBlock">Block</button>
+    </div>
+
+    <div class="skapa-panel" id="skapaZon">
+      <label class="lbl">Namn</label><input type="text" id="zNamn" placeholder="t.ex. Stora växthuset">
+      <label class="lbl" style="margin-top:12px">Typ</label>
+      <select id="zTyp">
+        <option value="vaxthus">Växthus</option>
+        <option value="utomhus">Utomhusbädd</option>
+        <option value="inomhus">Inomhus / krukor</option>
+        <option value="odlingslada">Odlingslåda</option>
+        <option value="annat">Annat</option>
+      </select>
+      <p class="lbl" style="margin-top:10px">Zonen läggs på den karta som är vald just nu.</p>
+      <button id="zLaggTillBtn" style="margin-top:12px">Lägg till zon</button>
+      <div class="status" id="zStatus"></div>
+    </div>
+
+    <div class="skapa-panel" id="skapaOdling" style="display:none">
+      <div class="skapa-rad">
+        <div><label class="lbl">Namn</label><input type="text" id="oNamn" placeholder="t.ex. Tomater"></div>
+        <div><label class="lbl">Zon</label><select id="oZon"><option value="">Ingen zon</option></select></div>
+      </div>
+      <div class="skapa-rad" style="margin-top:12px">
+        <div><label class="lbl">Planterad</label><input type="date" id="oPlanterad"></div>
+        <div><label class="lbl">Skördemånad</label><input type="month" id="oSkordManad"></div>
+      </div>
+      <div class="skapa-rad" style="margin-top:12px">
+        <div><label class="lbl">Skördefönster (fritext)</label><input type="text" id="oSkord" placeholder="t.ex. aug–sep"></div>
+        <div><label class="lbl">Anteckning</label><input type="text" id="oAnteckning" placeholder="valfritt"></div>
+      </div>
+      <button id="oLaggTillBtn" style="margin-top:14px">Lägg till planta</button>
+      <div class="status" id="oStatus"></div>
+    </div>
+
+    <div class="skapa-panel" id="skapaKarta" style="display:none">
+      <label class="lbl">Namn på ny karta</label>
+      <input type="text" id="kNamn" placeholder="t.ex. Baksidan">
+      <p class="lbl" style="margin-top:10px">Flera kartor låter er dela upp trädgården, t.ex. "Framsidan",
+        "Baksidan" och "Växthuset". Ni växlar mellan dem med flikarna ovanför kartan.</p>
+      <button id="kLaggTillBtn" style="margin-top:12px">Lägg till karta</button>
+      <div class="status" id="kStatus"></div>
+    </div>
+
+    <div class="skapa-panel" id="skapaBlock" style="display:none">
+      <div class="skapa-rad">
+        <div><label class="lbl">Rubrik</label><input type="text" id="wTitel" placeholder="t.ex. Växthusklimat"></div>
+        <div><label class="lbl">Typ</label>
+          <select id="wTyp">
+            <option value="entiteter">Entiteter</option>
+            <option value="kamera">Kamera</option>
+          </select>
+        </div>
+      </div>
+      <div class="skapa-rad" style="margin-top:12px">
+        <div><label class="lbl">Placering</label>
+          <select id="wKolumn">
+            <option value="sido">Sidokolumn (under Historik)</option>
+            <option value="huvud">Huvudkolumn</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl" id="wMalLbl">Entiteter (håll ctrl/cmd för flera)</label>
+          <select id="wEnheter" multiple size="1" style="height:42px"></select>
+          <input type="text" id="wKamera" list="haEntiteterList" autocomplete="off" placeholder="t.ex. camera.vaxthus" style="display:none">
+        </div>
+      </div>
+      <button id="wLaggTillBtn" style="margin-top:14px">Lägg till block</button>
+      <div class="status" id="wStatus"></div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -609,17 +762,20 @@ function uppdateraZonVal() {
 function entiteterFor(idLista) {
   return (idLista ?? []).map((id) => enheterStatus.find((e) => e.id === id)).filter(Boolean);
 }
-function vaxtChip(o) {
+// En planta ritas som en liten prydlig punkt i zonens yta. Namn och detaljer
+// ligger i tooltip och i Zondetaljer-panelen – kartan hålls medvetet ren.
+function vaxtPunkt(o) {
   const nuManad = new Date().toISOString().slice(0, 7);
   const skordSnart = o.skordManad === nuManad;
-  const detaljer = [o.planterad ? `Planterad ${o.planterad}` : "", o.skordManad ? `Skörd ${manadNamn(o.skordManad)}` : "", o.skordFonster, o.jord ? `Jord: ${o.jord}` : "", o.anteckning].filter(Boolean).join(" · ");
-  const enheter = entiteterFor(o.enhetIds);
-  const enhetText = enheter.filter((e) => !e.fel).map((e) => ` · ${ikonForEnhet(e.enhet)} ${esc(e.state)}${e.enhet ? esc(e.enhet) : ""}`).join("");
+  const enhetText = entiteterFor(o.enhetIds).filter((e) => !e.fel)
+    .map((e) => `${ikonForEnhet(e.enhet)} ${e.state}${e.enhet || ""}`).join(" · ");
+  const detaljer = [
+    o.namn, o.planterad ? `planterad ${o.planterad}` : "",
+    o.skordManad ? `skörd ${manadNamn(o.skordManad)}` : "", o.skordFonster,
+    o.jord ? `jord: ${o.jord}` : "", enhetText, o.anteckning,
+  ].filter(Boolean).join(" · ");
   const vald = valtMal?.typ === "odling" && valtMal.id === o.id;
-  return `<span class="vaxt-chip${vald ? " vald" : ""}" data-id="${o.id}" title="${esc(detaljer)}">
-    <span class="emoji">${ikonForVaxt(o.namn)}</span>${esc(o.namn)}${skordSnart ? " 🌾" : ""}<span class="chip-enhet">${enhetText}</span>
-    <button class="chip-ta-bort odling-ta-bort" data-id="${o.id}" title="Ta bort">×</button>
-  </span>`;
+  return `<span class="vaxt-punkt${vald ? " vald" : ""}${skordSnart ? " skord" : ""}" data-id="${o.id}" title="${esc(detaljer)}">${ikonForVaxt(o.namn)}</span>`;
 }
 // Ger äldre zoner (skapade innan den fria placeringen fanns) en utspridd
 // standardposition istället för att alla hamna i mitten på varandra.
@@ -648,21 +804,23 @@ function renderaKarta() {
       const enhetBadges = entiteterFor(z.enhetIds).filter((e) => !e.fel)
         .map((e) => `<span class="zon-enhet">${ikonForEnhet(e.enhet)} ${esc(e.state)}${e.enhet ? " " + esc(e.enhet) : ""}</span>`).join("");
       const vald = valtMal?.typ === "zon" && valtMal.id === z.id;
-      return `<div class="zon-kort zon-kort-canvas${vald ? " vald" : ""}" style="background:${info.grad}; left:${x * 100}%; top:${y * 100}%" data-id="${z.id}">
-        <button class="zon-ta-bort" data-id="${z.id}" title="Ta bort zon">×</button>
-        <div class="zon-head">
+      return `<div class="zon-kort zon-kort-canvas${vald ? " vald" : ""}" style="left:${x * 100}%; top:${y * 100}%" data-id="${z.id}">
+        <div class="zon-topp">
           ${redigerarLayout ? `<span class="zon-drag" title="Dra kortet för att flytta">✥</span>` : ""}
           <span class="ikon">${info.ikon}</span>
           <span class="namn">${esc(z.namn)}</span>
           ${enhetBadges}
+          ${redigerarLayout ? `<button class="zon-ta-bort" data-id="${z.id}" title="Ta bort zon">×</button>` : ""}
         </div>
-        <div class="vaxt-chips">${lista.length ? lista.map(vaxtChip).join("") : '<span class="zon-tom">Inget planterat än</span>'}</div>
+        <div class="zon-yta ${esc(z.typ || "annat")}">
+          <div class="zon-plantor">${lista.length ? lista.map(vaxtPunkt).join("") : '<span class="zon-tom">Inget planterat än</span>'}</div>
+        </div>
       </div>`;
     }).join("");
   }
   $("tradgardOkat").innerHTML = okategoriserade.length ? `<div class="zon-kort okategoriserat">
-      <div class="zon-head"><span class="ikon">📍</span><span class="namn">Okategoriserat</span></div>
-      <div class="vaxt-chips">${okategoriserade.map(vaxtChip).join("")}</div>
+      <div class="zon-topp"><span class="ikon">📍</span><span class="namn">Utan zon</span></div>
+      <div class="zon-yta annat"><div class="zon-plantor">${okategoriserade.map(vaxtPunkt).join("")}</div></div>
     </div>` : "";
 }
 
@@ -1048,6 +1206,26 @@ function avmarkeraMal() {
   renderaDetaljPanel();
   renderaKarta();
 }
+// Plantor i en zon, direkt i detaljpanelen – lägga till går alltid, men
+// borttagning kräver att Redigera är påslaget så man inte råkar radera.
+function zonPlantorHtml(z) {
+  const lista = odlingar.filter((o) => o.zonId === z.id);
+  return `<div class="modal-entiteter">
+    <label class="lbl">Plantor i zonen</label>
+    ${lista.length ? `<div class="plant-lista">${lista.map((o) => `
+      <div class="plant-rad">
+        <span class="plant-ikon">${ikonForVaxt(o.namn)}</span>
+        <span class="namn">${esc(o.namn)}</span>
+        ${o.skordManad ? `<span class="varde">${esc(manadNamn(o.skordManad))}</span>` : ""}
+        ${redigerarLayout ? `<button class="ta-bort odling-ta-bort" data-id="${esc(o.id)}" title="Ta bort planta" style="position:static">×</button>` : ""}
+      </div>`).join("")}</div>` : '<div class="tom">Inga plantor här än.</div>'}
+    <div class="modal-lagg-entitet">
+      <input type="text" id="zNyPlanta" placeholder="Ny planta, t.ex. Tomater">
+      <button id="zNyPlantaBtn">Lägg till</button>
+    </div>
+    ${redigerarLayout ? "" : '<p class="lbl" style="margin-top:8px">Slå på <strong>Redigera</strong> ovanför kartan för att kunna ta bort plantor.</p>'}
+  </div>`;
+}
 function detaljHistorikHtml(enhetIds) {
   const mal = (enhetIds ?? []).map((eid) => {
     const enhet = enheterStatus.find((e) => e.id === eid);
@@ -1083,6 +1261,7 @@ function renderaDetaljPanel() {
       <div class="falt"><label class="lbl">Anteckning</label><textarea id="mAnteckning" placeholder="fritt att skriva">${esc(z.anteckning ?? "")}</textarea></div>
       <button id="mSparaBtn">Spara</button>
       <div class="status" id="mStatus"></div>
+      ${zonPlantorHtml(z)}
       ${kopplaEntiteterHtml(z.enhetIds)}
       ${detaljHistorikHtml(z.enhetIds)}`;
   } else {
@@ -1216,6 +1395,32 @@ document.addEventListener("click", async (e) => {
   // Popup: avmarkera i detaljpanelen
   if (e.target.closest("#dAvmarkeraBtn")) { avmarkeraMal(); return; }
 
+  // Lägg till planta direkt i den valda zonen
+  if (e.target.closest("#zNyPlantaBtn") && valtMal?.typ === "zon") {
+    const namn = $("zNyPlanta").value.trim();
+    if (!namn) return;
+    await fetch(`${BAS}api/odlingar`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ namn, zonId: valtMal.id }),
+    });
+    await laddaOdlingar();
+    renderaDetaljPanel();
+    return;
+  }
+
+  // Skapa-popupen
+  if (e.target.closest("#skapaBtn")) { $("skapaBakgrund").style.display = "flex"; return; }
+  if (e.target.closest("#skapaStangBtn") || e.target.id === "skapaBakgrund") {
+    $("skapaBakgrund").style.display = "none";
+    return;
+  }
+  const skapaFlik = e.target.closest(".skapa-flik");
+  if (skapaFlik) {
+    document.querySelectorAll(".skapa-flik").forEach((f) => f.classList.toggle("aktiv", f === skapaFlik));
+    document.querySelectorAll(".skapa-panel").forEach((p) => { p.style.display = p.id === skapaFlik.dataset.mal ? "" : "none"; });
+    return;
+  }
+
   // Kartflikar
   const flikTaBort = e.target.closest(".karta-flik-ta-bort");
   if (flikTaBort) {
@@ -1270,10 +1475,8 @@ document.addEventListener("click", async (e) => {
     return;
   }
 
-  if (redigerarLayout) return; // i redigeringsläge ska klick bara flytta zoner, inte markera dem
-
   // Välj mål: klick på en planta (chip) väger tyngre än klick på hela zon-kortet
-  const chipEl = e.target.closest(".vaxt-chip");
+  const chipEl = e.target.closest(".vaxt-punkt");
   if (chipEl) { valjMal("odling", chipEl.dataset.id); return; }
   const zonKortEl = e.target.closest(".zon-kort");
   if (zonKortEl && !zonKortEl.classList.contains("okategoriserat")) { valjMal("zon", zonKortEl.dataset.id); return; }
@@ -1330,6 +1533,7 @@ $("redigeraLayoutBtn").addEventListener("click", () => {
   btn.lastChild.textContent = redigerarLayout ? " Klar, lås positionerna" : " Redigera layout";
   $("tradgardKarta").classList.toggle("redigerar", redigerarLayout);
   renderaKarta();
+  renderaDetaljPanel(); // ta bort-knapparna på plantor styrs av redigeringsläget
 });
 
 async function laddaInstallningar() {
@@ -1369,6 +1573,99 @@ $("nSparaBtn").addEventListener("click", async () => {
   } catch (e) { st.textContent = "Kunde inte spara: " + e.message; st.className = "status err"; }
   finally { $("nSparaBtn").disabled = false; }
 });
+
+// ---- AI-chatt ----
+// Historiken hålls i minnet (per flik) – frågorna handlar om just nu, och
+// vi slipper spara foton på servern.
+let chattHistorik = [];
+let chattBild = null; // { typ, data (base64), namn }
+let chattVantar = false;
+
+function renderaChatt() {
+  if (!chattHistorik.length) return;
+  // OBS: ingen indentering inuti .chatt-bubbla – den har white-space:pre-wrap,
+  // så radbrytningar och blanksteg i mallen skulle synas i bubblan.
+  $("chattLogg").innerHTML = chattHistorik.map((m) =>
+    `<div class="chatt-rad fran-${m.roll === "ai" ? "ai" : "du"}">` +
+    `<div class="chatt-bubbla${m.fel ? " fel" : ""}">` +
+    (m.bild ? `<img src="data:${esc(m.bild.typ)};base64,${m.bild.data}" alt="Bifogat foto">` : "") +
+    esc(m.text) +
+    `</div></div>`).join("") +
+    (chattVantar ? '<div class="chatt-rad fran-ai"><div class="chatt-bubbla">Tänker …</div></div>' : "");
+  $("chattLogg").scrollTop = $("chattLogg").scrollHeight;
+}
+
+// Skalar ner fotot i webbläsaren innan det skickas – mobilfoton är annars
+// flera megabyte, och Claude behöver inte mer än ~1600px för att se en planta.
+function laddaBild(fil) {
+  return new Promise((resolve, reject) => {
+    const lasare = new FileReader();
+    lasare.onerror = () => reject(new Error("kunde inte läsa filen"));
+    lasare.onload = () => {
+      const bild = new Image();
+      bild.onerror = () => reject(new Error("kunde inte tolka bilden"));
+      bild.onload = () => {
+        const max = 1600;
+        const skala = Math.min(1, max / Math.max(bild.width, bild.height));
+        const c = document.createElement("canvas");
+        c.width = Math.round(bild.width * skala);
+        c.height = Math.round(bild.height * skala);
+        c.getContext("2d").drawImage(bild, 0, 0, c.width, c.height);
+        resolve({ typ: "image/jpeg", data: c.toDataURL("image/jpeg", 0.85).split(",")[1], namn: fil.name });
+      };
+      bild.src = lasare.result;
+    };
+    lasare.readAsDataURL(fil);
+  });
+}
+
+function visaChattBild() {
+  const ruta = $("chattBildForhands");
+  ruta.classList.toggle("visas", !!chattBild);
+  if (chattBild) {
+    $("chattBildMini").src = `data:${chattBild.typ};base64,${chattBild.data}`;
+    $("chattBildNamn").textContent = chattBild.namn;
+  }
+}
+
+$("chattKnapp").addEventListener("click", () => {
+  $("chattPanel").classList.toggle("oppen");
+  if ($("chattPanel").classList.contains("oppen")) $("chattText").focus();
+});
+$("chattStangBtn").addEventListener("click", () => $("chattPanel").classList.remove("oppen"));
+$("chattBildBtn").addEventListener("click", () => $("chattBildFil").click());
+$("chattBildTaBort").addEventListener("click", () => { chattBild = null; $("chattBildFil").value = ""; visaChattBild(); });
+$("chattBildFil").addEventListener("change", async (e) => {
+  const fil = e.target.files?.[0];
+  if (!fil) return;
+  try { chattBild = await laddaBild(fil); visaChattBild(); }
+  catch (err) { alert("Kunde inte läsa bilden: " + err.message); }
+});
+$("chattText").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); skickaChatt(); }
+});
+$("chattSkickaBtn").addEventListener("click", skickaChatt);
+
+async function skickaChatt() {
+  if (chattVantar) return;
+  const text = $("chattText").value.trim();
+  if (!text && !chattBild) return;
+  chattHistorik.push({ roll: "du", text: text || "(foto)", bild: chattBild });
+  $("chattText").value = "";
+  chattBild = null; $("chattBildFil").value = ""; visaChattBild();
+  chattVantar = true; renderaChatt();
+  try {
+    const res = await fetch(`${BAS}api/chatt`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ meddelanden: chattHistorik }),
+    });
+    const data = await res.json();
+    chattHistorik.push(data.text ? { roll: "ai", text: data.text } : { roll: "ai", text: data.fel || "Något gick fel.", fel: true });
+  } catch (e) {
+    chattHistorik.push({ roll: "ai", text: "Kunde inte nå servern: " + e.message, fel: true });
+  }
+  chattVantar = false; renderaChatt();
+}
 
 (async () => {
   await laddaVader();

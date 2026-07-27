@@ -233,6 +233,68 @@ async function hamtaSmartBevattning() {
   }
 }
 
+// ---- AI-chatt (Claude, med bildstöd) ----
+// Användaren kan fråga t.ex. "varför ser den här plantan ut så här?" och
+// bifoga ett foto. Vi skickar med hela trädgårdssammanfattningen (zoner,
+// odlingar, sensorvärden, väder) plus en kort historiktrend per kopplad
+// sensor, så svaret kan väga in både bilden och den faktiska mätdatan.
+const CHATT_MODELL = "claude-opus-5";
+
+function historikSammanfattning(d) {
+  const rader = [];
+  const enhetIder = new Set([...d.zoner.flatMap((z) => z.enhetIds ?? []), ...d.odlingar.flatMap((o) => o.enhetIds ?? [])]);
+  for (const enhetId of enhetIder) {
+    const enhet = d.enheter.find((e) => e.id === enhetId);
+    if (!enhet) continue;
+    const punkter = (d.historik ?? []).filter((p) => p.enhetId === enhetId).sort((a, b) => new Date(a.tid) - new Date(b.tid));
+    if (punkter.length < 2) continue;
+    const varden = punkter.map((p) => p.varde);
+    const forsta = punkter[0], sista = punkter[punkter.length - 1];
+    rader.push(`- ${enhet.namn}: nu ${sista.varde}, min ${Math.min(...varden)}, max ${Math.max(...varden)} (${punkter.length} mätningar sedan ${forsta.tid.slice(0, 10)})`);
+  }
+  return rader.length ? rader.join("\n") : "(ingen loggad historik ännu)";
+}
+
+async function svaraChatt(meddelanden) {
+  if (!ANTHROPIC_API_KEY) return { fel: "ANTHROPIC_API_KEY är inte konfigurerad – lägg till den i docker-compose.yml." };
+  const [d, vader] = await Promise.all([lasData(), hamtaVader()]);
+  const sammanfattning = await byggTradgardsSammanfattning(d, vader);
+  const apiMeddelanden = (meddelanden ?? []).slice(-20).map((m) => {
+    const innehall = [];
+    if (m.bild?.data) innehall.push({ type: "image", source: { type: "base64", media_type: m.bild.typ || "image/jpeg", data: m.bild.data } });
+    if (m.text) innehall.push({ type: "text", text: m.text });
+    return { role: m.roll === "ai" ? "assistant" : "user", content: innehall.length ? innehall : [{ type: "text", text: "(tomt)" }] };
+  });
+  if (!apiMeddelanden.length) return { fel: "inget meddelande" };
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: CHATT_MODELL,
+        max_tokens: 2000,
+        system: `Du är en kunnig och konkret trädgårdsrådgivare som hjälper ett par med sin odling. Svara på svenska, kort och praktiskt – hellre två träffsäkra stycken än en lång uppsats.
+
+Om användaren bifogar ett foto: beskriv först kort vad du faktiskt ser på plantan (färg, fläckar, form, jord), och koppla sedan ihop det med mätdatan nedan om den är relevant. Var tydlig med vad som är säkert och vad som är en gissning – hitta aldrig på mätvärden som inte står här.
+
+Aktuell trädgård:
+${sammanfattning}
+
+Sensorhistorik:
+${historikSammanfattning(d)}`,
+        messages: apiMeddelanden,
+      }),
+    });
+    if (!res.ok) return { fel: `Claude svarade ${res.status}: ${(await res.text()).slice(0, 300)}` };
+    const data = await res.json();
+    if (data.stop_reason === "refusal") return { fel: "Claude avböjde att svara på den frågan." };
+    const text = data.content?.filter((b) => b.type === "text").map((b) => b.text).join("\n").trim();
+    return text ? { text } : { fel: "Tomt svar från Claude" };
+  } catch (err) {
+    return { fel: err.message };
+  }
+}
+
 // ---- Skördepåminnelser ----
 // Körs internt i containern (inte via GitHub Actions) eftersom journalen
 // bara finns lokalt i den här datafilen – ingen anledning att exponera den
@@ -336,9 +398,17 @@ function skickaJson(res, status, body) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
   res.end(JSON.stringify(body));
 }
+// Bilder i chatten skickas som base64 i JSON-kroppen, så taket är tilltaget –
+// men inte obegränsat, så en trasig klient inte kan äta upp minnet.
+const MAX_BODY_BYTES = 12 * 1024 * 1024;
 async function lasBody(req) {
   const delar = [];
-  for await (const del of req) delar.push(del);
+  let storlek = 0;
+  for await (const del of req) {
+    storlek += del.length;
+    if (storlek > MAX_BODY_BYTES) throw new Error("förfrågan är för stor");
+    delar.push(del);
+  }
   return delar.length ? JSON.parse(Buffer.concat(delar).toString("utf8")) : {};
 }
 
@@ -513,6 +583,10 @@ const server = createServer(async (req, res) => {
     if (req.method === "GET" && p.endsWith("/api/historik")) {
       const { historik } = await lasData();
       return skickaJson(res, 200, historik);
+    }
+    if (req.method === "POST" && p.endsWith("/api/chatt")) {
+      const { meddelanden } = await lasBody(req);
+      return skickaJson(res, 200, await svaraChatt(meddelanden));
     }
     if (req.method === "GET" && p.endsWith("/api/bevattning")) {
       return skickaJson(res, 200, await hamtaSmartBevattning());
