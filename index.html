@@ -84,9 +84,11 @@
   .karta-canvas-wrap { position:relative; }
   .karta-canvas { position:relative; width:100%; aspect-ratio:16/11; min-height:380px; border-radius:var(--r-sm);
     margin-top:4px; overflow:hidden; background:
-      radial-gradient(60% 50% at 20% 15%, color-mix(in srgb, var(--accent) 14%, transparent), transparent),
-      linear-gradient(160deg, color-mix(in srgb, var(--accent) 10%, var(--surface2)), var(--surface2));
-    border:1px dashed var(--border); }
+      radial-gradient(60% 50% at 20% 15%, color-mix(in srgb, var(--accent) 10%, transparent), transparent),
+      linear-gradient(90deg, color-mix(in srgb, var(--text) 5%, transparent) 1px, transparent 1px) 0 0/32px 32px,
+      linear-gradient(color-mix(in srgb, var(--text) 5%, transparent) 1px, transparent 1px) 0 0/32px 32px,
+      linear-gradient(160deg, color-mix(in srgb, var(--accent) 8%, var(--surface2)), var(--surface2));
+    border:1px solid var(--border); }
   .karta-plus { position:absolute; bottom:-16px; right:14px; width:48px; height:48px; border-radius:50%;
     font-size:1.6rem; line-height:1; display:flex; align-items:center; justify-content:center; padding:0; z-index:5; }
   .zon-kort-canvas { position:absolute; width:230px; max-width:min(230px,70vw); transform:translate(-50%,-50%);
@@ -148,11 +150,23 @@
   .modal textarea:focus { outline:none; border-color:var(--accent);
     box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
   .modal-entiteter { margin-top:22px; padding-top:18px; border-top:1px solid var(--border); }
-  .modal-entitet-rad { display:flex; align-items:center; gap:8px; padding:6px 0; font-size:.86rem; }
-  .modal-entitet-rad .namn { flex:1; min-width:0; }
-  .modal-entitet-rad .varde { font-variant-numeric:tabular-nums; color:var(--muted); }
-  .modal-lagg-entitet { display:flex; gap:8px; margin-top:10px; }
+  .modal-lagg-entitet { display:flex; gap:8px; margin-top:14px; }
   .modal-lagg-entitet select { flex:1; }
+
+  .metrik-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; margin-top:10px; }
+  .metrik-tile { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r-sm);
+    padding:14px; position:relative; }
+  .metrik-tile.god { background:color-mix(in srgb, var(--ok) 14%, var(--surface2)); border-color:color-mix(in srgb, var(--ok) 35%, var(--border)); }
+  .metrik-tile.varning { background:color-mix(in srgb, var(--warn) 14%, var(--surface2)); border-color:color-mix(in srgb, var(--warn) 35%, var(--border)); }
+  .metrik-tile .topp { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .metrik-tile .ikon { font-size:1.15rem; }
+  .metrik-tile .ta-bort-liten { background:none; border:0; box-shadow:none; color:var(--muted); opacity:.6;
+    cursor:pointer; font-size:.9rem; padding:0; line-height:1; }
+  .metrik-tile .ta-bort-liten:hover { opacity:1; color:var(--err); transform:none; }
+  .metrik-tile .varde { font-size:1.5rem; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.1; }
+  .metrik-tile .enhet-namn { font-size:.76rem; color:var(--muted); margin-top:4px; }
+  .metrik-tile .not { font-size:.74rem; margin-top:6px; opacity:.85; }
+  .metrik-tile.fel .varde { font-size:.86rem; color:var(--err); font-weight:600; }
 
   .detalj-panel .tom { padding:8px 0; }
   .detalj-head { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
@@ -708,18 +722,45 @@ async function sparaOdling(id, patch) {
   await laddaOdlingar();
   if (valtMal?.typ === "odling" && valtMal.id === id) renderaDetaljPanel();
 }
+// Enkel tumregel för statusfärg/kommentar per mätvärde, rent kosmetiskt –
+// ingen växtvetenskap, bara en snabb visuell fingervisning likt "Good"/
+// "Add compost"-texterna i referensdesignen.
+function metrikStatus(enhet, varde) {
+  const e = (enhet || "").toLowerCase();
+  const v = Number(varde);
+  if (!Number.isFinite(v)) return { niva: "", text: "" };
+  if (e.includes("%") ) {
+    if (v < 20) return { niva: "varning", text: "Torrt – dags att vattna" };
+    if (v > 70) return { niva: "varning", text: "Mycket fuktigt – vänta med vattning" };
+    return { niva: "god", text: "Bra nivå" };
+  }
+  if (e.includes("°")) {
+    if (v < 5) return { niva: "varning", text: "Kallt – frostrisk för känsliga plantor" };
+    if (v > 32) return { niva: "varning", text: "Varmt – se till att det vädras/vattnas" };
+    return { niva: "god", text: "Behaglig temperatur" };
+  }
+  return { niva: "", text: "" };
+}
 function kopplaEntiteterHtml(idLista) {
   const kopplade = entiteterFor(idLista);
   const lediga = enheterStatus.filter((e) => !(idLista ?? []).includes(e.id));
+  const tiles = kopplade.map((e) => {
+    if (e.fel) return `<div class="metrik-tile fel">
+      <div class="topp"><span class="ikon">⚠️</span><button class="ta-bort-liten modal-enhet-ta-bort" data-id="${e.id}" title="Koppla bort">×</button></div>
+      <div class="varde">${esc(e.fel)}</div>
+      <div class="enhet-namn">${esc(e.namn)}</div>
+    </div>`;
+    const status = metrikStatus(e.enhet, e.state);
+    return `<div class="metrik-tile ${status.niva}">
+      <div class="topp"><span class="ikon">${ikonForEnhet(e.enhet)}</span><button class="ta-bort-liten modal-enhet-ta-bort" data-id="${e.id}" title="Koppla bort">×</button></div>
+      <div class="varde">${esc(e.state)}${e.enhet ? `<span style="font-size:.9rem;font-weight:600"> ${esc(e.enhet)}</span>` : ""}</div>
+      <div class="enhet-namn">${esc(e.namn)}</div>
+      ${status.text ? `<div class="not">${esc(status.text)}</div>` : ""}
+    </div>`;
+  }).join("");
   return `<div class="modal-entiteter">
     <label class="lbl">Kopplade entiteter</label>
-    ${kopplade.length ? kopplade.map((e) => `
-      <div class="modal-entitet-rad">
-        <span>${ikonForEnhet(e.enhet)}</span>
-        <span class="namn">${esc(e.namn)}</span>
-        <span class="varde">${e.fel ? esc(e.fel) : esc(e.state) + (e.enhet ? " " + esc(e.enhet) : "")}</span>
-        <button class="ta-bort modal-enhet-ta-bort" data-id="${e.id}" title="Koppla bort" style="position:static">×</button>
-      </div>`).join("") : '<div class="tom">Inga entiteter kopplade.</div>'}
+    ${kopplade.length ? `<div class="metrik-grid">${tiles}</div>` : '<div class="tom">Inga entiteter kopplade.</div>'}
     ${lediga.length ? `
     <div class="modal-lagg-entitet">
       <select id="mEnhetVal">${lediga.map((e) => `<option value="${esc(e.id)}">${esc(e.namn)}</option>`).join("")}</select>
