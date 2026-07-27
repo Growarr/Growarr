@@ -426,23 +426,35 @@ const server = createServer(async (req, res) => {
       return skickaJson(res, 200, data);
     }
     if (req.method === "POST" && p.endsWith("/api/widgets")) {
-      const { titel, typ, enhetIds, entityId } = await lasBody(req);
+      const { titel, typ, enhetIds, entityId, kolumn } = await lasBody(req);
       if (!titel) return skickaJson(res, 400, { fel: "titel saknas" });
       const data = await muteraData((d) => {
         d.widgets.push({
           id: randomUUID(), titel, typ: typ === "kamera" ? "kamera" : "entiteter",
-          enhetIds: enhetIds ?? [], entityId: entityId || "",
+          enhetIds: enhetIds ?? [], entityId: entityId || "", kolumn: kolumn === "huvud" ? "huvud" : "sido",
         });
       });
       return skickaJson(res, 200, data);
     }
     if (req.method === "POST" && p.endsWith("/api/widgets/uppdatera")) {
-      const { id, titel, enhetIds, entityId } = await lasBody(req);
+      const { id, titel, enhetIds, entityId, kolumn } = await lasBody(req);
       const data = await muteraData((d) => {
         const w = d.widgets.find((x) => x.id === id);
         if (w) Object.assign(w, {
           titel: titel ?? w.titel, enhetIds: enhetIds ?? w.enhetIds ?? [], entityId: entityId ?? w.entityId ?? "",
+          kolumn: kolumn ?? w.kolumn ?? "sido",
         });
+      });
+      return skickaJson(res, 200, data);
+    }
+    // Sparar ny ordning på blocken (upp/ner-pilarna i panelen)
+    if (req.method === "POST" && p.endsWith("/api/widgets/ordna")) {
+      const { ids } = await lasBody(req);
+      const data = await muteraData((d) => {
+        const perId = new Map(d.widgets.map((w) => [w.id, w]));
+        const ordnade = (ids ?? []).map((id) => perId.get(id)).filter(Boolean);
+        const kvar = d.widgets.filter((w) => !(ids ?? []).includes(w.id));
+        d.widgets = [...ordnade, ...kvar];
       });
       return skickaJson(res, 200, data);
     }

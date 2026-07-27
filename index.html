@@ -100,9 +100,12 @@
   .widget-kamera { width:100%; border-radius:var(--r-sm); display:block; background:var(--surface2); }
   .widget-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
   .widget-head h2 { margin-bottom:0; }
-  .widget-ta-bort { background:none; border:0; box-shadow:none; color:var(--muted); opacity:.6;
-    cursor:pointer; font-size:1rem; padding:0 2px; line-height:1; }
-  .widget-ta-bort:hover { opacity:1; color:var(--err); transform:none; }
+  .widget-verktyg { display:flex; align-items:center; gap:2px; flex:0 0 auto; }
+  .widget-verktyg button { background:none; border:0; box-shadow:none; color:var(--muted); opacity:.6;
+    cursor:pointer; font-size:1rem; padding:2px 5px; line-height:1; border-radius:6px; }
+  .widget-verktyg button:hover:not(:disabled) { opacity:1; color:var(--text); background:var(--surface2); transform:none; }
+  .widget-verktyg button:disabled { opacity:.2; cursor:default; }
+  .widget-ta-bort:hover:not(:disabled) { color:var(--err) !important; }
 
   label.lbl { display:block; font-size:.78rem; color:var(--muted); margin-bottom:6px; font-weight:500; }
   input[type=text], input[type=date], select {
@@ -308,6 +311,8 @@
           <div class="tom">Klicka på en zon eller planta i kartan ovan för att se och redigera detaljer här.</div>
         </div>
       </div>
+
+      <div id="widgetHuvud"></div>
     </div>
 
     <div class="dash-kol">
@@ -316,12 +321,12 @@
         <div class="insikt" id="bevattningInnehall">Laddar …</div>
       </div>
 
-      <div id="widgetContainer"></div>
-
       <div class="card">
         <h2>Historik</h2>
         <div id="historikInnehall" class="historik-grid">Laddar …</div>
       </div>
+
+      <div id="widgetSido"></div>
     </div>
 
   </div>
@@ -380,14 +385,21 @@
 
   <div class="card">
     <h2>Egna block på översikten</h2>
-    <p class="lbl" style="margin-bottom:10px">Lägg till egna kort i högerkolumnen på översikten – antingen en samling
-      HA-entiteter (visas som mätvärdesrutor) eller en kamerabild.</p>
-    <div class="lagg-till" style="grid-template-columns:1.4fr 1fr 1.6fr auto">
+    <p class="lbl" style="margin-bottom:10px">Lägg till egna kort på översikten – antingen en samling HA-entiteter
+      (visas som mätvärdesrutor) eller en kamerabild. Välj om blocket ska ligga i den breda huvudkolumnen eller i
+      sidokolumnen (där hamnar det under Historik). Ordningen ändrar ni sen med ↑/↓ direkt på korten.</p>
+    <div class="lagg-till" style="grid-template-columns:1.3fr .9fr .9fr 1.5fr auto">
       <div><label class="lbl">Rubrik</label><input type="text" id="wTitel" placeholder="t.ex. Växthusklimat"></div>
       <div><label class="lbl">Typ</label>
         <select id="wTyp">
           <option value="entiteter">Entiteter</option>
           <option value="kamera">Kamera</option>
+        </select>
+      </div>
+      <div><label class="lbl">Placering</label>
+        <select id="wKolumn">
+          <option value="sido">Sidokolumn</option>
+          <option value="huvud">Huvudkolumn</option>
         </select>
       </div>
       <div>
@@ -793,8 +805,15 @@ $("eEntityId").addEventListener("input", () => {
 });
 
 // ---- Egna block (widgets) på översikten ----
+function widgetKolumn(w) { return w.kolumn === "huvud" ? "huvud" : "sido"; }
 function renderaWidgets() {
-  $("widgetContainer").innerHTML = widgets.map((w) => {
+  const huvud = widgets.filter((w) => widgetKolumn(w) === "huvud");
+  const sido = widgets.filter((w) => widgetKolumn(w) === "sido");
+  $("widgetHuvud").innerHTML = huvud.map((w, i) => widgetKortHtml(w, i, huvud.length)).join("");
+  $("widgetSido").innerHTML = sido.map((w, i) => widgetKortHtml(w, i, sido.length)).join("");
+}
+function widgetKortHtml(w, index, antal) {
+  {
     let innehall;
     if (w.typ === "kamera") {
       // cachebuster i URL:en så bilden faktiskt uppdateras vid omritning
@@ -821,11 +840,36 @@ function renderaWidgets() {
     return `<div class="card">
       <div class="widget-head">
         <h2>${esc(w.titel)}</h2>
-        <button class="widget-ta-bort" data-id="${esc(w.id)}" title="Ta bort block">×</button>
+        <div class="widget-verktyg">
+          <button class="widget-upp" data-id="${esc(w.id)}" title="Flytta upp" ${index === 0 ? "disabled" : ""}>↑</button>
+          <button class="widget-ner" data-id="${esc(w.id)}" title="Flytta ner" ${index === antal - 1 ? "disabled" : ""}>↓</button>
+          <button class="widget-byt-kolumn" data-id="${esc(w.id)}" title="Flytta till andra kolumnen">⇄</button>
+          <button class="widget-ta-bort" data-id="${esc(w.id)}" title="Ta bort block">×</button>
+        </div>
       </div>
       ${innehall}
     </div>`;
-  }).join("");
+  }
+}
+
+// Byter plats på ett block och dess granne inom samma kolumn, och sparar
+// hela den nya ordningen (servern lagrar widgets som en ordnad lista).
+async function flyttaWidget(id, steg) {
+  const w = widgets.find((x) => x.id === id);
+  if (!w) return;
+  const kol = widgetKolumn(w);
+  const iKol = widgets.filter((x) => widgetKolumn(x) === kol);
+  const andra = widgets.filter((x) => widgetKolumn(x) !== kol);
+  const i = iKol.findIndex((x) => x.id === id);
+  const j = i + steg;
+  if (j < 0 || j >= iKol.length) return;
+  [iKol[i], iKol[j]] = [iKol[j], iKol[i]];
+  const nyOrdning = kol === "huvud" ? [...iKol, ...andra] : [...andra, ...iKol];
+  await fetch(`${BAS}api/widgets/ordna`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ids: nyOrdning.map((x) => x.id) }),
+  });
+  await laddaOdlingar();
 }
 
 // ---- Historik ----
@@ -1207,6 +1251,24 @@ document.addEventListener("click", async (e) => {
     await laddaOdlingar();
     return;
   }
+  // Flytta block upp/ner inom sin kolumn
+  const widgetUpp = e.target.closest(".widget-upp");
+  if (widgetUpp) { await flyttaWidget(widgetUpp.dataset.id, -1); return; }
+  const widgetNer = e.target.closest(".widget-ner");
+  if (widgetNer) { await flyttaWidget(widgetNer.dataset.id, 1); return; }
+  // Flytta block mellan huvud- och sidokolumn
+  const widgetByt = e.target.closest(".widget-byt-kolumn");
+  if (widgetByt) {
+    const w = widgets.find((x) => x.id === widgetByt.dataset.id);
+    if (w) {
+      await fetch(`${BAS}api/widgets/uppdatera`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: w.id, kolumn: widgetKolumn(w) === "huvud" ? "sido" : "huvud" }),
+      });
+      await laddaOdlingar();
+    }
+    return;
+  }
 
   if (redigerarLayout) return; // i redigeringsläge ska klick bara flytta zoner, inte markera dem
 
@@ -1252,7 +1314,7 @@ $("wLaggTillBtn").addEventListener("click", async () => {
   try {
     await fetch(`${BAS}api/widgets`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ titel, typ, enhetIds, entityId }),
+      body: JSON.stringify({ titel, typ, enhetIds, entityId, kolumn: $("wKolumn").value }),
     });
     $("wTitel").value = ""; $("wKamera").value = "";
     await laddaOdlingar();

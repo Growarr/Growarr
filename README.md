@@ -22,9 +22,12 @@ Två delar i ett repo:
      "Baksidan", "Växthuset"). Klicka en flik för att byta karta; zoner hör
      till den karta de skapades på. Nya kartor läggs till med **+ Ny karta**
      eller från Inställningar.
-   - **Egna block** — lägg till egna kort i högerkolumnen: antingen en
-     samling HA-entiteter (visas som färgkodade mätvärdesrutor) eller en
-     kamerabild från en HA-kameraentitet. Skapas under Inställningar.
+   - **Egna block** — lägg till egna kort på översikten: antingen en samling
+     HA-entiteter (visas som färgkodade mätvärdesrutor) eller en kamerabild
+     från en HA-kameraentitet. Skapas under Inställningar, där ni också
+     väljer om blocket ska ligga i den breda huvudkolumnen eller i
+     sidokolumnen (under Historik). På varje block finns ↑/↓ för att ändra
+     ordning och ⇄ för att flytta det till den andra kolumnen.
    - **Trädgårdskarta** — en fritt placerbar karta. Klicka **Redigera layout**
      för att slå på flytt-läge (✥-handtag dyker upp på varje zon, dra dit ni
      vill ha dem), klicka **Klar, lås positionerna** när ni är nöjda för att
@@ -168,8 +171,9 @@ på fel ställe.
 | POST | `/api/zoner` | `{ namn, typ?, x?, y?, kartaId? }` | Lägger till en zon (`typ`: `vaxthus`/`utomhus`/`inomhus`/`odlingslada`/`annat`) |
 | POST | `/api/kartor` | `{ namn }` | Lägger till en trädgårdskarta (flik) |
 | POST | `/api/kartor/ta-bort` | `{ id }` | Tar bort en karta (zonerna flyttas till första kvarvarande) |
-| POST | `/api/widgets` | `{ titel, typ, enhetIds?, entityId? }` | Lägger till ett eget block (`typ`: `entiteter`/`kamera`) |
-| POST | `/api/widgets/uppdatera` | `{ id, titel?, enhetIds?, entityId? }` | Uppdaterar ett eget block |
+| POST | `/api/widgets` | `{ titel, typ, enhetIds?, entityId?, kolumn? }` | Lägger till ett eget block (`typ`: `entiteter`/`kamera`, `kolumn`: `huvud`/`sido`) |
+| POST | `/api/widgets/uppdatera` | `{ id, titel?, enhetIds?, entityId?, kolumn? }` | Uppdaterar ett eget block |
+| POST | `/api/widgets/ordna` | `{ ids: [...] }` | Sparar ny ordning på blocken (↑/↓ i panelen) |
 | POST | `/api/widgets/ta-bort` | `{ id }` | Tar bort ett eget block |
 | GET | `/api/kamera?entityId=` | – | Proxar en ögonblicksbild från en HA-kameraentitet (HA-token stannar på servern) |
 | POST | `/api/zoner/uppdatera` | `{ id, jord?, anteckning?, enhetIds?, x?, y? }` | Uppdaterar en zon, inkl. position på kartan (dragning) |
