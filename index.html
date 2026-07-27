@@ -34,18 +34,27 @@
   .dashboard-rad .card { margin-top:0; }
   @media (max-width:760px) { .dashboard-rad { grid-template-columns:1fr; } }
 
-  .topbar { border-bottom:1px solid var(--border); backdrop-filter:blur(10px);
-    background:color-mix(in srgb, var(--surface) 82%, transparent); position:sticky; top:0; z-index:5; }
-  .topbar .wrap { display:flex; align-items:center; gap:12px; height:64px; }
+  .app-shell { display:flex; align-items:stretch; min-height:100vh; }
+  .sidebar { width:76px; flex:0 0 auto; background:var(--surface); border-right:1px solid var(--border);
+    display:flex; flex-direction:column; align-items:center; gap:14px; padding:22px 0;
+    position:sticky; top:0; height:100vh; z-index:5; }
+  .app-content { flex:1; min-width:0; }
   .brand-mark { width:34px; height:34px; border-radius:10px; background:var(--grad);
-    display:flex; align-items:center; justify-content:center; color:#fff; flex:0 0 auto;
+    display:flex; align-items:center; justify-content:center; color:#fff; flex:0 0 auto; margin-bottom:8px;
     box-shadow:0 6px 16px -4px color-mix(in srgb, var(--accent) 60%, transparent); }
-  .brand-text { font-weight:700; font-size:1.05rem; letter-spacing:-.01em; }
-  .installningar-btn { margin-left:auto; width:38px; height:38px; padding:0; border-radius:10px; flex:0 0 auto;
-    background:var(--surface2); border:1px solid var(--border); color:var(--muted);
-    display:flex; align-items:center; justify-content:center; font-size:1.1rem; cursor:pointer;
+  .side-btn { width:44px; height:44px; padding:0; border-radius:12px; flex:0 0 auto;
+    background:none; border:1px solid transparent; color:var(--muted);
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
     box-shadow:none; transform:none; }
-  .installningar-btn:hover { color:var(--text); border-color:var(--accent); transform:none; box-shadow:none; }
+  .side-btn:hover { color:var(--text); background:var(--surface2); transform:none; box-shadow:none; }
+  .side-btn.aktiv { background:var(--grad); color:#04140e;
+    box-shadow:0 6px 16px -4px color-mix(in srgb, var(--accent) 60%, transparent); }
+  @media (max-width:720px) {
+    .app-shell { flex-direction:column; }
+    .sidebar { width:100%; height:auto; flex-direction:row; justify-content:center; position:sticky; top:0;
+      border-right:0; border-bottom:1px solid var(--border); padding:10px; gap:10px; }
+    .brand-mark { margin-bottom:0; }
+  }
   .tillbaka-btn { background:none; border:0; box-shadow:none; color:var(--muted); padding:8px 0 4px;
     font-size:.88rem; font-weight:600; cursor:pointer; }
   .tillbaka-btn:hover { color:var(--accent); transform:none; box-shadow:none; }
@@ -106,10 +115,11 @@
     touch-action:none; transition:box-shadow .12s ease; }
   .zon-kort-canvas.dragging { z-index:10; cursor:grabbing; box-shadow:0 22px 44px -12px rgba(0,0,0,.55); transition:none; }
   .karta-canvas:not(.redigerar) .zon-kort:not(.okategoriserat) { cursor:pointer; }
-  .karta-canvas.redigerar .zon-kort { cursor:default; }
-  .zon-drag { cursor:grab; background:rgba(255,255,255,.25); border:0; box-shadow:none; color:#fff; padding:2px 6px;
-    border-radius:8px; font-size:.9rem; line-height:1.4; flex:0 0 auto; touch-action:none; }
-  .zon-drag:hover { background:rgba(255,255,255,.4); transform:none; }
+  .karta-canvas.redigerar .zon-kort { cursor:grab; }
+  .karta-canvas.redigerar .zon-kort-canvas.dragging { cursor:grabbing; }
+  .zon-drag { cursor:grab; background:rgba(255,255,255,.25); border:0; box-shadow:none; color:#fff;
+    width:30px; height:30px; padding:0; display:flex; align-items:center; justify-content:center;
+    border-radius:9px; font-size:.9rem; line-height:1; flex:0 0 auto; touch-action:none; pointer-events:none; }
   .karta-tom { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
     text-align:center; padding:20px; color:var(--muted); font-size:.9rem; }
   .zon-kort { border-radius:var(--r-sm); padding:18px; color:#fff; position:relative; overflow:hidden;
@@ -227,11 +237,17 @@
   <g id="i-blad"><path d="M12 22v-9M12 13c-4-1-7-4-7-8 4 0 7 3 8 7M12 13c4-1 7-4 7-8-4 0-7 3-8 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></g>
 </defs></svg>
 
-<div class="topbar"><div class="wrap">
+<div class="app-shell">
+<nav class="sidebar">
   <div class="brand-mark"><svg width="18" height="18" viewBox="0 0 24 24"><use href="#i-blad"/></svg></div>
-  <div class="brand-text">Trädgårdsbevakning</div>
-  <button class="installningar-btn" id="installningarBtn" title="Inställningar">⚙️</button>
-</div></div>
+  <button class="side-btn" id="navDashboardBtn" title="Översikt">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/></svg>
+  </button>
+  <button class="side-btn" id="navInstallningarBtn" title="Inställningar">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </button>
+</nav>
+<div class="app-content">
 
 <div class="wrap" id="dashboardVy">
 
@@ -278,8 +294,6 @@
 </div>
 
 <div class="wrap" id="installningarVy" style="display:none">
-
-  <button class="tillbaka-btn" id="tillbakaBtn">← Tillbaka till översikten</button>
 
   <div class="card">
     <h2>Notiser (skördepåminnelser)</h2>
@@ -344,6 +358,9 @@
     <div class="status" id="eStatus"></div>
   </div>
 
+</div>
+
+</div>
 </div>
 
 <div class="modal-bakgrund" id="modalBakgrund" style="display:none">
@@ -541,7 +558,7 @@ function renderaKarta() {
       return `<div class="zon-kort zon-kort-canvas${vald ? " vald" : ""}" style="background:${info.grad}; left:${x * 100}%; top:${y * 100}%" data-id="${z.id}">
         <button class="zon-ta-bort" data-id="${z.id}" title="Ta bort zon">×</button>
         <div class="zon-head">
-          ${redigerarLayout ? `<button class="zon-drag" data-id="${z.id}" title="Flytta">✥</button>` : ""}
+          ${redigerarLayout ? `<span class="zon-drag" title="Dra kortet för att flytta">✥</span>` : ""}
           <span class="ikon">${info.ikon}</span>
           <span class="namn">${esc(z.namn)}</span>
           ${enhetBadges}
@@ -566,8 +583,13 @@ let dragState = null; // { id, drogs, startX, startY }
 let nyligenDragen = false;
 function zonDragStart(e, id, handle) {
   e.preventDefault();
-  handle.setPointerCapture(e.pointerId);
+  // dragState sätts FÖRST. setPointerCapture är bara en bonus (vi lyssnar
+  // ändå på document, så dragningen fungerar utan den) och kan kasta
+  // NotFoundError på vissa webbläsare/pekskärmar – förut satt anropet före
+  // tilldelningen, så ett sådant fel gjorde att dragningen aldrig startade
+  // och positionen aldrig sparades.
   dragState = { id, drogs: false, pointerId: e.pointerId, startX: e.clientX, startY: e.clientY };
+  try { handle.setPointerCapture(e.pointerId); } catch { /* strunt samma, document-lyssnarna räcker */ }
 }
 function zonDragMove(e) {
   if (!dragState || e.pointerId !== dragState.pointerId) return;
@@ -598,9 +620,14 @@ async function zonDragEnd(e) {
     await sparaZon(id, { x, y });
   }
 }
+// I redigeringsläge går hela kortet att dra, inte bara ✥-handtaget – ett
+// litet handtag är lätt att missa, särskilt på pekskärm. ✥ finns kvar som
+// visuell markör för att kortet är flyttbart.
 document.addEventListener("pointerdown", (e) => {
-  const handle = e.target.closest(".zon-drag");
-  if (handle) zonDragStart(e, handle.dataset.id, handle);
+  if (!redigerarLayout) return;
+  if (e.target.closest(".zon-ta-bort")) return; // ta bort-knappen ska fortfarande gå att klicka
+  const kort = e.target.closest(".zon-kort-canvas");
+  if (kort) zonDragStart(e, kort.dataset.id, kort);
 });
 document.addEventListener("pointermove", zonDragMove);
 document.addEventListener("pointerup", zonDragEnd);
@@ -1057,11 +1084,13 @@ function visaVy() {
   const installningar = location.hash === "#installningar";
   $("dashboardVy").style.display = installningar ? "none" : "";
   $("installningarVy").style.display = installningar ? "" : "none";
+  $("navDashboardBtn").classList.toggle("aktiv", !installningar);
+  $("navInstallningarBtn").classList.toggle("aktiv", installningar);
   window.scrollTo(0, 0);
 }
 window.addEventListener("hashchange", visaVy);
-$("installningarBtn").addEventListener("click", () => { location.hash = "installningar"; });
-$("tillbakaBtn").addEventListener("click", () => { location.hash = ""; });
+$("navDashboardBtn").addEventListener("click", () => { location.hash = ""; });
+$("navInstallningarBtn").addEventListener("click", () => { location.hash = "installningar"; });
 visaVy();
 $("kartaPlusBtn").addEventListener("click", oppnaNyZonModal);
 
