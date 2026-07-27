@@ -14,5 +14,6 @@ services:
       - GEO_LON=              # t.ex. 17.63
       - NTFY_TOPIC=           # samma ämne som Bostadsvakt/frostvarningen, för skördepåminnelser
       - WEBHOOK_URL=          # valfri HA-webhook (samma mönster som Bostadsvakts HA_WEBHOOK_URL), skickas till utöver ntfy
+      - ANTHROPIC_API_KEY=    # valfri, från console.anthropic.com – ger en AI-driven bevattningsinsikt (annars visas en enkel regelbaserad istället)
     volumes:
       - ./data:/data

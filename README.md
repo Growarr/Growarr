@@ -12,34 +12,56 @@ Två delar i ett repo:
 
    **Översikten** (`/`) — en ren visuell dashboard, inget att fylla i:
    - **Väderprognos**, 5 dagar framåt med riktiga väderikoner, frostrisk
-     markerad, plus en enkel bevattningsinsikt baserad på väntad nederbörd.
-   - **Trädgårdskarta** — en visuell karta som grupperar alla odlingar per
-     zon (färgad efter zontyp, med ett auto-gissat växtemoji per planta).
-     Odlingar utan zon hamnar i en egen "Okategoriserat"-grupp. Klicka på en
-     zon eller en planta för att öppna en popup där ni kan skriva jordtyp och
-     fria anteckningar, samt koppla valfritt antal HA-entiteter till just den
-     zonen/plantan — deras senaste värde visas sen direkt som en badge på
-     kartan (t.ex. 💧 42 % jordfuktighet på ett växthus, eller på en enskild
-     kruka).
-   - **Historik** — varje HA-entitet som är kopplad till en zon eller odling
-     loggas en gång i timmen, och panelen ritar en trendkurva (senaste,
-     min/max) per koppling. Byggs upp av sig själv från den dag ni kopplar en
+     markerad.
+   - **Bevattning** — en Claude-genererad rekommendation som väger in
+     väderprognosen, era zoner/odlingar och kopplade jordfuktighetssensorers
+     senaste värden (se "Smart bevattning" nedan). Faller tillbaka på en
+     enkel regelbaserad insikt (baserad på väntad nederbörd) om
+     `ANTHROPIC_API_KEY` inte är satt.
+   - **Trädgårdskarta** — en fritt placerbar karta: dra zoner (via ✥-handtaget)
+     dit ni vill ha dem, lägg till nya med **+**-knappen. Varje zon är färgad
+     efter sin typ, med ett auto-gissat växtemoji per planta. Odlingar utan
+     zon hamnar i en egen "Okategoriserat"-grupp under kartan.
+   - **Zondetaljer** — klicka på en zon eller planta i kartan för att den
+     markeras (ring runt kortet) och en panel längst ned dynamiskt visar och
+     låter er redigera jordtyp, fria anteckningar, koppla valfritt antal
+     HA-entiteter (senaste värde visas som en badge direkt på kartan, t.ex.
+     💧 42 % på ett växthus) samt en historik-graf per kopplad entitet.
+   - **Historik** — en samlad vy av alla kopplade entiteter över tid (loggas
+     en gång i timmen). Byggs upp av sig själv från den dag ni kopplar en
      entitet — ingen bakåtgående data.
 
    **Inställningar** (`/#installningar`) — allt ni fyller i eller lägger till:
    - **⚙️ Notiser** — ntfy-ämne och HA-webhook-URL för skördepåminnelser.
-   - **Zoner** — lägg till nya bäddar, växthus, odlingslådor, inomhus/utomhus.
+   - **Zoner** — lägg till nya bäddar, växthus, odlingslådor, inomhus/utomhus
+     (dra dem sen på plats i Trädgårdskartan på översikten).
    - **Odlingsjournal** — lägg till vad som planterats, i vilken zon, när, och
      när det ska skördas (med automatisk skördepåminnelse, se nedan).
-   - **HA-enheter** — lägg till valfri Home Assistant-entitet (namn +
-     `entity_id`) och se dess nuvarande värde. Tänkt att växa: den dagen ni
-     har jordfuktighetssensorer, ventiler eller annat i HA, lägg bara in
-     `entity_id` här — ingen kodändring behövs, sen kopplar ni den till en
-     zon/odling via Trädgårdskartans popup på översikten.
+   - **HA-enheter** — sök fram entiteter direkt ur Home Assistant (namn eller
+     entity_id, autocomplete) istället för att behöva komma ihåg dem utantill,
+     och se deras nuvarande värde. Koppla dem sen till en zon/odling via
+     Zondetaljer-panelen på översikten.
 
 Ingen inloggning i panelen – samma modell som de andra apparna: skyddet
 ligger i att den bara är nåbar via ert eget nätverk/VPN eller bakom samma
 Zero Trust-lager som resten av er Home Assistant-domän.
+
+## Smart bevattning (Claude)
+
+Bevattningskortet på översikten kan ge en AI-genererad rekommendation istället
+för bara en enkel regel om nederbörd. Servern skickar en sammanfattning av
+era zoner, odlingar, kopplade sensorers senaste värden och väderprognosen
+till Claudes API (`claude-sonnet-5`) och ber om en kort, konkret insikt.
+
+- **`ANTHROPIC_API_KEY`** — skaffas på [console.anthropic.com](https://console.anthropic.com)
+  (separat från ett ev. Claude.ai-abonnemang, faktureras per anrop).
+- Resultatet cachas i **4 timmar** server-side, så kostnaden hålls försumbar
+  oavsett hur många gånger panelen laddas.
+- Helt valfritt — utan nyckeln visas istället den enkla regelbaserade
+  insikten (baserad på väntad nederbörd de kommande dagarna), ingen
+  funktion går sönder.
+- **Lägg aldrig nyckeln i `docker-compose.example.yml`** (den är committad och
+  publik) — bara i er egna, gitignorade `docker-compose.yml` på home-vm.
 
 ## Notiser (skördepåminnelser + frostvarning)
 
@@ -132,15 +154,17 @@ på fel ställe.
 | GET | `/api/vader` | – | 5-dagars väderprognos från SMHI |
 | GET | `/api/odlingar` | – | Hämtar zoner + odlingsjournalen |
 | POST | `/api/odlingar` | `{ namn, zonId?, planterad?, skordFonster?, skordManad?, anteckning? }` | Lägger till en odling |
-| POST | `/api/odlingar/uppdatera` | `{ id, planterad?, skordFonster?, skordManad?, anteckning?, jord?, enhetIds? }` | Uppdaterar en odling (via popupen i Trädgårdskartan) |
+| POST | `/api/odlingar/uppdatera` | `{ id, planterad?, skordFonster?, skordManad?, anteckning?, jord?, enhetIds? }` | Uppdaterar en odling (via Zondetaljer-panelen) |
 | POST | `/api/odlingar/ta-bort` | `{ id }` | Tar bort en odling |
-| POST | `/api/zoner` | `{ namn, typ? }` | Lägger till en zon (`typ`: `vaxthus`/`utomhus`/`inomhus`/`odlingslada`/`annat`) |
-| POST | `/api/zoner/uppdatera` | `{ id, jord?, anteckning?, enhetIds? }` | Uppdaterar en zon (via popupen i Trädgårdskartan) |
+| POST | `/api/zoner` | `{ namn, typ?, x?, y? }` | Lägger till en zon (`typ`: `vaxthus`/`utomhus`/`inomhus`/`odlingslada`/`annat`) |
+| POST | `/api/zoner/uppdatera` | `{ id, jord?, anteckning?, enhetIds?, x?, y? }` | Uppdaterar en zon, inkl. position på kartan (dragning) |
 | POST | `/api/zoner/ta-bort` | `{ id }` | Tar bort en zon (odlingar i den blir okategoriserade) |
 | GET | `/api/enheter/status` | – | Hämtar nuvarande tillstånd för alla bevakade HA-entiteter |
 | POST | `/api/enheter` | `{ entityId, namn? }` | Lägger till en bevakad HA-entitet |
 | POST | `/api/enheter/ta-bort` | `{ id }` | Tar bort en bevakad enhet |
+| GET | `/api/ha-entiteter` | – | Hela HA:s entitetslista, för sökbar autocomplete (kräver `HA_TOKEN`) |
 | GET | `/api/historik` | – | Hämtar loggad historik för entiteter kopplade till zoner/odlingar |
+| GET | `/api/bevattning` | – | Hämtar den Claude-genererade bevattningsinsikten (cachad 4h) |
 | GET | `/api/installningar` | – | Hämtar sparat ntfy-ämne/webhook-URL |
 | POST | `/api/installningar` | `{ ntfyTopic?, webhookUrl? }` | Sparar ntfy-ämne/webhook-URL (via ⚙️ i panelen) |
 

@@ -63,6 +63,7 @@
   .frost-varning { font-size:.8rem; color:var(--warn); margin-top:12px; }
   .insikt { display:flex; align-items:center; gap:12px; margin-top:4px; font-size:.92rem; }
   .insikt .ikon { font-size:1.6rem; flex:0 0 auto; }
+  .ai-tid { font-size:.74rem; color:var(--muted); margin-top:4px; }
 
   label.lbl { display:block; font-size:.78rem; color:var(--muted); margin-bottom:6px; font-weight:500; }
   input[type=text], input[type=date], select {
@@ -80,6 +81,22 @@
   @media (max-width:600px) { .lagg-till-zon { grid-template-columns:1fr; } }
 
   .karta-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; margin-top:4px; }
+  .karta-canvas-wrap { position:relative; }
+  .karta-canvas { position:relative; width:100%; aspect-ratio:16/11; min-height:380px; border-radius:var(--r-sm);
+    margin-top:4px; overflow:hidden; background:
+      radial-gradient(60% 50% at 20% 15%, color-mix(in srgb, var(--accent) 14%, transparent), transparent),
+      linear-gradient(160deg, color-mix(in srgb, var(--accent) 10%, var(--surface2)), var(--surface2));
+    border:1px dashed var(--border); }
+  .karta-plus { position:absolute; bottom:-16px; right:14px; width:48px; height:48px; border-radius:50%;
+    font-size:1.6rem; line-height:1; display:flex; align-items:center; justify-content:center; padding:0; z-index:5; }
+  .zon-kort-canvas { position:absolute; width:230px; max-width:min(230px,70vw); transform:translate(-50%,-50%);
+    touch-action:none; transition:box-shadow .12s ease; }
+  .zon-kort-canvas.dragging { z-index:10; cursor:grabbing; box-shadow:0 22px 44px -12px rgba(0,0,0,.55); transition:none; }
+  .zon-drag { cursor:grab; background:rgba(255,255,255,.2); border:0; box-shadow:none; color:#fff; padding:2px 6px;
+    border-radius:8px; font-size:.9rem; line-height:1.4; flex:0 0 auto; touch-action:none; }
+  .zon-drag:hover { background:rgba(255,255,255,.35); transform:none; }
+  .karta-tom { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    text-align:center; padding:20px; color:var(--muted); font-size:.9rem; }
   .zon-kort { border-radius:var(--r-sm); padding:18px; color:#fff; position:relative; overflow:hidden;
     box-shadow:0 10px 24px -10px rgba(0,0,0,.3); }
   .zon-kort:not(.okategoriserat) { cursor:pointer; }
@@ -136,6 +153,14 @@
   .modal-entitet-rad .varde { font-variant-numeric:tabular-nums; color:var(--muted); }
   .modal-lagg-entitet { display:flex; gap:8px; margin-top:10px; }
   .modal-lagg-entitet select { flex:1; }
+
+  .detalj-panel .tom { padding:8px 0; }
+  .detalj-head { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+  .detalj-head .ikon { font-size:1.6rem; flex:0 0 auto; }
+  .detalj-head h3 { font-size:1.05rem; margin-bottom:2px; }
+  .detalj-head .tillbaka-btn { margin-left:auto; flex:0 0 auto; padding:6px 4px; }
+  .zon-kort.vald { box-shadow:0 0 0 3px var(--accent), 0 14px 30px -10px rgba(0,0,0,.4); }
+  .vaxt-chip.vald { box-shadow:0 0 0 2px var(--accent); }
 
   button { border:0; border-radius:99px; padding:10px 20px; font-size:.88rem; font-weight:600;
     font-family:inherit; cursor:pointer; background:var(--grad); color:#04140e;
@@ -195,7 +220,18 @@
 
   <div class="card">
     <h2>Trädgårdskarta</h2>
-    <div id="tradgardKarta" class="karta-grid"></div>
+    <div class="karta-canvas-wrap">
+      <div id="tradgardKarta" class="karta-canvas"></div>
+      <button class="karta-plus" id="kartaPlusBtn" title="Lägg till zon på kartan">+</button>
+    </div>
+    <div id="tradgardOkat" class="karta-grid"></div>
+  </div>
+
+  <div class="card">
+    <h2>Zondetaljer</h2>
+    <div id="detaljPanel" class="detalj-panel">
+      <div class="tom">Klicka på en zon eller planta i kartan ovan för att se och redigera detaljer här.</div>
+    </div>
   </div>
 
   <div class="card">
@@ -261,10 +297,14 @@
     <h2>HA-enheter (jordfuktighet, ventiler m.m. – lägg till när ni har dem)</h2>
     <div id="enheterLista"></div>
     <div class="lagg-till-enhet" style="margin-top:14px">
-      <div><label class="lbl">Entity ID</label><input type="text" id="eEntityId" placeholder="t.ex. sensor.jord_vaxthus"></div>
-      <div><label class="lbl">Namn</label><input type="text" id="eNamn" placeholder="t.ex. Jordfuktighet växthus"></div>
+      <div><label class="lbl">Sök namn eller entity_id</label>
+        <input type="text" id="eEntityId" list="haEntiteterList" autocomplete="off" placeholder="t.ex. jordfuktighet eller sensor.jord_vaxthus">
+        <datalist id="haEntiteterList"></datalist>
+      </div>
+      <div><label class="lbl">Namn</label><input type="text" id="eNamn" placeholder="fylls i automatiskt, går att ändra"></div>
       <button id="eLaggTillBtn">Lägg till</button>
     </div>
+    <p class="lbl" style="margin-top:10px" id="eHint"></p>
     <div class="status" id="eStatus"></div>
   </div>
 
@@ -317,7 +357,7 @@ let zoner = [];
 let senasteVader = null;
 let enheterStatus = [];
 let historik = [];
-let modalKontext = null; // { typ: "zon"|"odling", id }
+let modalKontext = null; // bara för "ny-zon"-popupen (+ på kartan) – { typ: "ny-zon" }
 
 // Väljer en rimlig ikon för en HA-entitets enhet, rent kosmetiskt.
 function ikonForEnhet(enhet) {
@@ -337,7 +377,6 @@ async function laddaVader() {
     const data = await res.json();
     senasteVader = data;
     renderaVader(data);
-    renderaBevattning(data);
   } catch (e) {
     $("vaderInnehall").innerHTML = `<div class="status err">Kunde inte hämta väder: ${e.message}</div>`;
     $("bevattningInnehall").innerHTML = `<div class="status err">Kunde inte hämta väder: ${e.message}</div>`;
@@ -363,17 +402,32 @@ function renderaVader(data) {
   $("frostVarning").innerHTML = nagonFrost
     ? `❄️ Frostrisk (≤${FROST_TROSKEL}°C) någon av de kommande dagarna – täck ömtåliga plantor.` : "";
 }
-// Enkel bevattningsinsikt baserad på prognostiserad nederbörd de kommande
-// dagarna (inte historik – SMHI:s prognos-API ger bara det som är framåt).
-function renderaBevattning(data) {
-  if (data.fel) { $("bevattningInnehall").innerHTML = `<div class="status err">${data.fel}</div>`; return; }
+// Enkel bevattningsinsikt baserad enbart på prognostiserad nederbörd –
+// fallback om Claude-insikten (se laddaBevattning) inte är konfigurerad
+// eller tillfälligt inte går att nå.
+function bevattningHeuristik(data) {
+  if (!data || data.fel) return `<div class="status err">${esc(data?.fel ?? "Väderdata saknas")}</div>`;
   const dagarFramat = data.dagar.slice(0, 3);
   const totalNb = dagarFramat.reduce((s, d) => s + d.nederbord, 0);
-  if (totalNb < 2) {
-    $("bevattningInnehall").innerHTML = `<span class="ikon">🪣</span><span>Bara ${totalNb.toFixed(1)} mm regn väntas de kommande ${dagarFramat.length} dagarna – dags att vattna själva.</span>`;
-  } else {
-    $("bevattningInnehall").innerHTML = `<span class="ikon">🌧️</span><span>${totalNb.toFixed(1)} mm regn väntas de kommande ${dagarFramat.length} dagarna – naturen sköter nog bevattningen.</span>`;
-  }
+  return totalNb < 2
+    ? `<span class="ikon">🪣</span><span>Bara ${totalNb.toFixed(1)} mm regn väntas de kommande ${dagarFramat.length} dagarna – dags att vattna själva.</span>`
+    : `<span class="ikon">🌧️</span><span>${totalNb.toFixed(1)} mm regn väntas de kommande ${dagarFramat.length} dagarna – naturen sköter nog bevattningen.</span>`;
+}
+// Smart bevattningsinsikt: en Claude-genererad rekommendation som väger in
+// väder, zoner/odlingar och kopplade jordfuktighetssensorer (se server.js:
+// hamtaSmartBevattning). Faller tillbaka på den enkla regelbaserade insikten
+// ovan om ANTHROPIC_API_KEY inte är satt eller anropet misslyckas.
+async function laddaBevattning() {
+  try {
+    const res = await fetch(`${BAS}api/bevattning`, { cache: "no-store" });
+    const data = await res.json();
+    if (data.text) {
+      const kl = new Date(data.tid).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+      $("bevattningInnehall").innerHTML = `<span class="ikon">🤖</span><span>${esc(data.text)}<div class="ai-tid">AI-insikt, uppdaterad ${kl}</div></span>`;
+      return;
+    }
+  } catch { /* faller igenom till heuristiken nedan */ }
+  $("bevattningInnehall").innerHTML = bevattningHeuristik(senasteVader);
 }
 
 async function laddaOdlingar() {
@@ -407,43 +461,96 @@ function vaxtChip(o) {
   const detaljer = [o.planterad ? `Planterad ${o.planterad}` : "", o.skordManad ? `Skörd ${manadNamn(o.skordManad)}` : "", o.skordFonster, o.jord ? `Jord: ${o.jord}` : "", o.anteckning].filter(Boolean).join(" · ");
   const enheter = entiteterFor(o.enhetIds);
   const enhetText = enheter.filter((e) => !e.fel).map((e) => ` · ${ikonForEnhet(e.enhet)} ${esc(e.state)}${e.enhet ? esc(e.enhet) : ""}`).join("");
-  return `<span class="vaxt-chip" data-id="${o.id}" title="${esc(detaljer)}">
+  const vald = valtMal?.typ === "odling" && valtMal.id === o.id;
+  return `<span class="vaxt-chip${vald ? " vald" : ""}" data-id="${o.id}" title="${esc(detaljer)}">
     <span class="emoji">${ikonForVaxt(o.namn)}</span>${esc(o.namn)}${skordSnart ? " 🌾" : ""}<span class="chip-enhet">${enhetText}</span>
     <button class="chip-ta-bort odling-ta-bort" data-id="${o.id}" title="Ta bort">×</button>
   </span>`;
 }
+// Ger äldre zoner (skapade innan den fria placeringen fanns) en utspridd
+// standardposition istället för att alla hamna i mitten på varandra.
+function zonPosition(z, i) {
+  const x = z.x ?? (0.15 + (i % 3) * 0.35);
+  const y = z.y ?? (0.2 + Math.floor(i / 3) * 0.32);
+  return { x, y };
+}
 function renderaKarta() {
-  if (!odlingar.length && !zoner.length) {
-    $("tradgardKarta").innerHTML = '<div class="tom">Inga zoner eller odlingar ännu – börja med att lägga till en zon ovan.</div>';
-    return;
-  }
+  if (dragState) return; // rendera inte om under en pågående dragning – då styr pointermove DOM:en direkt
   const grupper = new Map(zoner.map((z) => [z.id, []]));
   const okategoriserade = [];
   for (const o of odlingar) {
     if (o.zonId && grupper.has(o.zonId)) grupper.get(o.zonId).push(o);
     else okategoriserade.push(o);
   }
-  const zonKort = zoner.map((z) => {
-    const info = ZON_TYPER[z.typ] ?? ZON_TYPER.annat;
-    const lista = grupper.get(z.id) ?? [];
-    const enhetBadges = entiteterFor(z.enhetIds).filter((e) => !e.fel)
-      .map((e) => `<span class="zon-enhet">${ikonForEnhet(e.enhet)} ${esc(e.state)}${e.enhet ? " " + esc(e.enhet) : ""}</span>`).join("");
-    return `<div class="zon-kort" style="background:${info.grad}" data-id="${z.id}">
-      <button class="zon-ta-bort" data-id="${z.id}" title="Ta bort zon">×</button>
-      <div class="zon-head">
-        <span class="ikon">${info.ikon}</span>
-        <span class="namn">${esc(z.namn)}</span>
-        ${enhetBadges}
-      </div>
-      <div class="vaxt-chips">${lista.length ? lista.map(vaxtChip).join("") : '<span class="zon-tom">Inget planterat än</span>'}</div>
-    </div>`;
-  }).join("");
-  const okategoriseratKort = okategoriserade.length ? `<div class="zon-kort okategoriserat">
+  if (!zoner.length) {
+    $("tradgardKarta").innerHTML = '<div class="karta-tom">Inga zoner ännu – klicka på + för att lägga till en (växthus, bädd, odlingslåda …).</div>';
+  } else {
+    $("tradgardKarta").innerHTML = zoner.map((z, i) => {
+      const info = ZON_TYPER[z.typ] ?? ZON_TYPER.annat;
+      const lista = grupper.get(z.id) ?? [];
+      const { x, y } = zonPosition(z, i);
+      const enhetBadges = entiteterFor(z.enhetIds).filter((e) => !e.fel)
+        .map((e) => `<span class="zon-enhet">${ikonForEnhet(e.enhet)} ${esc(e.state)}${e.enhet ? " " + esc(e.enhet) : ""}</span>`).join("");
+      const vald = valtMal?.typ === "zon" && valtMal.id === z.id;
+      return `<div class="zon-kort zon-kort-canvas${vald ? " vald" : ""}" style="background:${info.grad}; left:${x * 100}%; top:${y * 100}%" data-id="${z.id}">
+        <button class="zon-ta-bort" data-id="${z.id}" title="Ta bort zon">×</button>
+        <div class="zon-head">
+          <button class="zon-drag" data-id="${z.id}" title="Flytta">✥</button>
+          <span class="ikon">${info.ikon}</span>
+          <span class="namn">${esc(z.namn)}</span>
+          ${enhetBadges}
+        </div>
+        <div class="vaxt-chips">${lista.length ? lista.map(vaxtChip).join("") : '<span class="zon-tom">Inget planterat än</span>'}</div>
+      </div>`;
+    }).join("");
+  }
+  $("tradgardOkat").innerHTML = okategoriserade.length ? `<div class="zon-kort okategoriserat">
       <div class="zon-head"><span class="ikon">📍</span><span class="namn">Okategoriserat</span></div>
       <div class="vaxt-chips">${okategoriserade.map(vaxtChip).join("")}</div>
     </div>` : "";
-  $("tradgardKarta").innerHTML = zonKort + okategoriseratKort;
 }
+
+// ---- Dra zoner fritt på kartan (pointer events, ingen extern lib) ----
+let dragState = null; // { id, drogs }
+let nyligenDragen = false;
+function zonDragStart(e, id) {
+  e.preventDefault();
+  const handle = e.currentTarget;
+  handle.setPointerCapture(e.pointerId);
+  dragState = { id, drogs: false, pointerId: e.pointerId };
+  document.querySelector(`.zon-kort-canvas[data-id="${id}"]`)?.classList.add("dragging");
+}
+function zonDragMove(e) {
+  if (!dragState || e.pointerId !== dragState.pointerId) return;
+  const canvas = $("tradgardKarta");
+  const rect = canvas.getBoundingClientRect();
+  let x = (e.clientX - rect.left) / rect.width;
+  let y = (e.clientY - rect.top) / rect.height;
+  x = Math.min(0.9, Math.max(0.1, x));
+  y = Math.min(0.88, Math.max(0.12, y));
+  dragState.drogs = true;
+  dragState.x = x; dragState.y = y;
+  const el = document.querySelector(`.zon-kort-canvas[data-id="${dragState.id}"]`);
+  if (el) { el.style.left = `${x * 100}%`; el.style.top = `${y * 100}%`; }
+}
+async function zonDragEnd(e) {
+  if (!dragState || e.pointerId !== dragState.pointerId) return;
+  const { id, drogs, x, y } = dragState;
+  document.querySelector(`.zon-kort-canvas[data-id="${id}"]`)?.classList.remove("dragging");
+  dragState = null;
+  if (drogs && x != null) {
+    nyligenDragen = true;
+    setTimeout(() => { nyligenDragen = false; }, 100);
+    await sparaZon(id, { x, y });
+  }
+}
+document.addEventListener("pointerdown", (e) => {
+  const handle = e.target.closest(".zon-drag");
+  if (handle) zonDragStart(e, handle.dataset.id);
+});
+document.addEventListener("pointermove", zonDragMove);
+document.addEventListener("pointerup", zonDragEnd);
+document.addEventListener("pointercancel", zonDragEnd);
 
 $("zLaggTillBtn").addEventListener("click", async () => {
   const st = $("zStatus");
@@ -488,7 +595,7 @@ async function laddaEnheter() {
     renderaEnheter(lista);
     renderaKarta();
     renderaHistorik();
-    if (modalKontext) renderaModal();
+    if (valtMal) renderaDetaljPanel();
   } catch (e) {
     $("enheterLista").innerHTML = `<div class="status err">Kunde inte hämta enheter: ${e.message}</div>`;
   }
@@ -502,6 +609,22 @@ function renderaEnheter(lista) {
     </div>`).join("")
     : '<div class="tom">Inga enheter tillagda ännu – lägg till HA-entiteter nedan (t.ex. jordfuktighetssensorer) när ni har dem.</div>';
 }
+
+// Sökbar lista över HA:s alla entiteter (via <datalist>) istället för att
+// behöva komma ihåg exakta entity_id:n utantill.
+let haEntiteter = [];
+async function laddaHaEntiteter() {
+  try {
+    const res = await fetch(`${BAS}api/ha-entiteter`, { cache: "no-store" });
+    haEntiteter = await res.json();
+  } catch { haEntiteter = []; }
+  $("haEntiteterList").innerHTML = haEntiteter.map((e) => `<option value="${esc(e.entityId)}">${esc(e.namn)}</option>`).join("");
+  $("eHint").textContent = haEntiteter.length ? "" : "Ingen entitetslista tillgänglig (kontrollera HA_TOKEN) – ni kan fortfarande skriva ett entity_id manuellt.";
+}
+$("eEntityId").addEventListener("input", () => {
+  const match = haEntiteter.find((e) => e.entityId === $("eEntityId").value);
+  if (match && !$("eNamn").value.trim()) $("eNamn").value = match.namn;
+});
 
 // ---- Historik ----
 async function laddaHistorikData() {
@@ -569,10 +692,10 @@ function renderaHistorik() {
 async function sparaZon(id, patch) {
   const z = zoner.find((x) => x.id === id);
   if (!z) return;
-  const body = { id, jord: z.jord ?? "", anteckning: z.anteckning ?? "", enhetIds: z.enhetIds ?? [], ...patch };
+  const body = { id, jord: z.jord ?? "", anteckning: z.anteckning ?? "", enhetIds: z.enhetIds ?? [], x: z.x, y: z.y, ...patch };
   await fetch(`${BAS}api/zoner/uppdatera`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   await laddaOdlingar();
-  if (modalKontext?.typ === "zon" && modalKontext.id === id) renderaModal();
+  if (valtMal?.typ === "zon" && valtMal.id === id) renderaDetaljPanel();
 }
 async function sparaOdling(id, patch) {
   const o = odlingar.find((x) => x.id === id);
@@ -583,7 +706,7 @@ async function sparaOdling(id, patch) {
   };
   await fetch(`${BAS}api/odlingar/uppdatera`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   await laddaOdlingar();
-  if (modalKontext?.typ === "odling" && modalKontext.id === id) renderaModal();
+  if (valtMal?.typ === "odling" && valtMal.id === id) renderaDetaljPanel();
 }
 function kopplaEntiteterHtml(idLista) {
   const kopplade = entiteterFor(idLista);
@@ -604,8 +727,8 @@ function kopplaEntiteterHtml(idLista) {
     </div>` : ""}
   </div>`;
 }
-function oppnaModal(typ, id) {
-  modalKontext = { typ, id };
+function oppnaNyZonModal() {
+  modalKontext = { typ: "ny-zon" };
   renderaModal();
   $("modalBakgrund").style.display = "flex";
 }
@@ -616,27 +739,89 @@ function stangModal() {
 function renderaModal() {
   if (!modalKontext) return;
   const { typ, id } = modalKontext;
-  if (typ === "zon") {
-    const z = zoner.find((x) => x.id === id);
-    if (!z) return stangModal();
-    const info = ZON_TYPER[z.typ] ?? ZON_TYPER.annat;
+  if (typ === "ny-zon") {
     $("modalInnehall").innerHTML = `
       <button class="ta-bort" id="modalStangBtn" title="Stäng" style="position:absolute; top:16px; right:16px">×</button>
-      <h3>${info.ikon} ${esc(z.namn)}</h3>
-      <div class="modal-sub">${esc(info.namn)}</div>
+      <h3>Ny zon</h3>
+      <div class="modal-sub">Dra den på plats på kartan efteråt</div>
+      <div class="falt"><label class="lbl">Namn</label><input type="text" id="mZonNamn" placeholder="t.ex. Stora växthuset"></div>
+      <div class="falt"><label class="lbl">Typ</label>
+        <select id="mZonTyp">
+          <option value="vaxthus">Växthus</option>
+          <option value="utomhus">Utomhusbädd</option>
+          <option value="inomhus">Inomhus</option>
+          <option value="odlingslada">Odlingslåda</option>
+          <option value="annat">Annat</option>
+        </select>
+      </div>
+      <button id="mSkapaZonBtn">Skapa zon</button>
+      <div class="status" id="mStatus"></div>`;
+    return;
+  }
+}
+
+// ---- Zondetaljer: en alltid-synlig panel under kartan istället för en
+// popup, som dynamiskt visar det du senast klickade på (zon eller planta) –
+// jord, anteckningar, kopplade entiteter och en historik-graf per entitet.
+let valtMal = null; // { typ: "zon"|"odling", id }
+function valjMal(typ, id) {
+  valtMal = { typ, id };
+  renderaDetaljPanel();
+  renderaKarta();
+  $("detaljPanel").closest(".card").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+function avmarkeraMal() {
+  valtMal = null;
+  renderaDetaljPanel();
+  renderaKarta();
+}
+function detaljHistorikHtml(enhetIds) {
+  const mal = (enhetIds ?? []).map((eid) => {
+    const enhet = enheterStatus.find((e) => e.id === eid);
+    return enhet ? { enhet, punkter: historik.filter((p) => p.enhetId === eid).sort((a, b) => new Date(a.tid) - new Date(b.tid)) } : null;
+  }).filter(Boolean);
+  if (!mal.length) return "";
+  return `<div class="falt" style="margin-top:22px">
+    <label class="lbl">Historik</label>
+    ${mal.map(({ enhet, punkter }) => `
+      <div style="margin-top:8px">
+        <div class="historik-head" style="margin-bottom:2px"><span class="namn" style="font-size:.86rem">${esc(enhet.namn)}</span></div>
+        ${sparkline(punkter)}
+      </div>`).join("")}
+  </div>`;
+}
+function renderaDetaljPanel() {
+  if (!valtMal) {
+    $("detaljPanel").innerHTML = '<div class="tom">Klicka på en zon eller planta i kartan ovan för att se och redigera detaljer här.</div>';
+    return;
+  }
+  const { typ, id } = valtMal;
+  if (typ === "zon") {
+    const z = zoner.find((x) => x.id === id);
+    if (!z) { valtMal = null; return renderaDetaljPanel(); }
+    const info = ZON_TYPER[z.typ] ?? ZON_TYPER.annat;
+    $("detaljPanel").innerHTML = `
+      <div class="detalj-head">
+        <span class="ikon">${info.ikon}</span>
+        <div><h3>${esc(z.namn)}</h3><div class="modal-sub">${esc(info.namn)}</div></div>
+        <button class="tillbaka-btn" id="dAvmarkeraBtn">Avmarkera</button>
+      </div>
       <div class="falt"><label class="lbl">Jord</label><input type="text" id="mJord" placeholder="t.ex. näringsrik potatisjord + kompost" value="${esc(z.jord ?? "")}"></div>
       <div class="falt"><label class="lbl">Anteckning</label><textarea id="mAnteckning" placeholder="fritt att skriva">${esc(z.anteckning ?? "")}</textarea></div>
       <button id="mSparaBtn">Spara</button>
       <div class="status" id="mStatus"></div>
-      ${kopplaEntiteterHtml(z.enhetIds)}`;
+      ${kopplaEntiteterHtml(z.enhetIds)}
+      ${detaljHistorikHtml(z.enhetIds)}`;
   } else {
     const o = odlingar.find((x) => x.id === id);
-    if (!o) return stangModal();
+    if (!o) { valtMal = null; return renderaDetaljPanel(); }
     const zon = o.zonId ? zoner.find((z) => z.id === o.zonId) : null;
-    $("modalInnehall").innerHTML = `
-      <button class="ta-bort" id="modalStangBtn" title="Stäng" style="position:absolute; top:16px; right:16px">×</button>
-      <h3>${ikonForVaxt(o.namn)} ${esc(o.namn)}</h3>
-      <div class="modal-sub">${zon ? esc(zon.namn) : "Okategoriserat"}</div>
+    $("detaljPanel").innerHTML = `
+      <div class="detalj-head">
+        <span class="ikon">${ikonForVaxt(o.namn)}</span>
+        <div><h3>${esc(o.namn)}</h3><div class="modal-sub">${zon ? esc(zon.namn) : "Okategoriserat"}</div></div>
+        <button class="tillbaka-btn" id="dAvmarkeraBtn">Avmarkera</button>
+      </div>
       <div class="falt"><label class="lbl">Planterad</label><input type="date" id="mPlanterad" value="${esc(o.planterad ?? "")}"></div>
       <div class="falt"><label class="lbl">Skördemånad</label><input type="month" id="mSkordManad" value="${esc(o.skordManad ?? "")}"></div>
       <div class="falt"><label class="lbl">Skördefönster (fritext)</label><input type="text" id="mSkordFonster" value="${esc(o.skordFonster ?? "")}"></div>
@@ -644,7 +829,8 @@ function renderaModal() {
       <div class="falt"><label class="lbl">Anteckning</label><textarea id="mAnteckning" placeholder="fritt att skriva">${esc(o.anteckning ?? "")}</textarea></div>
       <button id="mSparaBtn">Spara</button>
       <div class="status" id="mStatus"></div>
-      ${kopplaEntiteterHtml(o.enhetIds)}`;
+      ${kopplaEntiteterHtml(o.enhetIds)}
+      ${detaljHistorikHtml(o.enhetIds)}`;
   }
 }
 
@@ -665,6 +851,8 @@ $("eLaggTillBtn").addEventListener("click", async () => {
 });
 
 document.addEventListener("click", async (e) => {
+  if (nyligenDragen) return; // undvik att en avslutad dragning även tolkas som ett klick som öppnar popupen
+  if (e.target.closest(".zon-drag")) return;
   const odlingTaBort = e.target.closest(".odling-ta-bort");
   if (odlingTaBort) {
     await fetch(`${BAS}api/odlingar/ta-bort`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: odlingTaBort.dataset.id }) });
@@ -685,16 +873,34 @@ document.addEventListener("click", async (e) => {
     return;
   }
 
+  // Popup: skapa ny zon (via + på kartan)
+  const mSkapaZon = e.target.closest("#mSkapaZonBtn");
+  if (mSkapaZon && modalKontext?.typ === "ny-zon") {
+    const st = $("mStatus");
+    const namn = $("mZonNamn").value.trim();
+    if (!namn) { st.textContent = "Namn krävs."; st.className = "status err"; return; }
+    st.textContent = ""; st.className = "status";
+    try {
+      await fetch(`${BAS}api/zoner`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ namn, typ: $("mZonTyp").value }),
+      });
+      await laddaOdlingar();
+      stangModal();
+    } catch (err) { st.textContent = "Kunde inte spara: " + err.message; st.className = "status err"; }
+    return;
+  }
+
   // Popup: spara jord/anteckning
   const mSpara = e.target.closest("#mSparaBtn");
-  if (mSpara && modalKontext) {
+  if (mSpara && valtMal) {
     const st = $("mStatus");
     st.textContent = ""; st.className = "status";
     try {
-      if (modalKontext.typ === "zon") {
-        await sparaZon(modalKontext.id, { jord: $("mJord").value.trim(), anteckning: $("mAnteckning").value.trim() });
+      if (valtMal.typ === "zon") {
+        await sparaZon(valtMal.id, { jord: $("mJord").value.trim(), anteckning: $("mAnteckning").value.trim() });
       } else {
-        await sparaOdling(modalKontext.id, {
+        await sparaOdling(valtMal.id, {
           planterad: $("mPlanterad").value, skordManad: $("mSkordManad").value,
           skordFonster: $("mSkordFonster").value.trim(), jord: $("mJord").value.trim(), anteckning: $("mAnteckning").value.trim(),
         });
@@ -703,43 +909,46 @@ document.addEventListener("click", async (e) => {
     } catch (err) { $("mStatus").textContent = "Kunde inte spara: " + err.message; $("mStatus").className = "status err"; }
     return;
   }
-  // Popup: koppla en entitet
+  // Detaljpanel: koppla en entitet
   const mEnhetLaggTill = e.target.closest("#mEnhetLaggTillBtn");
-  if (mEnhetLaggTill && modalKontext) {
+  if (mEnhetLaggTill && valtMal) {
     const valtId = $("mEnhetVal").value;
     if (valtId) {
-      if (modalKontext.typ === "zon") {
-        const z = zoner.find((x) => x.id === modalKontext.id);
-        await sparaZon(modalKontext.id, { enhetIds: [...(z.enhetIds ?? []), valtId] });
+      if (valtMal.typ === "zon") {
+        const z = zoner.find((x) => x.id === valtMal.id);
+        await sparaZon(valtMal.id, { enhetIds: [...(z.enhetIds ?? []), valtId] });
       } else {
-        const o = odlingar.find((x) => x.id === modalKontext.id);
-        await sparaOdling(modalKontext.id, { enhetIds: [...(o.enhetIds ?? []), valtId] });
+        const o = odlingar.find((x) => x.id === valtMal.id);
+        await sparaOdling(valtMal.id, { enhetIds: [...(o.enhetIds ?? []), valtId] });
       }
     }
     return;
   }
-  // Popup: koppla bort en entitet
+  // Detaljpanel: koppla bort en entitet
   const modalEnhetTaBort = e.target.closest(".modal-enhet-ta-bort");
-  if (modalEnhetTaBort && modalKontext) {
+  if (modalEnhetTaBort && valtMal) {
     const bortId = modalEnhetTaBort.dataset.id;
-    if (modalKontext.typ === "zon") {
-      const z = zoner.find((x) => x.id === modalKontext.id);
-      await sparaZon(modalKontext.id, { enhetIds: (z.enhetIds ?? []).filter((eid) => eid !== bortId) });
+    if (valtMal.typ === "zon") {
+      const z = zoner.find((x) => x.id === valtMal.id);
+      await sparaZon(valtMal.id, { enhetIds: (z.enhetIds ?? []).filter((eid) => eid !== bortId) });
     } else {
-      const o = odlingar.find((x) => x.id === modalKontext.id);
-      await sparaOdling(modalKontext.id, { enhetIds: (o.enhetIds ?? []).filter((eid) => eid !== bortId) });
+      const o = odlingar.find((x) => x.id === valtMal.id);
+      await sparaOdling(valtMal.id, { enhetIds: (o.enhetIds ?? []).filter((eid) => eid !== bortId) });
     }
     return;
   }
-  // Popup: stäng
+  // Popup (ny zon): stäng
   if (e.target.closest("#modalStangBtn")) { stangModal(); return; }
   if (e.target.id === "modalBakgrund") { stangModal(); return; }
 
-  // Öppna popup: klick på en planta (chip) väger tyngre än klick på hela zon-kortet
+  // Popup: avmarkera i detaljpanelen
+  if (e.target.closest("#dAvmarkeraBtn")) { avmarkeraMal(); return; }
+
+  // Välj mål: klick på en planta (chip) väger tyngre än klick på hela zon-kortet
   const chipEl = e.target.closest(".vaxt-chip");
-  if (chipEl) { oppnaModal("odling", chipEl.dataset.id); return; }
+  if (chipEl) { valjMal("odling", chipEl.dataset.id); return; }
   const zonKortEl = e.target.closest(".zon-kort");
-  if (zonKortEl && !zonKortEl.classList.contains("okategoriserat")) { oppnaModal("zon", zonKortEl.dataset.id); return; }
+  if (zonKortEl && !zonKortEl.classList.contains("okategoriserat")) { valjMal("zon", zonKortEl.dataset.id); return; }
 });
 
 async function laddaInstallningar() {
@@ -763,6 +972,7 @@ window.addEventListener("hashchange", visaVy);
 $("installningarBtn").addEventListener("click", () => { location.hash = "installningar"; });
 $("tillbakaBtn").addEventListener("click", () => { location.hash = ""; });
 visaVy();
+$("kartaPlusBtn").addEventListener("click", oppnaNyZonModal);
 
 $("nSparaBtn").addEventListener("click", async () => {
   const st = $("nStatus");
@@ -779,8 +989,10 @@ $("nSparaBtn").addEventListener("click", async () => {
 
 (async () => {
   await laddaVader();
+  await laddaBevattning();
   await laddaOdlingar();
   await laddaEnheter();
+  await laddaHaEntiteter();
   await laddaInstallningar();
   await laddaHistorikData();
 })();

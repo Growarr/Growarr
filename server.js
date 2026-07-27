@@ -16,6 +16,8 @@ const GEO_LAT = process.env.GEO_LAT || "";
 const GEO_LON = process.env.GEO_LON || "";
 const NTFY_TOPIC = process.env.NTFY_TOPIC || "";
 const WEBHOOK_URL = process.env.WEBHOOK_URL || "";
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || "";
+const ANTHROPIC_MODEL = "claude-sonnet-5";
 const PANEL_HTML = join(dirname(fileURLToPath(import.meta.url)), "index.html");
 
 function stockholmManad(d = new Date()) {
@@ -114,6 +116,103 @@ async function hamtaEntitetStatus(entityId) {
     };
   } catch (err) {
     return { entityId, fel: err.message };
+  }
+}
+
+// Hela HA:s entitetslista (för sökbar autocomplete i "Lägg till HA-enhet"),
+// cachad en kort stund så inte varje besök på Inställningar hamrar HA.
+let allaEntiteterCache = null; // { tid, lista }
+const ALLA_ENTITETER_CACHE_MS = 60 * 1000;
+async function hamtaAllaEntiteter() {
+  if (!HA_TOKEN) return [];
+  if (allaEntiteterCache && Date.now() - allaEntiteterCache.tid < ALLA_ENTITETER_CACHE_MS) return allaEntiteterCache.lista;
+  try {
+    const res = await fetch(`${HA_URL}/api/states`, { headers: { Authorization: `Bearer ${HA_TOKEN}` } });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const lista = data
+      .map((s) => ({ entityId: s.entity_id, namn: s.attributes?.friendly_name || s.entity_id }))
+      .sort((a, b) => a.namn.localeCompare(b.namn, "sv"));
+    allaEntiteterCache = { tid: Date.now(), lista };
+    return lista;
+  } catch {
+    return [];
+  }
+}
+
+// ---- Smart bevattningsinsikt (Claude) ----
+// Ger Claude en sammanfattning av trädgården (zoner, odlingar, kopplade
+// sensorers senaste värden, väderprognos) och ber om en kort, konkret
+// bevattningsrekommendation. Cachas i timmar för att hålla kostnaden
+// försumbar – väder och jordfuktighet ändras inte minut för minut.
+let bevattningCache = null; // { tid, resultat }
+const BEVATTNING_CACHE_MS = 4 * 3600 * 1000;
+const ZON_TYPER_NAMN = { vaxthus: "växthus", utomhus: "utomhusbädd", inomhus: "inomhus", odlingslada: "odlingslåda", annat: "annat" };
+
+async function byggTradgardsSammanfattning(d, vader) {
+  const zonRader = d.zoner.map((z) => {
+    const info = ZON_TYPER_NAMN[z.typ] ?? z.typ;
+    return `- ${z.namn} (${info})${z.jord ? `, jord: ${z.jord}` : ""}`;
+  });
+  const odlingRader = await Promise.all(d.odlingar.map(async (o) => {
+    const zon = d.zoner.find((z) => z.id === o.zonId);
+    const delar = [`- ${o.namn}${zon ? ` i zonen "${zon.namn}"` : " (okategoriserad)"}`];
+    if (o.jord) delar.push(`jord: ${o.jord}`);
+    if (o.skordManad) delar.push(`skörd: ${o.skordManad}`);
+    return delar.join(", ");
+  }));
+  const enhetIder = new Set([...d.zoner.flatMap((z) => z.enhetIds ?? []), ...d.odlingar.flatMap((o) => o.enhetIds ?? [])]);
+  const sensorRader = [];
+  for (const enhetId of enhetIder) {
+    const enhet = d.enheter.find((e) => e.id === enhetId);
+    if (!enhet) continue;
+    const status = await hamtaEntitetStatus(enhet.entityId);
+    const agare = [...d.zoner, ...d.odlingar].find((x) => (x.enhetIds ?? []).includes(enhetId));
+    sensorRader.push(status.fel
+      ? `- ${enhet.namn} (${agare?.namn ?? "okänd"}): ej tillgänglig`
+      : `- ${enhet.namn} (${agare?.namn ?? "okänd"}): ${status.state}${status.enhet ? " " + status.enhet : ""}`);
+  }
+  const vaderRader = vader.fel ? ["Väderdata ej tillgänglig."] : vader.dagar.map((dag) =>
+    `- ${dag.dag}: ${dag.min}–${dag.max}°C, ${dag.nederbord} mm nederbörd`);
+  return [
+    "Zoner:", zonRader.length ? zonRader.join("\n") : "(inga zoner ännu)",
+    "\nOdlingar:", odlingRader.length ? odlingRader.join("\n") : "(inga odlingar ännu)",
+    "\nSensorer just nu:", sensorRader.length ? sensorRader.join("\n") : "(inga sensorer kopplade ännu)",
+    "\nVäderprognos:", vaderRader.join("\n"),
+  ].join("\n");
+}
+
+async function hamtaSmartBevattning() {
+  if (!ANTHROPIC_API_KEY) return { text: null, fel: "ANTHROPIC_API_KEY är inte konfigurerad" };
+  if (bevattningCache && Date.now() - bevattningCache.tid < BEVATTNING_CACHE_MS) return bevattningCache.resultat;
+  try {
+    const [d, vader] = await Promise.all([lasData(), hamtaVader()]);
+    const sammanfattning = await byggTradgardsSammanfattning(d, vader);
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: ANTHROPIC_MODEL,
+        max_tokens: 300,
+        messages: [{
+          role: "user",
+          content: `Du är en erfaren trädgårdsrådgivare. Ge en kort (max 3 meningar), konkret bevattningsrekommendation på svenska utifrån datan nedan. Nämn specifika zoner eller odlingar vid namn om något sticker ut (torr jord, ingen nederbörd väntad, en sensor som visar lågt värde). Ingen inledande hälsningsfras, gå rakt på sak.\n\n${sammanfattning}`,
+        }],
+      }),
+    });
+    if (!res.ok) return { text: null, fel: `Claude svarade ${res.status}` };
+    const data = await res.json();
+    const text = data.content?.[0]?.text?.trim();
+    if (!text) return { text: null, fel: "Tomt svar från Claude" };
+    const resultat = { text, tid: new Date().toISOString() };
+    bevattningCache = { tid: Date.now(), resultat };
+    return resultat;
+  } catch (err) {
+    return { text: null, fel: err.message };
   }
 }
 
@@ -254,18 +353,29 @@ const server = createServer(async (req, res) => {
       return skickaJson(res, 200, data);
     }
     if (req.method === "POST" && p.endsWith("/api/zoner/uppdatera")) {
-      const { id, jord, anteckning, enhetIds } = await lasBody(req);
+      const { id, jord, anteckning, enhetIds, x, y } = await lasBody(req);
       const data = await muteraData((d) => {
-        const z = d.zoner.find((x) => x.id === id);
-        if (z) Object.assign(z, { jord: jord || "", anteckning: anteckning || "", enhetIds: enhetIds ?? [] });
+        const zon = d.zoner.find((z) => z.id === id);
+        if (zon) Object.assign(zon, {
+          jord: jord || "", anteckning: anteckning || "", enhetIds: enhetIds ?? [],
+          x: x ?? zon.x ?? 0.5, y: y ?? zon.y ?? 0.5,
+        });
       });
       return skickaJson(res, 200, data);
     }
     if (req.method === "POST" && p.endsWith("/api/zoner")) {
-      const { namn, typ } = await lasBody(req);
+      const { namn, typ, x, y } = await lasBody(req);
       if (!namn) return skickaJson(res, 400, { fel: "namn saknas" });
       const data = await muteraData((d) => {
-        d.zoner.push({ id: randomUUID(), namn, typ: typ || "annat", jord: "", anteckning: "", enhetIds: [] });
+        // Staggrar nya zoner i ett löst rutmönster så de inte hamnar rakt
+        // ovanpå varandra innan man dragit dem på plats.
+        const n = d.zoner.length;
+        const standardX = 0.15 + (n % 3) * 0.35;
+        const standardY = 0.2 + Math.floor(n / 3) * 0.32;
+        d.zoner.push({
+          id: randomUUID(), namn, typ: typ || "annat", jord: "", anteckning: "", enhetIds: [],
+          x: x ?? standardX, y: y ?? standardY,
+        });
       });
       return skickaJson(res, 200, data);
     }
@@ -291,6 +401,9 @@ const server = createServer(async (req, res) => {
       const data = await muteraData((d) => { d.enheter = d.enheter.filter((e) => e.id !== id); });
       return skickaJson(res, 200, data);
     }
+    if (req.method === "GET" && p.endsWith("/api/ha-entiteter")) {
+      return skickaJson(res, 200, await hamtaAllaEntiteter());
+    }
     if (req.method === "GET" && p.endsWith("/api/enheter/status")) {
       const { enheter } = await lasData();
       const status = await Promise.all(enheter.map(async (e) => ({ ...e, ...(await hamtaEntitetStatus(e.entityId)) })));
@@ -310,6 +423,9 @@ const server = createServer(async (req, res) => {
     if (req.method === "GET" && p.endsWith("/api/historik")) {
       const { historik } = await lasData();
       return skickaJson(res, 200, historik);
+    }
+    if (req.method === "GET" && p.endsWith("/api/bevattning")) {
+      return skickaJson(res, 200, await hamtaSmartBevattning());
     }
     if (req.method === "GET" && p.endsWith("/api/vader")) {
       return skickaJson(res, 200, await hamtaVader());
