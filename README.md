@@ -18,10 +18,12 @@ Två delar i ett repo:
      senaste värden (se "Smart bevattning" nedan). Faller tillbaka på en
      enkel regelbaserad insikt (baserad på väntad nederbörd) om
      `ANTHROPIC_API_KEY` inte är satt.
-   - **Trädgårdskarta** — en fritt placerbar karta: dra zoner (via ✥-handtaget)
-     dit ni vill ha dem, lägg till nya med **+**-knappen. Varje zon är färgad
-     efter sin typ, med ett auto-gissat växtemoji per planta. Odlingar utan
-     zon hamnar i en egen "Okategoriserat"-grupp under kartan.
+   - **Trädgårdskarta** — en fritt placerbar karta. Klicka **Redigera layout**
+     för att slå på flytt-läge (✥-handtag dyker upp på varje zon, dra dit ni
+     vill ha dem), klicka **Klar, lås positionerna** när ni är nöjda för att
+     låsa dem igen. Lägg till nya zoner med **+**-knappen. Varje zon är
+     färgad efter sin typ, med ett auto-gissat växtemoji per planta. Odlingar
+     utan zon hamnar i en egen "Okategoriserat"-grupp under kartan.
    - **Zondetaljer** — klicka på en zon eller planta i kartan för att den
      markeras (ring runt kortet) och en panel längst ned dynamiskt visar och
      låter er redigera jordtyp, fria anteckningar, koppla valfritt antal

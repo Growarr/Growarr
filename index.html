@@ -66,6 +66,7 @@
   .frost-varning { font-size:.8rem; color:var(--warn); margin-top:12px; }
   .insikt { display:flex; align-items:center; gap:12px; margin-top:4px; font-size:.92rem; }
   .insikt .ikon { font-size:1.6rem; flex:0 0 auto; }
+  .insikt .ikon-ai { color:var(--accent); filter:drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 50%, transparent)); }
   .ai-tid { font-size:.74rem; color:var(--muted); margin-top:4px; }
 
   label.lbl { display:block; font-size:.78rem; color:var(--muted); margin-bottom:6px; font-weight:500; }
@@ -83,6 +84,12 @@
   .lagg-till-zon { display:grid; grid-template-columns:2fr 1fr auto; gap:10px; align-items:end; }
   @media (max-width:600px) { .lagg-till-zon { grid-template-columns:1fr; } }
 
+  .karta-header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
+  .karta-redigera-btn { display:flex; align-items:center; gap:6px; padding:8px 14px 8px 12px; font-size:.8rem;
+    background:var(--surface2); color:var(--muted); border:1px solid var(--border); box-shadow:none; }
+  .karta-redigera-btn:hover { color:var(--text); border-color:var(--accent); transform:none; box-shadow:none; }
+  .karta-redigera-btn.aktiv { background:color-mix(in srgb, var(--warn) 20%, var(--surface2)); color:var(--warn);
+    border-color:color-mix(in srgb, var(--warn) 50%, var(--border)); }
   .karta-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; margin-top:4px; }
   .karta-canvas-wrap { position:relative; }
   .karta-canvas { position:relative; width:100%; aspect-ratio:16/11; min-height:380px; border-radius:var(--r-sm);
@@ -91,21 +98,25 @@
       linear-gradient(90deg, color-mix(in srgb, var(--text) 5%, transparent) 1px, transparent 1px) 0 0/32px 32px,
       linear-gradient(color-mix(in srgb, var(--text) 5%, transparent) 1px, transparent 1px) 0 0/32px 32px,
       linear-gradient(160deg, color-mix(in srgb, var(--accent) 8%, var(--surface2)), var(--surface2));
-    border:1px solid var(--border); }
+    border:1px solid var(--border); transition:box-shadow .2s ease; }
+  .karta-canvas.redigerar { box-shadow:inset 0 0 0 2px var(--warn); }
   .karta-plus { position:absolute; bottom:-16px; right:14px; width:48px; height:48px; border-radius:50%;
     font-size:1.6rem; line-height:1; display:flex; align-items:center; justify-content:center; padding:0; z-index:5; }
   .zon-kort-canvas { position:absolute; width:230px; max-width:min(230px,70vw); transform:translate(-50%,-50%);
     touch-action:none; transition:box-shadow .12s ease; }
   .zon-kort-canvas.dragging { z-index:10; cursor:grabbing; box-shadow:0 22px 44px -12px rgba(0,0,0,.55); transition:none; }
-  .zon-drag { cursor:grab; background:rgba(255,255,255,.2); border:0; box-shadow:none; color:#fff; padding:2px 6px;
+  .karta-canvas:not(.redigerar) .zon-kort:not(.okategoriserat) { cursor:pointer; }
+  .karta-canvas.redigerar .zon-kort { cursor:default; }
+  .zon-drag { cursor:grab; background:rgba(255,255,255,.25); border:0; box-shadow:none; color:#fff; padding:2px 6px;
     border-radius:8px; font-size:.9rem; line-height:1.4; flex:0 0 auto; touch-action:none; }
-  .zon-drag:hover { background:rgba(255,255,255,.35); transform:none; }
+  .zon-drag:hover { background:rgba(255,255,255,.4); transform:none; }
   .karta-tom { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
     text-align:center; padding:20px; color:var(--muted); font-size:.9rem; }
   .zon-kort { border-radius:var(--r-sm); padding:18px; color:#fff; position:relative; overflow:hidden;
     box-shadow:0 10px 24px -10px rgba(0,0,0,.3); }
-  .zon-kort:not(.okategoriserat) { cursor:pointer; }
-  .zon-kort:not(.okategoriserat):hover { transform:translateY(-2px); box-shadow:0 14px 30px -10px rgba(0,0,0,.4); }
+  .zon-kort:not(.okategoriserat)::before { content:""; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(165deg, rgba(255,255,255,.22), transparent 45%); }
+  .zon-kort:not(.okategoriserat):hover { box-shadow:0 14px 30px -10px rgba(0,0,0,.4); }
   .zon-kort.okategoriserat { background:var(--surface2); color:var(--text); }
   .zon-head { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
   .zon-head .ikon { font-size:1.4rem; }
@@ -238,7 +249,13 @@
   </div>
 
   <div class="card">
-    <h2>Trädgårdskarta</h2>
+    <div class="karta-header">
+      <h2 style="margin-bottom:0">Trädgårdskarta</h2>
+      <button class="karta-redigera-btn" id="redigeraLayoutBtn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        Redigera layout
+      </button>
+    </div>
     <div class="karta-canvas-wrap">
       <div id="tradgardKarta" class="karta-canvas"></div>
       <button class="karta-plus" id="kartaPlusBtn" title="Lägg till zon på kartan">+</button>
@@ -377,6 +394,10 @@ let senasteVader = null;
 let enheterStatus = [];
 let historik = [];
 let modalKontext = null; // bara för "ny-zon"-popupen (+ på kartan) – { typ: "ny-zon" }
+// Dragning av zoner är avstängd som standard och slås bara på via "Redigera
+// layout" – annars kan ett vanligt klick för att markera en zon råka tolkas
+// som ett drag-försök (och vice versa).
+let redigerarLayout = false;
 
 // Väljer en rimlig ikon för en HA-entitets enhet, rent kosmetiskt.
 function ikonForEnhet(enhet) {
@@ -432,6 +453,12 @@ function bevattningHeuristik(data) {
     ? `<span class="ikon">🪣</span><span>Bara ${totalNb.toFixed(1)} mm regn väntas de kommande ${dagarFramat.length} dagarna – dags att vattna själva.</span>`
     : `<span class="ikon">🌧️</span><span>${totalNb.toFixed(1)} mm regn väntas de kommande ${dagarFramat.length} dagarna – naturen sköter nog bevattningen.</span>`;
 }
+// Enkel "sparkle"-ikon för AI-insikten, i samma tunna linjestil som resten
+// av panelens ikoner – mer konsekvent än en emoji-robot.
+const AI_IKON = `<svg class="ikon ikon-ai" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M12 3l1.7 4.6L18.3 9.3l-4.6 1.7L12 15.6l-1.7-4.6L5.7 9.3l4.6-1.7L12 3z"/>
+  <path d="M19 14.5l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9.9-2.4z"/>
+</svg>`;
 // Smart bevattningsinsikt: en Claude-genererad rekommendation som väger in
 // väder, zoner/odlingar och kopplade jordfuktighetssensorer (se server.js:
 // hamtaSmartBevattning). Faller tillbaka på den enkla regelbaserade insikten
@@ -442,7 +469,7 @@ async function laddaBevattning() {
     const data = await res.json();
     if (data.text) {
       const kl = new Date(data.tid).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
-      $("bevattningInnehall").innerHTML = `<span class="ikon">🤖</span><span>${esc(data.text)}<div class="ai-tid">AI-insikt, uppdaterad ${kl}</div></span>`;
+      $("bevattningInnehall").innerHTML = `${AI_IKON}<span>${esc(data.text)}<div class="ai-tid">AI-insikt, uppdaterad ${kl}</div></span>`;
       return;
     }
   } catch { /* faller igenom till heuristiken nedan */ }
@@ -514,7 +541,7 @@ function renderaKarta() {
       return `<div class="zon-kort zon-kort-canvas${vald ? " vald" : ""}" style="background:${info.grad}; left:${x * 100}%; top:${y * 100}%" data-id="${z.id}">
         <button class="zon-ta-bort" data-id="${z.id}" title="Ta bort zon">×</button>
         <div class="zon-head">
-          <button class="zon-drag" data-id="${z.id}" title="Flytta">✥</button>
+          ${redigerarLayout ? `<button class="zon-drag" data-id="${z.id}" title="Flytta">✥</button>` : ""}
           <span class="ikon">${info.ikon}</span>
           <span class="namn">${esc(z.namn)}</span>
           ${enhetBadges}
@@ -997,11 +1024,22 @@ document.addEventListener("click", async (e) => {
   // Popup: avmarkera i detaljpanelen
   if (e.target.closest("#dAvmarkeraBtn")) { avmarkeraMal(); return; }
 
+  if (redigerarLayout) return; // i redigeringsläge ska klick bara flytta zoner, inte markera dem
+
   // Välj mål: klick på en planta (chip) väger tyngre än klick på hela zon-kortet
   const chipEl = e.target.closest(".vaxt-chip");
   if (chipEl) { valjMal("odling", chipEl.dataset.id); return; }
   const zonKortEl = e.target.closest(".zon-kort");
   if (zonKortEl && !zonKortEl.classList.contains("okategoriserat")) { valjMal("zon", zonKortEl.dataset.id); return; }
+});
+
+$("redigeraLayoutBtn").addEventListener("click", () => {
+  redigerarLayout = !redigerarLayout;
+  const btn = $("redigeraLayoutBtn");
+  btn.classList.toggle("aktiv", redigerarLayout);
+  btn.lastChild.textContent = redigerarLayout ? " Klar, lås positionerna" : " Redigera layout";
+  $("tradgardKarta").classList.toggle("redigerar", redigerarLayout);
+  renderaKarta();
 });
 
 async function laddaInstallningar() {
