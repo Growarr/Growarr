@@ -29,10 +29,16 @@
     color:var(--text); -webkit-font-smoothing:antialiased;
     font:15px/1.6 "Inter","Segoe UI",system-ui,-apple-system,sans-serif; min-height:100vh; padding-bottom:72px; }
   h1, h2, .total, button, .avatar { font-family:"Outfit","Inter",sans-serif; }
-  .wrap { max-width:980px; margin:0 auto; padding:0 20px; }
+  .wrap { max-width:1560px; margin:0 auto; padding:0 24px; }
   .dashboard-rad { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:20px; }
   .dashboard-rad .card { margin-top:0; }
   @media (max-width:760px) { .dashboard-rad { grid-template-columns:1fr; } }
+  /* Två kolumner: en bred huvudkolumn (väder, karta, detaljer) och en
+     smalare sidokolumn (bevattning, egna block, historik) – samma upplägg
+     som referensdesignen. */
+  .dash-grid { display:grid; grid-template-columns:minmax(0,2.1fr) minmax(0,1fr); gap:20px; align-items:start; }
+  @media (max-width:1120px) { .dash-grid { grid-template-columns:1fr; } }
+  .dash-kol { min-width:0; }
 
   .app-shell { display:flex; align-items:stretch; min-height:100vh; }
   .sidebar { width:76px; flex:0 0 auto; background:var(--surface); border-right:1px solid var(--border);
@@ -75,8 +81,28 @@
   .frost-varning { font-size:.8rem; color:var(--warn); margin-top:12px; }
   .insikt { display:flex; align-items:center; gap:12px; margin-top:4px; font-size:.92rem; }
   .insikt .ikon { font-size:1.6rem; flex:0 0 auto; }
-  .insikt .ikon-ai { color:var(--accent); filter:drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 50%, transparent)); }
   .ai-tid { font-size:.74rem; color:var(--muted); margin-top:4px; }
+
+  /* Flikar för flera trädgårdskartor */
+  .karta-flikar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+  .karta-flik { padding:7px 14px; border-radius:99px; font-size:.82rem; font-weight:600; cursor:pointer;
+    background:var(--surface2); color:var(--muted); border:1px solid var(--border); box-shadow:none;
+    display:flex; align-items:center; gap:8px; }
+  .karta-flik:hover { color:var(--text); transform:none; box-shadow:none; }
+  .karta-flik.aktiv { background:var(--grad); color:#04140e; border-color:transparent; }
+  .karta-flik .flik-x { opacity:.6; font-size:.9rem; line-height:1; }
+  .karta-flik .flik-x:hover { opacity:1; }
+  .karta-flik-ny { padding:7px 12px; border-radius:99px; font-size:.82rem; font-weight:600;
+    background:none; border:1px dashed var(--border); color:var(--muted); box-shadow:none; cursor:pointer; }
+  .karta-flik-ny:hover { color:var(--accent); border-color:var(--accent); transform:none; box-shadow:none; }
+
+  /* Egna block (widgets) på översikten */
+  .widget-kamera { width:100%; border-radius:var(--r-sm); display:block; background:var(--surface2); }
+  .widget-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
+  .widget-head h2 { margin-bottom:0; }
+  .widget-ta-bort { background:none; border:0; box-shadow:none; color:var(--muted); opacity:.6;
+    cursor:pointer; font-size:1rem; padding:0 2px; line-height:1; }
+  .widget-ta-bort:hover { opacity:1; color:var(--err); transform:none; }
 
   label.lbl { display:block; font-size:.78rem; color:var(--muted); margin-bottom:6px; font-weight:500; }
   input[type=text], input[type=date], select {
@@ -251,44 +277,53 @@
 
 <div class="wrap" id="dashboardVy">
 
-  <div class="dashboard-rad">
-    <div class="card">
-      <h2>Väder, kommande dagar</h2>
-      <div class="vader-rader" id="vaderInnehall">Laddar …</div>
-      <div class="frost-varning" id="frostVarning"></div>
+  <div class="dash-grid">
+
+    <div class="dash-kol">
+      <div class="card" style="margin-top:20px">
+        <h2>Väder, kommande dagar</h2>
+        <div class="vader-rader" id="vaderInnehall">Laddar …</div>
+        <div class="frost-varning" id="frostVarning"></div>
+      </div>
+
+      <div class="card">
+        <div class="karta-header">
+          <h2 style="margin-bottom:0">Trädgårdskarta</h2>
+          <button class="karta-redigera-btn" id="redigeraLayoutBtn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            Redigera layout
+          </button>
+        </div>
+        <div class="karta-flikar" id="kartaFlikar"></div>
+        <div class="karta-canvas-wrap">
+          <div id="tradgardKarta" class="karta-canvas"></div>
+          <button class="karta-plus" id="kartaPlusBtn" title="Lägg till zon på kartan">+</button>
+        </div>
+        <div id="tradgardOkat" class="karta-grid"></div>
+      </div>
+
+      <div class="card">
+        <h2>Zondetaljer</h2>
+        <div id="detaljPanel" class="detalj-panel">
+          <div class="tom">Klicka på en zon eller planta i kartan ovan för att se och redigera detaljer här.</div>
+        </div>
+      </div>
     </div>
 
-    <div class="card">
-      <h2>Bevattning</h2>
-      <div class="insikt" id="bevattningInnehall">Laddar …</div>
-    </div>
-  </div>
+    <div class="dash-kol">
+      <div class="card" style="margin-top:20px">
+        <h2>Bevattning</h2>
+        <div class="insikt" id="bevattningInnehall">Laddar …</div>
+      </div>
 
-  <div class="card">
-    <div class="karta-header">
-      <h2 style="margin-bottom:0">Trädgårdskarta</h2>
-      <button class="karta-redigera-btn" id="redigeraLayoutBtn">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-        Redigera layout
-      </button>
-    </div>
-    <div class="karta-canvas-wrap">
-      <div id="tradgardKarta" class="karta-canvas"></div>
-      <button class="karta-plus" id="kartaPlusBtn" title="Lägg till zon på kartan">+</button>
-    </div>
-    <div id="tradgardOkat" class="karta-grid"></div>
-  </div>
+      <div id="widgetContainer"></div>
 
-  <div class="card">
-    <h2>Zondetaljer</h2>
-    <div id="detaljPanel" class="detalj-panel">
-      <div class="tom">Klicka på en zon eller planta i kartan ovan för att se och redigera detaljer här.</div>
+      <div class="card">
+        <h2>Historik</h2>
+        <div id="historikInnehall" class="historik-grid">Laddar …</div>
+      </div>
     </div>
-  </div>
 
-  <div class="card">
-    <h2>Historik</h2>
-    <div id="historikInnehall" class="historik-grid">Laddar …</div>
   </div>
 
 </div>
@@ -341,6 +376,40 @@
     </div>
     <p class="lbl" style="margin-top:10px">Tips: klicka på en zon eller planta i Trädgårdskartan på översikten för att lägga till jordtyp, anteckningar och koppla HA-entiteter.</p>
     <div class="status" id="oStatus"></div>
+  </div>
+
+  <div class="card">
+    <h2>Egna block på översikten</h2>
+    <p class="lbl" style="margin-bottom:10px">Lägg till egna kort i högerkolumnen på översikten – antingen en samling
+      HA-entiteter (visas som mätvärdesrutor) eller en kamerabild.</p>
+    <div class="lagg-till" style="grid-template-columns:1.4fr 1fr 1.6fr auto">
+      <div><label class="lbl">Rubrik</label><input type="text" id="wTitel" placeholder="t.ex. Växthusklimat"></div>
+      <div><label class="lbl">Typ</label>
+        <select id="wTyp">
+          <option value="entiteter">Entiteter</option>
+          <option value="kamera">Kamera</option>
+        </select>
+      </div>
+      <div>
+        <label class="lbl" id="wMalLbl">Entiteter (håll ctrl/cmd för flera)</label>
+        <select id="wEnheter" multiple size="1" style="height:42px"></select>
+        <input type="text" id="wKamera" list="haEntiteterList" autocomplete="off" placeholder="t.ex. camera.vaxthus" style="display:none">
+      </div>
+      <button id="wLaggTillBtn">Lägg till block</button>
+    </div>
+    <div class="status" id="wStatus"></div>
+  </div>
+
+  <div class="card">
+    <h2>Trädgårdskartor</h2>
+    <p class="lbl" style="margin-bottom:10px">Flera kartor låter er dela upp trädgården, t.ex. "Framsidan",
+      "Baksidan" och "Växthuset". Ni växlar mellan dem med flikarna ovanför kartan på översikten.</p>
+    <div class="lagg-till-zon">
+      <div><label class="lbl">Namn på ny karta</label><input type="text" id="kNamn" placeholder="t.ex. Baksidan"></div>
+      <div></div>
+      <button id="kLaggTillBtn">Lägg till karta</button>
+    </div>
+    <div class="status" id="kStatus"></div>
   </div>
 
   <div class="card">
@@ -407,6 +476,9 @@ function ikonForVaxt(namn) {
 }
 let odlingar = [];
 let zoner = [];
+let kartor = [];
+let aktivKartaId = null;
+let widgets = [];
 let senasteVader = null;
 let enheterStatus = [];
 let historik = [];
@@ -470,12 +542,6 @@ function bevattningHeuristik(data) {
     ? `<span class="ikon">🪣</span><span>Bara ${totalNb.toFixed(1)} mm regn väntas de kommande ${dagarFramat.length} dagarna – dags att vattna själva.</span>`
     : `<span class="ikon">🌧️</span><span>${totalNb.toFixed(1)} mm regn väntas de kommande ${dagarFramat.length} dagarna – naturen sköter nog bevattningen.</span>`;
 }
-// Enkel "sparkle"-ikon för AI-insikten, i samma tunna linjestil som resten
-// av panelens ikoner – mer konsekvent än en emoji-robot.
-const AI_IKON = `<svg class="ikon ikon-ai" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M12 3l1.7 4.6L18.3 9.3l-4.6 1.7L12 15.6l-1.7-4.6L5.7 9.3l4.6-1.7L12 3z"/>
-  <path d="M19 14.5l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9.9-2.4z"/>
-</svg>`;
 // Smart bevattningsinsikt: en Claude-genererad rekommendation som väger in
 // väder, zoner/odlingar och kopplade jordfuktighetssensorer (se server.js:
 // hamtaSmartBevattning). Faller tillbaka på den enkla regelbaserade insikten
@@ -486,7 +552,7 @@ async function laddaBevattning() {
     const data = await res.json();
     if (data.text) {
       const kl = new Date(data.tid).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
-      $("bevattningInnehall").innerHTML = `${AI_IKON}<span>${esc(data.text)}<div class="ai-tid">AI-insikt, uppdaterad ${kl}</div></span>`;
+      $("bevattningInnehall").innerHTML = `<span>${esc(data.text)}<div class="ai-tid">Uppdaterad ${kl}</div></span>`;
       return;
     }
   } catch { /* faller igenom till heuristiken nedan */ }
@@ -499,10 +565,23 @@ async function laddaOdlingar() {
     const data = await res.json();
     odlingar = data.odlingar ?? [];
     zoner = data.zoner ?? [];
-  } catch { odlingar = []; zoner = []; }
+    kartor = data.kartor ?? [];
+    widgets = data.widgets ?? [];
+  } catch { odlingar = []; zoner = []; kartor = []; widgets = []; }
+  // Håll aktiv flik giltig även om kartan tagits bort i en annan flik/enhet.
+  if (!kartor.some((k) => k.id === aktivKartaId)) aktivKartaId = kartor[0]?.id ?? null;
+  renderaKartaFlikar();
   uppdateraZonVal();
   renderaKarta();
   renderaHistorik();
+  renderaWidgets();
+}
+function renderaKartaFlikar() {
+  $("kartaFlikar").innerHTML = kartor.map((k) => `
+    <button class="karta-flik${k.id === aktivKartaId ? " aktiv" : ""}" data-id="${esc(k.id)}">
+      ${esc(k.namn)}${kartor.length > 1 ? `<span class="flik-x karta-flik-ta-bort" data-id="${esc(k.id)}" title="Ta bort karta">×</span>` : ""}
+    </button>`).join("") +
+    '<button class="karta-flik-ny" id="kartaFlikNyBtn">+ Ny karta</button>';
 }
 function manadNamn(m) {
   // "2026-09" -> "september 2026"
@@ -539,16 +618,18 @@ function zonPosition(z, i) {
 }
 function renderaKarta() {
   if (dragState) return; // rendera inte om under en pågående dragning – då styr pointermove DOM:en direkt
-  const grupper = new Map(zoner.map((z) => [z.id, []]));
+  // Bara zonerna på den aktiva kartfliken ritas ut.
+  const synligaZoner = zoner.filter((z) => z.kartaId === aktivKartaId);
+  const grupper = new Map(synligaZoner.map((z) => [z.id, []]));
   const okategoriserade = [];
   for (const o of odlingar) {
     if (o.zonId && grupper.has(o.zonId)) grupper.get(o.zonId).push(o);
-    else okategoriserade.push(o);
+    else if (!o.zonId) okategoriserade.push(o);
   }
-  if (!zoner.length) {
-    $("tradgardKarta").innerHTML = '<div class="karta-tom">Inga zoner ännu – klicka på + för att lägga till en (växthus, bädd, odlingslåda …).</div>';
+  if (!synligaZoner.length) {
+    $("tradgardKarta").innerHTML = '<div class="karta-tom">Inga zoner på den här kartan ännu – klicka på + för att lägga till en (växthus, bädd, odlingslåda …).</div>';
   } else {
-    $("tradgardKarta").innerHTML = zoner.map((z, i) => {
+    $("tradgardKarta").innerHTML = synligaZoner.map((z, i) => {
       const info = ZON_TYPER[z.typ] ?? ZON_TYPER.annat;
       const lista = grupper.get(z.id) ?? [];
       const { x, y } = zonPosition(z, i);
@@ -641,7 +722,7 @@ $("zLaggTillBtn").addEventListener("click", async () => {
   try {
     await fetch(`${BAS}api/zoner`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ namn, typ: $("zTyp").value }),
+      body: JSON.stringify({ namn, typ: $("zTyp").value, kartaId: aktivKartaId }),
     });
     $("zNamn").value = "";
     await laddaOdlingar();
@@ -674,8 +755,12 @@ async function laddaEnheter() {
     const lista = await res.json();
     enheterStatus = lista;
     renderaEnheter(lista);
+    // Entitetsväljaren för egna block speglar de tillagda enheterna
+    $("wEnheter").innerHTML = lista.map((e) => `<option value="${esc(e.id)}">${esc(e.namn)}</option>`).join("");
+    $("wEnheter").size = Math.min(6, Math.max(1, lista.length));
     renderaKarta();
     renderaHistorik();
+    renderaWidgets();
     if (valtMal) renderaDetaljPanel();
   } catch (e) {
     $("enheterLista").innerHTML = `<div class="status err">Kunde inte hämta enheter: ${e.message}</div>`;
@@ -706,6 +791,42 @@ $("eEntityId").addEventListener("input", () => {
   const match = haEntiteter.find((e) => e.entityId === $("eEntityId").value);
   if (match && !$("eNamn").value.trim()) $("eNamn").value = match.namn;
 });
+
+// ---- Egna block (widgets) på översikten ----
+function renderaWidgets() {
+  $("widgetContainer").innerHTML = widgets.map((w) => {
+    let innehall;
+    if (w.typ === "kamera") {
+      // cachebuster i URL:en så bilden faktiskt uppdateras vid omritning
+      innehall = w.entityId
+        ? `<img class="widget-kamera" alt="${esc(w.titel)}" src="${BAS}api/kamera?entityId=${encodeURIComponent(w.entityId)}&t=${Date.now()}"
+             onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'tom',textContent:'Kunde inte hämta bild från ${esc(w.entityId)} – kontrollera entity_id och HA_TOKEN.'}))">`
+        : '<div class="tom">Ingen kameraentitet vald.</div>';
+    } else {
+      const kopplade = entiteterFor(w.enhetIds);
+      innehall = kopplade.length
+        ? `<div class="metrik-grid">${kopplade.map((e) => {
+            if (e.fel) return `<div class="metrik-tile fel"><div class="topp"><span class="ikon">⚠️</span></div>
+              <div class="varde">${esc(e.fel)}</div><div class="enhet-namn">${esc(e.namn)}</div></div>`;
+            const s = metrikStatus(e.enhet, e.state);
+            return `<div class="metrik-tile ${s.niva}">
+              <div class="topp"><span class="ikon">${ikonForEnhet(e.enhet)}</span></div>
+              <div class="varde">${esc(e.state)}${e.enhet ? `<span style="font-size:.9rem;font-weight:600"> ${esc(e.enhet)}</span>` : ""}</div>
+              <div class="enhet-namn">${esc(e.namn)}</div>
+              ${s.text ? `<div class="not">${esc(s.text)}</div>` : ""}
+            </div>`;
+          }).join("")}</div>`
+        : '<div class="tom">Inga entiteter valda för det här blocket.</div>';
+    }
+    return `<div class="card">
+      <div class="widget-head">
+        <h2>${esc(w.titel)}</h2>
+        <button class="widget-ta-bort" data-id="${esc(w.id)}" title="Ta bort block">×</button>
+      </div>
+      ${innehall}
+    </div>`;
+  }).join("");
+}
 
 // ---- Historik ----
 async function laddaHistorikData() {
@@ -990,7 +1111,7 @@ document.addEventListener("click", async (e) => {
     try {
       await fetch(`${BAS}api/zoner`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ namn, typ: $("mZonTyp").value }),
+        body: JSON.stringify({ namn, typ: $("mZonTyp").value, kartaId: aktivKartaId }),
       });
       await laddaOdlingar();
       stangModal();
@@ -1051,6 +1172,42 @@ document.addEventListener("click", async (e) => {
   // Popup: avmarkera i detaljpanelen
   if (e.target.closest("#dAvmarkeraBtn")) { avmarkeraMal(); return; }
 
+  // Kartflikar
+  const flikTaBort = e.target.closest(".karta-flik-ta-bort");
+  if (flikTaBort) {
+    e.stopPropagation();
+    if (!confirm("Ta bort kartan? Zonerna på den flyttas till den första kvarvarande kartan.")) return;
+    await fetch(`${BAS}api/kartor/ta-bort`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: flikTaBort.dataset.id }) });
+    await laddaOdlingar();
+    return;
+  }
+  if (e.target.closest("#kartaFlikNyBtn")) {
+    const namn = prompt("Namn på den nya kartan:");
+    if (namn && namn.trim()) {
+      await fetch(`${BAS}api/kartor`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ namn: namn.trim() }) });
+      await laddaOdlingar();
+      aktivKartaId = kartor[kartor.length - 1]?.id ?? aktivKartaId;
+      renderaKartaFlikar();
+      renderaKarta();
+    }
+    return;
+  }
+  const flik = e.target.closest(".karta-flik");
+  if (flik) {
+    aktivKartaId = flik.dataset.id;
+    avmarkeraMal();
+    renderaKartaFlikar();
+    renderaKarta();
+    return;
+  }
+  // Ta bort ett eget block
+  const widgetTaBort = e.target.closest(".widget-ta-bort");
+  if (widgetTaBort) {
+    await fetch(`${BAS}api/widgets/ta-bort`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: widgetTaBort.dataset.id }) });
+    await laddaOdlingar();
+    return;
+  }
+
   if (redigerarLayout) return; // i redigeringsläge ska klick bara flytta zoner, inte markera dem
 
   // Välj mål: klick på en planta (chip) väger tyngre än klick på hela zon-kortet
@@ -1058,6 +1215,50 @@ document.addEventListener("click", async (e) => {
   if (chipEl) { valjMal("odling", chipEl.dataset.id); return; }
   const zonKortEl = e.target.closest(".zon-kort");
   if (zonKortEl && !zonKortEl.classList.contains("okategoriserat")) { valjMal("zon", zonKortEl.dataset.id); return; }
+});
+
+$("kLaggTillBtn").addEventListener("click", async () => {
+  const st = $("kStatus");
+  const namn = $("kNamn").value.trim();
+  if (!namn) { st.textContent = "Namn krävs."; st.className = "status err"; return; }
+  $("kLaggTillBtn").disabled = true; st.textContent = ""; st.className = "status";
+  try {
+    await fetch(`${BAS}api/kartor`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ namn }) });
+    $("kNamn").value = "";
+    await laddaOdlingar();
+    st.textContent = "Karta tillagd."; st.className = "status ok";
+  } catch (e) { st.textContent = "Kunde inte spara: " + e.message; st.className = "status err"; }
+  finally { $("kLaggTillBtn").disabled = false; }
+});
+
+// Växlar mellan entitetsväljare och kamerafält beroende på blocktyp
+$("wTyp").addEventListener("change", () => {
+  const kamera = $("wTyp").value === "kamera";
+  $("wEnheter").style.display = kamera ? "none" : "";
+  $("wKamera").style.display = kamera ? "" : "none";
+  $("wMalLbl").textContent = kamera ? "Kameraentitet" : "Entiteter (håll ctrl/cmd för flera)";
+});
+
+$("wLaggTillBtn").addEventListener("click", async () => {
+  const st = $("wStatus");
+  const titel = $("wTitel").value.trim();
+  const typ = $("wTyp").value;
+  if (!titel) { st.textContent = "Rubrik krävs."; st.className = "status err"; return; }
+  const enhetIds = [...$("wEnheter").selectedOptions].map((o) => o.value);
+  const entityId = $("wKamera").value.trim();
+  if (typ === "kamera" && !entityId) { st.textContent = "Ange en kameraentitet."; st.className = "status err"; return; }
+  if (typ === "entiteter" && !enhetIds.length) { st.textContent = "Välj minst en entitet."; st.className = "status err"; return; }
+  $("wLaggTillBtn").disabled = true; st.textContent = ""; st.className = "status";
+  try {
+    await fetch(`${BAS}api/widgets`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ titel, typ, enhetIds, entityId }),
+    });
+    $("wTitel").value = ""; $("wKamera").value = "";
+    await laddaOdlingar();
+    st.textContent = "Block tillagt – syns på översikten."; st.className = "status ok";
+  } catch (e) { st.textContent = "Kunde inte spara: " + e.message; st.className = "status err"; }
+  finally { $("wLaggTillBtn").disabled = false; }
 });
 
 $("redigeraLayoutBtn").addEventListener("click", () => {

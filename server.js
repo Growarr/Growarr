@@ -34,11 +34,11 @@ async function lasData() {
   try {
     const d = JSON.parse(await readFile(DATA_PATH, "utf8"));
     return {
-      zoner: d.zoner ?? [], odlingar: d.odlingar ?? [], enheter: d.enheter ?? [],
-      installningar: d.installningar ?? {}, historik: d.historik ?? [],
+      kartor: d.kartor ?? [], zoner: d.zoner ?? [], odlingar: d.odlingar ?? [], enheter: d.enheter ?? [],
+      widgets: d.widgets ?? [], installningar: d.installningar ?? {}, historik: d.historik ?? [],
     };
   } catch {
-    return { zoner: [], odlingar: [], enheter: [], installningar: {}, historik: [] };
+    return { kartor: [], zoner: [], odlingar: [], enheter: [], widgets: [], installningar: {}, historik: [] };
   }
 }
 async function skrivData(data) {
@@ -116,6 +116,23 @@ async function hamtaEntitetStatus(entityId) {
     };
   } catch (err) {
     return { entityId, fel: err.message };
+  }
+}
+
+// Hämtar en ögonblicksbild från en HA-kameraentitet. Går via servern
+// eftersom HA:s camera_proxy kräver en Authorization-header, som en vanlig
+// <img src> inte kan skicka – panelen pekar alltså på den här endpointen
+// istället och slipper någonsin se HA-token.
+async function hamtaKamerabild(entityId) {
+  if (!HA_TOKEN) return null;
+  try {
+    const res = await fetch(`${HA_URL}/api/camera_proxy/${encodeURIComponent(entityId)}`, {
+      headers: { Authorization: `Bearer ${HA_TOKEN}` },
+    });
+    if (!res.ok) return null;
+    return { typ: res.headers.get("content-type") || "image/jpeg", data: Buffer.from(await res.arrayBuffer()) };
+  } catch {
+    return null;
   }
 }
 
@@ -303,6 +320,17 @@ async function loggaHistorik() {
 const EN_TIMME_MS = 3600 * 1000;
 setInterval(() => loggaHistorik().catch((err) => console.warn("Historik-loggning misslyckades:", err.message)), EN_TIMME_MS);
 
+// ---- Migrering ----
+// Kartor tillkom efter att zoner redan fanns: se till att det alltid finns
+// minst en karta och att varje zon hör till en. Idempotent, körs vid start.
+async function migreraData() {
+  await muteraData((d) => {
+    if (!d.kartor.length) d.kartor.push({ id: randomUUID(), namn: "Min trädgård" });
+    const forsta = d.kartor[0].id;
+    for (const z of d.zoner) if (!z.kartaId) z.kartaId = forsta;
+  });
+}
+
 // ---- HTTP ----
 function skickaJson(res, status, body) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
@@ -364,20 +392,70 @@ const server = createServer(async (req, res) => {
       return skickaJson(res, 200, data);
     }
     if (req.method === "POST" && p.endsWith("/api/zoner")) {
-      const { namn, typ, x, y } = await lasBody(req);
+      const { namn, typ, x, y, kartaId } = await lasBody(req);
       if (!namn) return skickaJson(res, 400, { fel: "namn saknas" });
       const data = await muteraData((d) => {
+        const karta = kartaId || d.kartor[0]?.id || "";
         // Staggrar nya zoner i ett löst rutmönster så de inte hamnar rakt
-        // ovanpå varandra innan man dragit dem på plats.
-        const n = d.zoner.length;
+        // ovanpå varandra innan man dragit dem på plats – räknas per karta.
+        const n = d.zoner.filter((z) => z.kartaId === karta).length;
         const standardX = 0.15 + (n % 3) * 0.35;
         const standardY = 0.2 + Math.floor(n / 3) * 0.32;
         d.zoner.push({
           id: randomUUID(), namn, typ: typ || "annat", jord: "", anteckning: "", enhetIds: [],
-          x: x ?? standardX, y: y ?? standardY,
+          kartaId: karta, x: x ?? standardX, y: y ?? standardY,
         });
       });
       return skickaJson(res, 200, data);
+    }
+    if (req.method === "POST" && p.endsWith("/api/kartor")) {
+      const { namn } = await lasBody(req);
+      if (!namn) return skickaJson(res, 400, { fel: "namn saknas" });
+      const data = await muteraData((d) => { d.kartor.push({ id: randomUUID(), namn }); });
+      return skickaJson(res, 200, data);
+    }
+    if (req.method === "POST" && p.endsWith("/api/kartor/ta-bort")) {
+      const { id } = await lasBody(req);
+      const data = await muteraData((d) => {
+        d.kartor = d.kartor.filter((k) => k.id !== id);
+        if (!d.kartor.length) d.kartor.push({ id: randomUUID(), namn: "Min trädgård" });
+        // Zoner på den borttagna kartan flyttas till den första kvarvarande
+        // istället för att bli osynliga.
+        for (const z of d.zoner) if (z.kartaId === id) z.kartaId = d.kartor[0].id;
+      });
+      return skickaJson(res, 200, data);
+    }
+    if (req.method === "POST" && p.endsWith("/api/widgets")) {
+      const { titel, typ, enhetIds, entityId } = await lasBody(req);
+      if (!titel) return skickaJson(res, 400, { fel: "titel saknas" });
+      const data = await muteraData((d) => {
+        d.widgets.push({
+          id: randomUUID(), titel, typ: typ === "kamera" ? "kamera" : "entiteter",
+          enhetIds: enhetIds ?? [], entityId: entityId || "",
+        });
+      });
+      return skickaJson(res, 200, data);
+    }
+    if (req.method === "POST" && p.endsWith("/api/widgets/uppdatera")) {
+      const { id, titel, enhetIds, entityId } = await lasBody(req);
+      const data = await muteraData((d) => {
+        const w = d.widgets.find((x) => x.id === id);
+        if (w) Object.assign(w, {
+          titel: titel ?? w.titel, enhetIds: enhetIds ?? w.enhetIds ?? [], entityId: entityId ?? w.entityId ?? "",
+        });
+      });
+      return skickaJson(res, 200, data);
+    }
+    if (req.method === "POST" && p.endsWith("/api/widgets/ta-bort")) {
+      const { id } = await lasBody(req);
+      const data = await muteraData((d) => { d.widgets = d.widgets.filter((w) => w.id !== id); });
+      return skickaJson(res, 200, data);
+    }
+    if (req.method === "GET" && p.endsWith("/api/kamera")) {
+      const bild = await hamtaKamerabild(url.searchParams.get("entityId") || "");
+      if (!bild) return skickaJson(res, 404, { fel: "kunde inte hämta kamerabild" });
+      res.writeHead(200, { "Content-Type": bild.typ, "Cache-Control": "no-store" });
+      return res.end(bild.data);
     }
     if (req.method === "POST" && p.endsWith("/api/zoner/ta-bort")) {
       const { id } = await lasBody(req);
@@ -442,5 +520,6 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => console.log(`tradgardsbevakning lyssnar på :${PORT}, data i ${DATA_PATH}`));
+migreraData().catch((err) => console.warn("Migrering misslyckades:", err.message));
 kollaSkordepaminnelser().catch((err) => console.warn("Skördepåminnelse-koll misslyckades:", err.message));
 loggaHistorik().catch((err) => console.warn("Historik-loggning misslyckades:", err.message));
