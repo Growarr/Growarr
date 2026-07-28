@@ -156,10 +156,10 @@
   .karta-canvas.redigerar { box-shadow:inset 0 0 0 2px var(--warn); }
   .karta-plus { position:absolute; bottom:-16px; right:14px; width:48px; height:48px; border-radius:50%;
     font-size:1.6rem; line-height:1; display:flex; align-items:center; justify-content:center; padding:0; z-index:5; }
-  .zon-kort-canvas { position:absolute; width:230px; max-width:min(230px,70vw); transform:translate(-50%,-50%);
+  /* Bredden sätts inline per zon (styr även orienteringen) – ingen max-width
+     här, den skulle klämma ihop breda växthus. */
+  .zon-kort-canvas { position:absolute; transform:translate(-50%,-50%);
     touch-action:none; transition:box-shadow .12s ease; }
-  /* Ett växthus med flera odlingslådor behöver mer bredd för sektionerna */
-  .zon-kort-canvas.har-sektioner { width:290px; max-width:min(290px,80vw); }
   .zon-kort-canvas.dragging { z-index:10; cursor:grabbing; box-shadow:0 22px 44px -12px rgba(0,0,0,.55); transition:none; }
   .karta-canvas:not(.redigerar) .zon-kort:not(.okategoriserat) { cursor:pointer; }
   .karta-canvas.redigerar .zon-kort { cursor:grab; }
@@ -195,32 +195,58 @@
 
   /* ---- Ytan: zonen sedd uppifrån ---- */
   .zon-yta { position:relative; border-radius:12px; min-height:92px; padding:12px; overflow:hidden; }
-  .zon-plantor { display:flex; flex-wrap:wrap; gap:8px; position:relative; z-index:1; }
+  /* Tomtexterna centreras eftersom plantlagret nu är ett absolut positionslager */
+  .zon-plantor .zon-tom, .zon-plantor .sektion-tom { position:absolute; left:50%; top:50%;
+    transform:translate(-50%,-50%); white-space:nowrap; }
+  .zon-plantor { position:absolute; inset:0; z-index:1; }
 
   /* Sektioner inuti en zon – t.ex. odlingslådor och bänkar i ett växthus.
-     Ritas som mindre ytor inne i förälderns yta. */
-  .zon-sektioner { display:grid; grid-template-columns:repeat(auto-fit,minmax(96px,1fr)); gap:8px;
-    position:relative; z-index:1; margin-bottom:8px; }
-  .zon-sektion { border-radius:9px; padding:7px; cursor:pointer; }
-  .zon-sektion .sektion-topp { display:flex; align-items:center; gap:5px; margin-bottom:6px; }
+     Placeras fritt i förälderns yta med egen storlek, så orienteringen
+     (liggande låda vs stående) styrs av bredd/höjd. */
+  .zon-sektion { position:absolute; transform:translate(-50%,-50%); border-radius:9px; padding:6px;
+    cursor:pointer; overflow:hidden; z-index:2; touch-action:none;
+    display:flex; flex-direction:column; box-shadow:0 3px 10px -3px rgba(0,0,0,.4); }
+  .zon-sektion .sektion-yta { position:relative; flex:1; min-height:0; }
+  .zon-sektion .sektion-topp { display:flex; align-items:center; gap:4px; margin-bottom:4px; }
   .zon-sektion .sektion-topp .ikon { font-size:.85rem; }
   .zon-sektion .sektion-topp .namn { font-size:.7rem; font-weight:650; flex:1; min-width:0;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#fff;
     text-shadow:0 1px 2px rgba(0,0,0,.45); }
   .zon-yta.inomhus .zon-sektion .sektion-topp .namn,
   .zon-yta.annat .zon-sektion .sektion-topp .namn { color:var(--text); text-shadow:none; }
-  .zon-sektion .zon-plantor { gap:5px; }
   .zon-sektion .vaxt-punkt { width:26px; height:26px; font-size:.82rem; }
-  .zon-sektion.vald { box-shadow:0 0 0 2px var(--accent); }
+  .zon-sektion.vald { box-shadow:0 0 0 2px var(--accent), 0 3px 10px -3px rgba(0,0,0,.4); }
+  .zon-sektion.dragging { z-index:12; box-shadow:0 12px 26px -6px rgba(0,0,0,.5); transition:none; }
   .zon-sektion .sektion-ta-bort { background:rgba(255,255,255,.28); border:0; box-shadow:none; color:#fff;
     width:17px; height:17px; border-radius:50%; padding:0; font-size:.7rem; line-height:1; cursor:pointer;
     display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+
+  /* Storlekshandtag (syns bara i redigeringsläge). Sektioner och zonkort dras
+     genom att ta tag var som helst på dem, så de har inget eget draghandtag. */
+  .karta-canvas.redigerar .zon-sektion { cursor:grab; }
+  .storlek-handtag { position:absolute; right:2px; bottom:2px; width:16px; height:16px; cursor:nwse-resize;
+    z-index:6; touch-action:none; border-radius:4px; background:rgba(255,255,255,.35);
+    box-shadow:inset -2px -2px 0 rgba(0,0,0,.25); }
+  .zon-kort-canvas > .storlek-handtag { right:4px; bottom:4px; width:18px; height:18px;
+    background:var(--surface2); border:1px solid var(--border); box-shadow:none; }
+  .vand-btn { background:var(--surface2); border:1px solid var(--border); box-shadow:none; color:var(--muted);
+    width:22px; height:22px; padding:0; border-radius:6px; font-size:.75rem; line-height:1; flex:0 0 auto;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .vand-btn:hover { color:var(--text); border-color:var(--accent); transform:none; }
+  .sektion-vand { background:rgba(255,255,255,.3); border:0; color:#fff; width:16px; height:16px; font-size:.62rem; }
+  /* I redigeringsläge kan plantorna dras – annars är de bara klickbara */
+  .karta-canvas.redigerar .vaxt-punkt { cursor:grab; touch-action:none; }
+  .vaxt-punkt.dragging { z-index:15; transform:translate(-50%,-50%) scale(1.15); transition:none; }
   .sektion-tom { font-size:.66rem; color:rgba(255,255,255,.8); text-shadow:0 1px 2px rgba(0,0,0,.4); }
   .zon-yta.inomhus .sektion-tom, .zon-yta.annat .sektion-tom { color:var(--muted); text-shadow:none; }
-  .vaxt-punkt { position:relative; width:34px; height:34px; border-radius:50%; display:flex; align-items:center;
-    justify-content:center; font-size:1.05rem; cursor:pointer; flex:0 0 auto; background:rgba(255,255,255,.92);
-    box-shadow:0 2px 6px rgba(0,0,0,.28), inset 0 0 0 1px rgba(255,255,255,.7); transition:transform .12s ease; }
-  .vaxt-punkt:hover { transform:scale(1.1); }
+  /* Plantorna ligger fritt placerade i sin zon eller sektion (0–1 av ytan).
+     OBS: alla transform-regler måste behålla translate(-50%,-50%) – annars
+     hoppar punkten ur sin position (samma fälla som zonkorten hade). */
+  .vaxt-punkt { position:absolute; transform:translate(-50%,-50%); width:34px; height:34px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-size:1.05rem; cursor:pointer;
+    background:rgba(255,255,255,.92);
+    box-shadow:0 2px 6px rgba(0,0,0,.28), inset 0 0 0 1px rgba(255,255,255,.7); transition:box-shadow .12s ease; }
+  .vaxt-punkt:hover { box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 65%, transparent), 0 2px 6px rgba(0,0,0,.28); }
   .vaxt-punkt.vald { box-shadow:0 0 0 2px var(--accent), 0 2px 6px rgba(0,0,0,.28); }
   .vaxt-punkt.skord::after { content:""; position:absolute; width:9px; height:9px; border-radius:50%;
     background:var(--warn); transform:translate(13px,-13px); box-shadow:0 0 0 2px var(--surface); }
@@ -814,7 +840,7 @@ function entiteterFor(idLista) {
 }
 // En planta ritas som en liten prydlig punkt i zonens yta. Namn och detaljer
 // ligger i tooltip och i Zondetaljer-panelen – kartan hålls medvetet ren.
-function vaxtPunkt(o) {
+function vaxtPunkt(o, i = 0) {
   const nuManad = new Date().toISOString().slice(0, 7);
   const skordSnart = o.skordManad === nuManad;
   const enhetText = entiteterFor(o.enhetIds).filter((e) => !e.fel)
@@ -825,7 +851,23 @@ function vaxtPunkt(o) {
     o.jord ? `jord: ${o.jord}` : "", enhetText, o.anteckning,
   ].filter(Boolean).join(" · ");
   const vald = valtMal?.typ === "odling" && valtMal.id === o.id;
-  return `<span class="vaxt-punkt${vald ? " vald" : ""}${skordSnart ? " skord" : ""}" data-id="${o.id}" title="${esc(detaljer)}">${ikonForVaxt(o.namn)}</span>`;
+  const { x, y } = plantPosition(o, i);
+  return `<span class="vaxt-punkt${vald ? " vald" : ""}${skordSnart ? " skord" : ""}" style="left:${x * 100}%; top:${y * 100}%" data-id="${o.id}" title="${esc(detaljer)}">${ikonForVaxt(o.namn)}</span>`;
+}
+// Plantor utan sparad plats läggs ut i ett prydligt rutmönster tills man
+// drar dem – positionen sparas först när användaren faktiskt flyttar dem.
+function plantPosition(o, i) {
+  return {
+    x: o.x ?? (0.16 + (i % 4) * 0.23),
+    y: o.y ?? (0.26 + Math.floor(i / 4) * 0.30),
+  };
+}
+// Samma sak för sektioner inuti en zon.
+function sektionPosition(s, i) {
+  return {
+    x: s.x ?? (0.28 + (i % 2) * 0.44),
+    y: s.y ?? (0.3 + Math.floor(i / 2) * 0.4),
+  };
 }
 // Ger äldre zoner (skapade innan den fria placeringen fanns) en utspridd
 // standardposition istället för att alla hamna i mitten på varandra.
@@ -836,17 +878,24 @@ function zonPosition(z, i) {
 }
 // En sektion är en zon som ligger inuti en annan zon – t.ex. odlingslådor
 // och bänkar inne i ett växthus. Den ritas som en mindre yta i förälderns yta.
-function sektionHtml(sektion, grupper) {
+function sektionHtml(sektion, grupper, i) {
   const info = ZON_TYPER[sektion.typ] ?? ZON_TYPER.annat;
   const lista = grupper.get(sektion.id) ?? [];
   const vald = valtMal?.typ === "zon" && valtMal.id === sektion.id;
-  return `<div class="zon-sektion${vald ? " vald" : ""}" style="background:${info.grad}" data-id="${esc(sektion.id)}">
+  const { x, y } = sektionPosition(sektion, i);
+  const b = sektion.bredd ?? 152, h = sektion.hojd ?? 84;
+  return `<div class="zon-sektion${vald ? " vald" : ""}" data-id="${esc(sektion.id)}"
+      style="background:${info.grad}; left:${x * 100}%; top:${y * 100}%; width:${b}px; height:${h}px">
       <div class="sektion-topp">
         <span class="ikon">${info.ikon}</span>
         <span class="namn">${esc(sektion.namn)}</span>
+        ${redigerarLayout ? `<button class="sektion-vand vand-btn" data-id="${esc(sektion.id)}" title="Vänd (byt bredd/höjd)">⟳</button>` : ""}
         ${redigerarLayout ? `<button class="sektion-ta-bort" data-id="${esc(sektion.id)}" title="Ta bort sektion">×</button>` : ""}
       </div>
-      <div class="zon-plantor">${lista.length ? lista.map(vaxtPunkt).join("") : '<span class="sektion-tom">Tom</span>'}</div>
+      <div class="sektion-yta">
+        <div class="zon-plantor">${lista.length ? lista.map(vaxtPunkt).join("") : '<span class="sektion-tom">Tom</span>'}</div>
+      </div>
+      ${redigerarLayout ? `<div class="storlek-handtag" data-id="${esc(sektion.id)}" title="Dra för att ändra storlek"></div>` : ""}
     </div>`;
 }
 function renderaKarta() {
@@ -882,24 +931,33 @@ function renderaKarta() {
         .map((e) => `<span class="zon-enhet">${ikonForEnhet(e.enhet)} ${esc(e.state)}${e.enhet ? " " + esc(e.enhet) : ""}</span>`).join("");
       const vald = valtMal?.typ === "zon" && valtMal.id === z.id;
       const tomText = sektioner.length ? "" : '<span class="zon-tom">Inget planterat än</span>';
-      return `<div class="zon-kort zon-kort-canvas${vald ? " vald" : ""}${sektioner.length ? " har-sektioner" : ""}" style="left:${x * 100}%; top:${y * 100}%" data-id="${z.id}">
+      // Bredd/höjd styr både storlek och orientering (liggande vs stående)
+      const b = z.bredd ?? (sektioner.length ? 340 : 230);
+      const h = z.hojd ?? (sektioner.length ? 210 : 100);
+      return `<div class="zon-kort zon-kort-canvas${vald ? " vald" : ""}" data-id="${z.id}"
+          style="left:${x * 100}%; top:${y * 100}%; width:${b}px">
         <div class="zon-topp">
           ${redigerarLayout ? `<span class="zon-drag" title="Dra kortet för att flytta">✥</span>` : ""}
           <span class="ikon">${info.ikon}</span>
           <span class="namn">${esc(z.namn)}</span>
           ${enhetBadges}
+          ${redigerarLayout ? `<button class="zon-vand vand-btn" data-id="${z.id}" title="Vänd (byt bredd/höjd)">⟳</button>` : ""}
           ${redigerarLayout ? `<button class="zon-ta-bort" data-id="${z.id}" title="Ta bort zon">×</button>` : ""}
         </div>
-        <div class="zon-yta ${esc(z.typ || "annat")}">
-          ${sektioner.length ? `<div class="zon-sektioner">${sektioner.map((s) => sektionHtml(s, grupper)).join("")}</div>` : ""}
-          ${lista.length || !sektioner.length ? `<div class="zon-plantor">${lista.length ? lista.map(vaxtPunkt).join("") : tomText}</div>` : ""}
+        <div class="zon-yta ${esc(z.typ || "annat")}" style="height:${h}px">
+          ${sektioner.map((s, si) => sektionHtml(s, grupper, si)).join("")}
+          <div class="zon-plantor">${lista.length ? lista.map(vaxtPunkt).join("") : tomText}</div>
         </div>
+        ${redigerarLayout ? `<div class="storlek-handtag" data-id="${z.id}" title="Dra för att ändra storlek"></div>` : ""}
       </div>`;
     }).join("");
   }
+  // Plantlagret är absolut positionerat, så ytan behöver en höjd som rymmer
+  // alla rader (fyra plantor per rad i standardutlägget).
+  const okatHojd = 40 + Math.ceil(okategoriserade.length / 4) * 46;
   $("tradgardOkat").innerHTML = okategoriserade.length ? `<div class="zon-kort okategoriserat">
       <div class="zon-topp"><span class="ikon">📍</span><span class="namn">Utan zon</span></div>
-      <div class="zon-yta annat"><div class="zon-plantor">${okategoriserade.map(vaxtPunkt).join("")}</div></div>
+      <div class="zon-yta annat" style="height:${okatHojd}px"><div class="zon-plantor">${okategoriserade.map(vaxtPunkt).join("")}</div></div>
     </div>` : "";
 }
 
@@ -908,60 +966,106 @@ function renderaKarta() {
 // råkar ett vanligt klick nära draghandtaget (naturlig musdarr på några
 // pixlar) sparas som en ny, lätt förskjuten position, vilket upplevdes som
 // att zonen "hoppade" varje gång man försökte markera den.
-const DRAG_TROSKEL_PX = 6;
-let dragState = null; // { id, drogs, startX, startY }
+const DRAG_TROSKEL_PX = 5;
+let dragState = null;
 let nyligenDragen = false;
-function zonDragStart(e, id, handle) {
+
+// Standardmått måste matcha renderingen, annars "hoppar" storleken första
+// gången man drar i handtaget eller vänder ett kort.
+function zonMatt(z, harSektioner) {
+  const arSektion = Boolean(z.foralderId);
+  if (arSektion) return { bredd: z.bredd ?? 152, hojd: z.hojd ?? 84 };
+  return { bredd: z.bredd ?? (harSektioner ? 340 : 230), hojd: z.hojd ?? (harSektioner ? 210 : 100) };
+}
+
+function startaDrag(e, cfg, handle) {
   e.preventDefault();
-  // dragState sätts FÖRST. setPointerCapture är bara en bonus (vi lyssnar
-  // ändå på document, så dragningen fungerar utan den) och kan kasta
-  // NotFoundError på vissa webbläsare/pekskärmar – förut satt anropet före
-  // tilldelningen, så ett sådant fel gjorde att dragningen aldrig startade
-  // och positionen aldrig sparades.
-  dragState = { id, drogs: false, pointerId: e.pointerId, startX: e.clientX, startY: e.clientY };
-  try { handle.setPointerCapture(e.pointerId); } catch { /* strunt samma, document-lyssnarna räcker */ }
+  // dragState sätts FÖRST – setPointerCapture kan kasta på vissa pekskärmar,
+  // och vi lyssnar ändå på document, så dragningen klarar sig utan den.
+  dragState = { ...cfg, drogs: false, pointerId: e.pointerId, startX: e.clientX, startY: e.clientY };
+  try { handle.setPointerCapture(e.pointerId); } catch { /* document-lyssnarna räcker */ }
 }
-function zonDragMove(e) {
-  if (!dragState || e.pointerId !== dragState.pointerId) return;
-  if (!dragState.drogs) {
-    const flyttat = Math.hypot(e.clientX - dragState.startX, e.clientY - dragState.startY);
-    if (flyttat < DRAG_TROSKEL_PX) return;
-    dragState.drogs = true;
-    document.querySelector(`.zon-kort-canvas[data-id="${dragState.id}"]`)?.classList.add("dragging");
-  }
-  const canvas = $("tradgardKarta");
-  const rect = canvas.getBoundingClientRect();
-  let x = (e.clientX - rect.left) / rect.width;
-  let y = (e.clientY - rect.top) / rect.height;
-  x = Math.min(0.9, Math.max(0.1, x));
-  y = Math.min(0.88, Math.max(0.12, y));
-  dragState.x = x; dragState.y = y;
-  const el = document.querySelector(`.zon-kort-canvas[data-id="${dragState.id}"]`);
-  if (el) { el.style.left = `${x * 100}%`; el.style.top = `${y * 100}%`; }
-}
-async function zonDragEnd(e) {
-  if (!dragState || e.pointerId !== dragState.pointerId) return;
-  const { id, drogs, x, y } = dragState;
-  document.querySelector(`.zon-kort-canvas[data-id="${id}"]`)?.classList.remove("dragging");
-  dragState = null;
-  if (drogs && x != null) {
-    nyligenDragen = true;
-    setTimeout(() => { nyligenDragen = false; }, 100);
-    await sparaZon(id, { x, y });
-  }
-}
-// I redigeringsläge går hela kortet att dra, inte bara ✥-handtaget – ett
-// litet handtag är lätt att missa, särskilt på pekskärm. ✥ finns kvar som
-// visuell markör för att kortet är flyttbart.
+
 document.addEventListener("pointerdown", (e) => {
   if (!redigerarLayout) return;
-  if (e.target.closest(".zon-ta-bort")) return; // ta bort-knappen ska fortfarande gå att klicka
+  if (e.target.closest(".zon-ta-bort, .sektion-ta-bort, .vand-btn")) return; // knappar ska gå att klicka
+
+  // Storleksändring: dra hörnhandtaget på en zon eller sektion
+  const storlek = e.target.closest(".storlek-handtag");
+  if (storlek) {
+    const el = storlek.closest(".zon-sektion") || storlek.closest(".zon-kort-canvas");
+    if (!el) return;
+    const arSektion = el.classList.contains("zon-sektion");
+    const ytaEl = arSektion ? el : el.querySelector(".zon-yta");
+    startaDrag(e, {
+      typ: "storlek", id: storlek.dataset.id, el, arSektion,
+      startB: el.getBoundingClientRect().width,
+      startH: ytaEl.getBoundingClientRect().height,
+    }, storlek);
+    return;
+  }
+  // Planta: dras inom sin zon eller sektion
+  const planta = e.target.closest(".vaxt-punkt");
+  if (planta && planta.closest(".karta-canvas")) {
+    startaDrag(e, { typ: "planta", id: planta.dataset.id, el: planta, container: planta.closest(".zon-plantor") }, planta);
+    return;
+  }
+  // Sektion: dras inom föräldrazonens yta
+  const sektion = e.target.closest(".zon-sektion");
+  if (sektion) {
+    startaDrag(e, { typ: "sektion", id: sektion.dataset.id, el: sektion, container: sektion.parentElement }, sektion);
+    return;
+  }
+  // Hela zonkortet går att dra, inte bara ✥ – ett litet handtag är lätt att
+  // missa, särskilt på pekskärm.
   const kort = e.target.closest(".zon-kort-canvas");
-  if (kort) zonDragStart(e, kort.dataset.id, kort);
+  if (kort) startaDrag(e, { typ: "zon", id: kort.dataset.id, el: kort, container: $("tradgardKarta") }, kort);
 });
-document.addEventListener("pointermove", zonDragMove);
-document.addEventListener("pointerup", zonDragEnd);
-document.addEventListener("pointercancel", zonDragEnd);
+
+function dragMove(e) {
+  if (!dragState || e.pointerId !== dragState.pointerId) return;
+  if (!dragState.drogs) {
+    if (Math.hypot(e.clientX - dragState.startX, e.clientY - dragState.startY) < DRAG_TROSKEL_PX) return;
+    dragState.drogs = true;
+    dragState.el.classList.add("dragging");
+  }
+  if (dragState.typ === "storlek") {
+    const minB = dragState.arSektion ? 74 : 150;
+    const minH = dragState.arSektion ? 48 : 70;
+    const b = Math.max(minB, Math.round(dragState.startB + (e.clientX - dragState.startX)));
+    const h = Math.max(minH, Math.round(dragState.startH + (e.clientY - dragState.startY)));
+    dragState.b = b; dragState.h = h;
+    dragState.el.style.width = `${b}px`;
+    if (dragState.arSektion) dragState.el.style.height = `${h}px`;
+    else dragState.el.querySelector(".zon-yta").style.height = `${h}px`;
+    return;
+  }
+  const rect = dragState.container.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  const x = Math.min(0.94, Math.max(0.06, (e.clientX - rect.left) / rect.width));
+  const y = Math.min(0.94, Math.max(0.06, (e.clientY - rect.top) / rect.height));
+  dragState.x = x; dragState.y = y;
+  dragState.el.style.left = `${x * 100}%`;
+  dragState.el.style.top = `${y * 100}%`;
+}
+
+async function dragEnd(e) {
+  if (!dragState || e.pointerId !== dragState.pointerId) return;
+  const s = dragState;
+  s.el.classList.remove("dragging");
+  dragState = null;
+  if (!s.drogs) return;
+  // Hindra att den avslutade dragningen också tolkas som ett klick
+  nyligenDragen = true;
+  setTimeout(() => { nyligenDragen = false; }, 120);
+  if (s.typ === "storlek") await sparaZon(s.id, { bredd: s.b, hojd: s.h });
+  else if (s.typ === "planta") await sparaOdling(s.id, { x: s.x, y: s.y });
+  else await sparaZon(s.id, { x: s.x, y: s.y });
+}
+
+document.addEventListener("pointermove", dragMove);
+document.addEventListener("pointerup", dragEnd);
+document.addEventListener("pointercancel", dragEnd);
 
 $("zLaggTillBtn").addEventListener("click", async () => {
   const st = $("zStatus");
@@ -1424,6 +1528,17 @@ document.addEventListener("click", async (e) => {
   if (enhetTaBort) {
     await fetch(`${BAS}api/enheter/ta-bort`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: enhetTaBort.dataset.id }) });
     await laddaEnheter();
+    return;
+  }
+  // Vänd en zon eller sektion – byter bredd och höjd, dvs orienteringen
+  const vand = e.target.closest(".vand-btn");
+  if (vand) {
+    const z = zoner.find((x) => x.id === vand.dataset.id);
+    if (z) {
+      const harSektioner = zoner.some((s) => s.foralderId === z.id);
+      const { bredd, hojd } = zonMatt(z, harSektioner);
+      await sparaZon(z.id, { bredd: hojd, hojd: bredd });
+    }
     return;
   }
   const zonTaBort = e.target.closest(".zon-ta-bort, .sektion-ta-bort");

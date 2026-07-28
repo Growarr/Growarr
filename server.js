@@ -435,13 +435,18 @@ const server = createServer(async (req, res) => {
       return skickaJson(res, 200, data);
     }
     if (req.method === "POST" && p.endsWith("/api/odlingar/uppdatera")) {
-      const { id, planterad, skordFonster, skordManad, anteckning, jord, enhetIds } = await lasBody(req);
+      const { id, planterad, skordFonster, skordManad, anteckning, jord, enhetIds, zonId, x, y } = await lasBody(req);
       const data = await muteraData((d) => {
-        const o = d.odlingar.find((x) => x.id === id);
-        if (o) Object.assign(o, {
+        const o = d.odlingar.find((o2) => o2.id === id);
+        if (!o) return;
+        Object.assign(o, {
           planterad: planterad || "", skordFonster: skordFonster || "", skordManad: skordManad || "",
           anteckning: anteckning || "", jord: jord || "", enhetIds: enhetIds ?? [],
         });
+        // Plantans plats i sin zon/sektion (0–1), satt genom att dra på kartan.
+        if (zonId !== undefined) o.zonId = zonId || "";
+        if (x !== undefined) o.x = x;
+        if (y !== undefined) o.y = y;
       });
       return skickaJson(res, 200, data);
     }
@@ -451,7 +456,7 @@ const server = createServer(async (req, res) => {
       return skickaJson(res, 200, data);
     }
     if (req.method === "POST" && p.endsWith("/api/zoner/uppdatera")) {
-      const { id, jord, anteckning, enhetIds, x, y, foralderId } = await lasBody(req);
+      const { id, jord, anteckning, enhetIds, x, y, foralderId, bredd, hojd } = await lasBody(req);
       const data = await muteraData((d) => {
         const zon = d.zoner.find((z) => z.id === id);
         if (!zon) return;
@@ -459,6 +464,8 @@ const server = createServer(async (req, res) => {
           jord: jord || "", anteckning: anteckning || "", enhetIds: enhetIds ?? [],
           x: x ?? zon.x ?? 0.5, y: y ?? zon.y ?? 0.5,
         });
+        if (bredd !== undefined) zon.bredd = bredd;
+        if (hojd !== undefined) zon.hojd = hojd;
         if (foralderId !== undefined) {
           // Skydda mot att en zon blir sin egen förälder eller att två zoner
           // pekar på varandra – då skulle utritningen loopa i all oändlighet.
@@ -495,7 +502,11 @@ const server = createServer(async (req, res) => {
         d.zoner.push({
           id: randomUUID(), namn, typ: typ || "annat", jord: "", anteckning: "", enhetIds: [],
           kartaId: karta, foralderId: foralder ? foralder.id : "",
-          x: x ?? standardX, y: y ?? standardY,
+          // Sektioner placeras i förälderns yta (0–1), toppzoner på kartan.
+          x: x ?? (foralder ? 0.5 : standardX), y: y ?? (foralder ? 0.5 : standardY),
+          // Storleken styr även orienteringen – en bred låda ligger längs med,
+          // en hög står på tvären. Null = använd standardstorlek i panelen.
+          bredd: null, hojd: null,
         });
       });
       return skickaJson(res, 200, data);

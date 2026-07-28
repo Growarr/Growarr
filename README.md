@@ -40,11 +40,18 @@ Två delar i ett repo:
      **+ Skapa nytt → Zon → Placering**, eller direkt från Zondetaljer.
      Tas en zon bort raderas inte dess sektioner – de blir fristående.
    - **Trädgårdskarta** — en fritt placerbar karta. Klicka **Redigera layout**
-     för att slå på flytt-läge (✥-handtag dyker upp på varje zon, dra dit ni
-     vill ha dem), klicka **Klar, lås positionerna** när ni är nöjda för att
-     låsa dem igen. Lägg till nya zoner med **+**-knappen. Varje zon är
-     färgad efter sin typ, med ett auto-gissat växtemoji per planta. Odlingar
-     utan zon hamnar i en egen "Okategoriserat"-grupp under kartan.
+     för att slå på flytt-läge, och **Klar, lås positionerna** när ni är nöjda.
+     I redigeringsläge går det att:
+     - **dra zoner** dit ni vill på kartan,
+     - **dra sektioner** (odlingslådor, bänkar) till rätt plats *inuti* en zon,
+     - **dra enskilda plantor** till rätt plats i sin låda eller bädd,
+     - **ändra storlek** genom att dra i hörnhandtaget, och
+     - **vända** en zon eller låda med ⟳ (byter bredd/höjd), så en låda kan
+       ligga längs med eller stå på tvären.
+
+     Allt sparas automatiskt. Varje zon är färgad efter sin typ, med ett
+     auto-gissat växtemoji per planta. Odlingar utan zon hamnar i en egen
+     "Okategoriserat"-grupp under kartan.
    - **Zondetaljer** — klicka på en zon eller planta i kartan för att den
      markeras (ring runt kortet) och en panel längst ned dynamiskt visar och
      låter er redigera jordtyp, fria anteckningar, koppla valfritt antal
