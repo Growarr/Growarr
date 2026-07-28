@@ -34,6 +34,11 @@ Två delar i ett repo:
      väderprognosen, och väger ihop bilden med mätdatan i svaret. Kräver
      `ANTHROPIC_API_KEY` (se "Smart bevattning" nedan). Foton skalas ner i
      webbläsaren innan de skickas och sparas aldrig på servern.
+   - **Sektioner i en zon** — en zon kan innehålla andra zoner, så ett växthus
+     kan rymma flera odlingslådor och bänkar som ritas inuti det. Samma sorts
+     odlingslåda kan lika gärna stå fristående på kartan. Skapas via
+     **+ Skapa nytt → Zon → Placering**, eller direkt från Zondetaljer.
+     Tas en zon bort raderas inte dess sektioner – de blir fristående.
    - **Trädgårdskarta** — en fritt placerbar karta. Klicka **Redigera layout**
      för att slå på flytt-läge (✥-handtag dyker upp på varje zon, dra dit ni
      vill ha dem), klicka **Klar, lås positionerna** när ni är nöjda för att
@@ -174,7 +179,7 @@ på fel ställe.
 | POST | `/api/odlingar` | `{ namn, zonId?, planterad?, skordFonster?, skordManad?, anteckning? }` | Lägger till en odling |
 | POST | `/api/odlingar/uppdatera` | `{ id, planterad?, skordFonster?, skordManad?, anteckning?, jord?, enhetIds? }` | Uppdaterar en odling (via Zondetaljer-panelen) |
 | POST | `/api/odlingar/ta-bort` | `{ id }` | Tar bort en odling |
-| POST | `/api/zoner` | `{ namn, typ?, x?, y?, kartaId? }` | Lägger till en zon (`typ`: `vaxthus`/`utomhus`/`inomhus`/`odlingslada`/`annat`) |
+| POST | `/api/zoner` | `{ namn, typ?, x?, y?, kartaId?, foralderId? }` | Lägger till en zon (`typ`: `vaxthus`/`utomhus`/`inomhus`/`odlingslada`/`annat`). Med `foralderId` blir den en sektion inuti den zonen |
 | POST | `/api/kartor` | `{ namn }` | Lägger till en trädgårdskarta (flik) |
 | POST | `/api/kartor/ta-bort` | `{ id }` | Tar bort en karta (zonerna flyttas till första kvarvarande) |
 | POST | `/api/widgets` | `{ titel, typ, enhetIds?, entityId?, kolumn? }` | Lägger till ett eget block (`typ`: `entiteter`/`kamera`, `kolumn`: `huvud`/`sido`) |
@@ -182,8 +187,8 @@ på fel ställe.
 | POST | `/api/widgets/ordna` | `{ ids: [...] }` | Sparar ny ordning på blocken (↑/↓ i panelen) |
 | POST | `/api/widgets/ta-bort` | `{ id }` | Tar bort ett eget block |
 | GET | `/api/kamera?entityId=` | – | Proxar en ögonblicksbild från en HA-kameraentitet (HA-token stannar på servern) |
-| POST | `/api/zoner/uppdatera` | `{ id, jord?, anteckning?, enhetIds?, x?, y? }` | Uppdaterar en zon, inkl. position på kartan (dragning) |
-| POST | `/api/zoner/ta-bort` | `{ id }` | Tar bort en zon (odlingar i den blir okategoriserade) |
+| POST | `/api/zoner/uppdatera` | `{ id, jord?, anteckning?, enhetIds?, x?, y?, foralderId? }` | Uppdaterar en zon, inkl. position på kartan (dragning) och vilken zon den ligger i |
+| POST | `/api/zoner/ta-bort` | `{ id }` | Tar bort en zon (plantor blir okategoriserade, sektioner flyttas upp en nivå) |
 | GET | `/api/enheter/status` | – | Hämtar nuvarande tillstånd för alla bevakade HA-entiteter |
 | POST | `/api/enheter` | `{ entityId, namn? }` | Lägger till en bevakad HA-entitet |
 | POST | `/api/enheter/ta-bort` | `{ id }` | Tar bort en bevakad enhet |

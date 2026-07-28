@@ -451,29 +451,51 @@ const server = createServer(async (req, res) => {
       return skickaJson(res, 200, data);
     }
     if (req.method === "POST" && p.endsWith("/api/zoner/uppdatera")) {
-      const { id, jord, anteckning, enhetIds, x, y } = await lasBody(req);
+      const { id, jord, anteckning, enhetIds, x, y, foralderId } = await lasBody(req);
       const data = await muteraData((d) => {
         const zon = d.zoner.find((z) => z.id === id);
-        if (zon) Object.assign(zon, {
+        if (!zon) return;
+        Object.assign(zon, {
           jord: jord || "", anteckning: anteckning || "", enhetIds: enhetIds ?? [],
           x: x ?? zon.x ?? 0.5, y: y ?? zon.y ?? 0.5,
         });
+        if (foralderId !== undefined) {
+          // Skydda mot att en zon blir sin egen förälder eller att två zoner
+          // pekar på varandra – då skulle utritningen loopa i all oändlighet.
+          let giltig = Boolean(foralderId);
+          if (foralderId === zon.id) giltig = false;
+          if (giltig) {
+            let f = d.zoner.find((z) => z.id === foralderId);
+            if (!f) giltig = false;
+            for (let steg = 0; f && steg < 20; steg++) {
+              if (f.id === zon.id) { giltig = false; break; }
+              f = f.foralderId ? d.zoner.find((z) => z.id === f.foralderId) : null;
+            }
+          }
+          zon.foralderId = giltig ? foralderId : "";
+          if (giltig) zon.kartaId = d.zoner.find((z) => z.id === foralderId).kartaId;
+        }
       });
       return skickaJson(res, 200, data);
     }
     if (req.method === "POST" && p.endsWith("/api/zoner")) {
-      const { namn, typ, x, y, kartaId } = await lasBody(req);
+      const { namn, typ, x, y, kartaId, foralderId } = await lasBody(req);
       if (!namn) return skickaJson(res, 400, { fel: "namn saknas" });
       const data = await muteraData((d) => {
-        const karta = kartaId || d.kartor[0]?.id || "";
-        // Staggrar nya zoner i ett löst rutmönster så de inte hamnar rakt
-        // ovanpå varandra innan man dragit dem på plats – räknas per karta.
-        const n = d.zoner.filter((z) => z.kartaId === karta).length;
-        const standardX = 0.15 + (n % 3) * 0.35;
-        const standardY = 0.2 + Math.floor(n / 3) * 0.32;
+        // En sektion (t.ex. en odlingslåda inne i ett växthus) ärver kartan
+        // från sin förälder och behöver ingen egen x/y – den ritas inuti
+        // föräldern istället för fritt på kartan.
+        const foralder = foralderId ? d.zoner.find((z) => z.id === foralderId) : null;
+        const karta = foralder ? foralder.kartaId : (kartaId || d.kartor[0]?.id || "");
+        // Staggrar nya toppnivå-zoner i ett löst rutmönster så de inte hamnar
+        // rakt ovanpå varandra innan man dragit dem på plats – per karta.
+        const n = d.zoner.filter((z) => z.kartaId === karta && !z.foralderId).length;
+        const standardX = 0.2 + (n % 3) * 0.3;
+        const standardY = 0.25 + Math.floor(n / 3) * 0.32;
         d.zoner.push({
           id: randomUUID(), namn, typ: typ || "annat", jord: "", anteckning: "", enhetIds: [],
-          kartaId: karta, x: x ?? standardX, y: y ?? standardY,
+          kartaId: karta, foralderId: foralder ? foralder.id : "",
+          x: x ?? standardX, y: y ?? standardY,
         });
       });
       return skickaJson(res, 200, data);
@@ -542,7 +564,17 @@ const server = createServer(async (req, res) => {
     if (req.method === "POST" && p.endsWith("/api/zoner/ta-bort")) {
       const { id } = await lasBody(req);
       const data = await muteraData((d) => {
+        const borttagen = d.zoner.find((z) => z.id === id);
         d.zoner = d.zoner.filter((z) => z.id !== id);
+        // Sektioner inuti den borttagna zonen raderas inte – de flyttas upp
+        // en nivå (oftast till fristående på kartan) istället.
+        for (const z of d.zoner) {
+          if (z.foralderId === id) {
+            z.foralderId = borttagen?.foralderId || "";
+            if (z.x == null) z.x = 0.5;
+            if (z.y == null) z.y = 0.5;
+          }
+        }
         // Odlingar i borttagen zon blir "okategoriserade" istället för att pekas ut i tomma intet.
         for (const o of d.odlingar) if (o.zonId === id) o.zonId = "";
       });

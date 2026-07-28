@@ -40,9 +40,12 @@
   @media (max-width:1120px) { .dash-grid { grid-template-columns:1fr; } }
   .dash-kol { min-width:0; }
 
-  .vy-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding-top:22px; }
+  .vy-header { display:flex; align-items:center; gap:12px; padding-top:22px; }
   .vy-titel { font-size:1.3rem; font-weight:700; letter-spacing:-.01em; }
   .skapa-btn { display:flex; align-items:center; gap:7px; padding:10px 18px 10px 14px; font-size:.86rem; }
+  /* Ligger fast uppe till höger så den finns på både översikt och inställningar */
+  .skapa-btn-fast { position:fixed; top:20px; right:24px; z-index:30; }
+  @media (max-width:720px) { .skapa-btn-fast { top:12px; right:14px; padding:8px 14px 8px 11px; font-size:.8rem; } }
 
   .modal-bred { max-width:620px; }
   .skapa-flikar { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
@@ -155,6 +158,8 @@
     font-size:1.6rem; line-height:1; display:flex; align-items:center; justify-content:center; padding:0; z-index:5; }
   .zon-kort-canvas { position:absolute; width:230px; max-width:min(230px,70vw); transform:translate(-50%,-50%);
     touch-action:none; transition:box-shadow .12s ease; }
+  /* Ett växthus med flera odlingslådor behöver mer bredd för sektionerna */
+  .zon-kort-canvas.har-sektioner { width:290px; max-width:min(290px,80vw); }
   .zon-kort-canvas.dragging { z-index:10; cursor:grabbing; box-shadow:0 22px 44px -12px rgba(0,0,0,.55); transition:none; }
   .karta-canvas:not(.redigerar) .zon-kort:not(.okategoriserat) { cursor:pointer; }
   .karta-canvas.redigerar .zon-kort { cursor:grab; }
@@ -191,6 +196,27 @@
   /* ---- Ytan: zonen sedd uppifrån ---- */
   .zon-yta { position:relative; border-radius:12px; min-height:92px; padding:12px; overflow:hidden; }
   .zon-plantor { display:flex; flex-wrap:wrap; gap:8px; position:relative; z-index:1; }
+
+  /* Sektioner inuti en zon – t.ex. odlingslådor och bänkar i ett växthus.
+     Ritas som mindre ytor inne i förälderns yta. */
+  .zon-sektioner { display:grid; grid-template-columns:repeat(auto-fit,minmax(96px,1fr)); gap:8px;
+    position:relative; z-index:1; margin-bottom:8px; }
+  .zon-sektion { border-radius:9px; padding:7px; cursor:pointer; }
+  .zon-sektion .sektion-topp { display:flex; align-items:center; gap:5px; margin-bottom:6px; }
+  .zon-sektion .sektion-topp .ikon { font-size:.85rem; }
+  .zon-sektion .sektion-topp .namn { font-size:.7rem; font-weight:650; flex:1; min-width:0;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#fff;
+    text-shadow:0 1px 2px rgba(0,0,0,.45); }
+  .zon-yta.inomhus .zon-sektion .sektion-topp .namn,
+  .zon-yta.annat .zon-sektion .sektion-topp .namn { color:var(--text); text-shadow:none; }
+  .zon-sektion .zon-plantor { gap:5px; }
+  .zon-sektion .vaxt-punkt { width:26px; height:26px; font-size:.82rem; }
+  .zon-sektion.vald { box-shadow:0 0 0 2px var(--accent); }
+  .zon-sektion .sektion-ta-bort { background:rgba(255,255,255,.28); border:0; box-shadow:none; color:#fff;
+    width:17px; height:17px; border-radius:50%; padding:0; font-size:.7rem; line-height:1; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+  .sektion-tom { font-size:.66rem; color:rgba(255,255,255,.8); text-shadow:0 1px 2px rgba(0,0,0,.4); }
+  .zon-yta.inomhus .sektion-tom, .zon-yta.annat .sektion-tom { color:var(--muted); text-shadow:none; }
   .vaxt-punkt { position:relative; width:34px; height:34px; border-radius:50%; display:flex; align-items:center;
     justify-content:center; font-size:1.05rem; cursor:pointer; flex:0 0 auto; background:rgba(255,255,255,.92);
     box-shadow:0 2px 6px rgba(0,0,0,.28), inset 0 0 0 1px rgba(255,255,255,.7); transition:transform .12s ease; }
@@ -383,14 +409,15 @@
 </nav>
 <div class="app-content">
 
+<button class="skapa-btn skapa-btn-fast" id="skapaBtn" title="Skapa nytt">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+  Skapa nytt
+</button>
+
 <div class="wrap" id="dashboardVy">
 
   <div class="vy-header">
     <h1 class="vy-titel">Översikt</h1>
-    <button class="skapa-btn" id="skapaBtn" title="Skapa nytt">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-      Skapa nytt
-    </button>
   </div>
 
   <div class="dash-grid">
@@ -541,7 +568,10 @@
         <option value="odlingslada">Odlingslåda</option>
         <option value="annat">Annat</option>
       </select>
-      <p class="lbl" style="margin-top:10px">Zonen läggs på den karta som är vald just nu.</p>
+      <label class="lbl" style="margin-top:12px">Placering</label>
+      <select id="zForalder"><option value="">Fristående på kartan</option></select>
+      <p class="lbl" style="margin-top:10px">Välj en zon här för att lägga den nya som en <strong>sektion inuti</strong> den –
+        t.ex. flera odlingslådor och bänkar inne i ett växthus. Fristående zoner placeras fritt på kartan.</p>
       <button id="zLaggTillBtn" style="margin-top:12px">Lägg till zon</button>
       <div class="status" id="zStatus"></div>
     </div>
@@ -753,11 +783,31 @@ function manadNamn(m) {
   const [ar, man] = m.split("-").map(Number);
   return new Date(Date.UTC(ar, man - 1, 1)).toLocaleDateString("sv-SE", { month: "long", year: "numeric", timeZone: "UTC" });
 }
+// Bygger en trädordnad lista av zonerna på aktiv karta, så sektioner visas
+// indenterade under sin förälder i rullgardinerna.
+function zonerITrad() {
+  const pa = zoner.filter((z) => z.kartaId === aktivKartaId);
+  const ider = new Set(pa.map((z) => z.id));
+  const ut = [];
+  const lagg = (z, djup) => {
+    ut.push({ zon: z, djup });
+    if (djup < 3) pa.filter((b) => b.foralderId === z.id).forEach((b) => lagg(b, djup + 1));
+  };
+  pa.filter((z) => !z.foralderId || !ider.has(z.foralderId)).forEach((z) => lagg(z, 0));
+  return ut;
+}
+function zonAlternativ() {
+  return zonerITrad().map(({ zon, djup }) =>
+    `<option value="${esc(zon.id)}">${"  ".repeat(djup)}${djup ? "└ " : ""}${ZON_TYPER[zon.typ]?.ikon ?? "📍"} ${esc(zon.namn)}</option>`).join("");
+}
 function uppdateraZonVal() {
   const val = $("oZon").value;
-  $("oZon").innerHTML = '<option value="">Ingen zon</option>' +
-    zoner.map((z) => `<option value="${esc(z.id)}">${ZON_TYPER[z.typ]?.ikon ?? "📍"} ${esc(z.namn)}</option>`).join("");
+  $("oZon").innerHTML = '<option value="">Ingen zon</option>' + zonAlternativ();
   if (zoner.some((z) => z.id === val)) $("oZon").value = val;
+  // Samma lista styr var en ny zon ska placeras (fristående eller som sektion)
+  const fVal = $("zForalder").value;
+  $("zForalder").innerHTML = '<option value="">Fristående på kartan</option>' + zonAlternativ();
+  if (zoner.some((z) => z.id === fVal)) $("zForalder").value = fVal;
 }
 function entiteterFor(idLista) {
   return (idLista ?? []).map((id) => enheterStatus.find((e) => e.id === id)).filter(Boolean);
@@ -784,27 +834,55 @@ function zonPosition(z, i) {
   const y = z.y ?? (0.2 + Math.floor(i / 3) * 0.32);
   return { x, y };
 }
+// En sektion är en zon som ligger inuti en annan zon – t.ex. odlingslådor
+// och bänkar inne i ett växthus. Den ritas som en mindre yta i förälderns yta.
+function sektionHtml(sektion, grupper) {
+  const info = ZON_TYPER[sektion.typ] ?? ZON_TYPER.annat;
+  const lista = grupper.get(sektion.id) ?? [];
+  const vald = valtMal?.typ === "zon" && valtMal.id === sektion.id;
+  return `<div class="zon-sektion${vald ? " vald" : ""}" style="background:${info.grad}" data-id="${esc(sektion.id)}">
+      <div class="sektion-topp">
+        <span class="ikon">${info.ikon}</span>
+        <span class="namn">${esc(sektion.namn)}</span>
+        ${redigerarLayout ? `<button class="sektion-ta-bort" data-id="${esc(sektion.id)}" title="Ta bort sektion">×</button>` : ""}
+      </div>
+      <div class="zon-plantor">${lista.length ? lista.map(vaxtPunkt).join("") : '<span class="sektion-tom">Tom</span>'}</div>
+    </div>`;
+}
 function renderaKarta() {
   if (dragState) return; // rendera inte om under en pågående dragning – då styr pointermove DOM:en direkt
   // Bara zonerna på den aktiva kartfliken ritas ut.
   const synligaZoner = zoner.filter((z) => z.kartaId === aktivKartaId);
+  const synligaIder = new Set(synligaZoner.map((z) => z.id));
   const grupper = new Map(synligaZoner.map((z) => [z.id, []]));
   const okategoriserade = [];
   for (const o of odlingar) {
     if (o.zonId && grupper.has(o.zonId)) grupper.get(o.zonId).push(o);
     else if (!o.zonId) okategoriserade.push(o);
   }
-  if (!synligaZoner.length) {
+  // Sektioner ritas inuti sin förälder; bara zoner utan (synlig) förälder
+  // placeras fritt på kartan.
+  const sektionerPer = new Map();
+  for (const z of synligaZoner) {
+    if (z.foralderId && synligaIder.has(z.foralderId)) {
+      if (!sektionerPer.has(z.foralderId)) sektionerPer.set(z.foralderId, []);
+      sektionerPer.get(z.foralderId).push(z);
+    }
+  }
+  const toppzoner = synligaZoner.filter((z) => !z.foralderId || !synligaIder.has(z.foralderId));
+  if (!toppzoner.length) {
     $("tradgardKarta").innerHTML = '<div class="karta-tom">Inga zoner på den här kartan ännu – klicka på + för att lägga till en (växthus, bädd, odlingslåda …).</div>';
   } else {
-    $("tradgardKarta").innerHTML = synligaZoner.map((z, i) => {
+    $("tradgardKarta").innerHTML = toppzoner.map((z, i) => {
       const info = ZON_TYPER[z.typ] ?? ZON_TYPER.annat;
       const lista = grupper.get(z.id) ?? [];
+      const sektioner = sektionerPer.get(z.id) ?? [];
       const { x, y } = zonPosition(z, i);
       const enhetBadges = entiteterFor(z.enhetIds).filter((e) => !e.fel)
         .map((e) => `<span class="zon-enhet">${ikonForEnhet(e.enhet)} ${esc(e.state)}${e.enhet ? " " + esc(e.enhet) : ""}</span>`).join("");
       const vald = valtMal?.typ === "zon" && valtMal.id === z.id;
-      return `<div class="zon-kort zon-kort-canvas${vald ? " vald" : ""}" style="left:${x * 100}%; top:${y * 100}%" data-id="${z.id}">
+      const tomText = sektioner.length ? "" : '<span class="zon-tom">Inget planterat än</span>';
+      return `<div class="zon-kort zon-kort-canvas${vald ? " vald" : ""}${sektioner.length ? " har-sektioner" : ""}" style="left:${x * 100}%; top:${y * 100}%" data-id="${z.id}">
         <div class="zon-topp">
           ${redigerarLayout ? `<span class="zon-drag" title="Dra kortet för att flytta">✥</span>` : ""}
           <span class="ikon">${info.ikon}</span>
@@ -813,7 +891,8 @@ function renderaKarta() {
           ${redigerarLayout ? `<button class="zon-ta-bort" data-id="${z.id}" title="Ta bort zon">×</button>` : ""}
         </div>
         <div class="zon-yta ${esc(z.typ || "annat")}">
-          <div class="zon-plantor">${lista.length ? lista.map(vaxtPunkt).join("") : '<span class="zon-tom">Inget planterat än</span>'}</div>
+          ${sektioner.length ? `<div class="zon-sektioner">${sektioner.map((s) => sektionHtml(s, grupper)).join("")}</div>` : ""}
+          ${lista.length || !sektioner.length ? `<div class="zon-plantor">${lista.length ? lista.map(vaxtPunkt).join("") : tomText}</div>` : ""}
         </div>
       </div>`;
     }).join("");
@@ -892,7 +971,7 @@ $("zLaggTillBtn").addEventListener("click", async () => {
   try {
     await fetch(`${BAS}api/zoner`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ namn, typ: $("zTyp").value, kartaId: aktivKartaId }),
+      body: JSON.stringify({ namn, typ: $("zTyp").value, kartaId: aktivKartaId, foralderId: $("zForalder").value }),
     });
     $("zNamn").value = "";
     await laddaOdlingar();
@@ -1206,6 +1285,33 @@ function avmarkeraMal() {
   renderaDetaljPanel();
   renderaKarta();
 }
+// Sektioner (t.ex. odlingslådor inne i ett växthus) hanteras direkt i
+// detaljpanelen, precis som plantorna.
+function zonSektionerHtml(z) {
+  const lista = zoner.filter((s) => s.foralderId === z.id);
+  return `<div class="modal-entiteter">
+    <label class="lbl">Sektioner inuti zonen</label>
+    ${lista.length ? `<div class="plant-lista">${lista.map((s) => `
+      <div class="plant-rad">
+        <span class="plant-ikon">${(ZON_TYPER[s.typ] ?? ZON_TYPER.annat).ikon}</span>
+        <span class="namn">${esc(s.namn)}</span>
+        <span class="varde">${esc((ZON_TYPER[s.typ] ?? ZON_TYPER.annat).namn)}</span>
+        ${redigerarLayout ? `<button class="ta-bort sektion-ta-bort" data-id="${esc(s.id)}" title="Ta bort sektion" style="position:static">×</button>` : ""}
+      </div>`).join("")}</div>` : '<div class="tom">Inga sektioner – t.ex. odlingslådor eller bänkar inne i zonen.</div>'}
+    <div class="modal-lagg-entitet">
+      <input type="text" id="zNySektion" placeholder="Ny sektion, t.ex. Odlingslåda 1">
+      <select id="zNySektionTyp" style="max-width:140px">
+        <option value="odlingslada">Odlingslåda</option>
+        <option value="utomhus">Bädd</option>
+        <option value="inomhus">Krukor</option>
+        <option value="vaxthus">Växthus</option>
+        <option value="annat">Annat</option>
+      </select>
+      <button id="zNySektionBtn">Lägg till</button>
+    </div>
+  </div>`;
+}
+
 // Plantor i en zon, direkt i detaljpanelen – lägga till går alltid, men
 // borttagning kräver att Redigera är påslaget så man inte råkar radera.
 function zonPlantorHtml(z) {
@@ -1254,13 +1360,17 @@ function renderaDetaljPanel() {
     $("detaljPanel").innerHTML = `
       <div class="detalj-head">
         <span class="ikon">${info.ikon}</span>
-        <div><h3>${esc(z.namn)}</h3><div class="modal-sub">${esc(info.namn)}</div></div>
+        <div><h3>${esc(z.namn)}</h3><div class="modal-sub">${esc(info.namn)}${(() => {
+          const f = z.foralderId ? zoner.find((x) => x.id === z.foralderId) : null;
+          return f ? ` · sektion i ${esc(f.namn)}` : "";
+        })()}</div></div>
         <button class="tillbaka-btn" id="dAvmarkeraBtn">Avmarkera</button>
       </div>
       <div class="falt"><label class="lbl">Jord</label><input type="text" id="mJord" placeholder="t.ex. näringsrik potatisjord + kompost" value="${esc(z.jord ?? "")}"></div>
       <div class="falt"><label class="lbl">Anteckning</label><textarea id="mAnteckning" placeholder="fritt att skriva">${esc(z.anteckning ?? "")}</textarea></div>
       <button id="mSparaBtn">Spara</button>
       <div class="status" id="mStatus"></div>
+      ${zonSektionerHtml(z)}
       ${zonPlantorHtml(z)}
       ${kopplaEntiteterHtml(z.enhetIds)}
       ${detaljHistorikHtml(z.enhetIds)}`;
@@ -1316,9 +1426,9 @@ document.addEventListener("click", async (e) => {
     await laddaEnheter();
     return;
   }
-  const zonTaBort = e.target.closest(".zon-ta-bort");
+  const zonTaBort = e.target.closest(".zon-ta-bort, .sektion-ta-bort");
   if (zonTaBort) {
-    if (!confirm("Ta bort zonen? Odlingar i den blir okategoriserade.")) return;
+    if (!confirm("Ta bort zonen? Plantor i den blir okategoriserade, och eventuella sektioner flyttas ut.")) return;
     await fetch(`${BAS}api/zoner/ta-bort`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: zonTaBort.dataset.id }) });
     await laddaOdlingar();
     return;
@@ -1394,6 +1504,19 @@ document.addEventListener("click", async (e) => {
 
   // Popup: avmarkera i detaljpanelen
   if (e.target.closest("#dAvmarkeraBtn")) { avmarkeraMal(); return; }
+
+  // Lägg till en sektion (t.ex. odlingslåda) inuti den valda zonen
+  if (e.target.closest("#zNySektionBtn") && valtMal?.typ === "zon") {
+    const namn = $("zNySektion").value.trim();
+    if (!namn) return;
+    await fetch(`${BAS}api/zoner`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ namn, typ: $("zNySektionTyp").value, foralderId: valtMal.id }),
+    });
+    await laddaOdlingar();
+    renderaDetaljPanel();
+    return;
+  }
 
   // Lägg till planta direkt i den valda zonen
   if (e.target.closest("#zNyPlantaBtn") && valtMal?.typ === "zon") {
@@ -1478,6 +1601,9 @@ document.addEventListener("click", async (e) => {
   // Välj mål: klick på en planta (chip) väger tyngre än klick på hela zon-kortet
   const chipEl = e.target.closest(".vaxt-punkt");
   if (chipEl) { valjMal("odling", chipEl.dataset.id); return; }
+  // Sektionen måste testas före zon-kortet – annars fångar föräldern klicket
+  const sektionEl = e.target.closest(".zon-sektion");
+  if (sektionEl) { valjMal("zon", sektionEl.dataset.id); return; }
   const zonKortEl = e.target.closest(".zon-kort");
   if (zonKortEl && !zonKortEl.classList.contains("okategoriserat")) { valjMal("zon", zonKortEl.dataset.id); return; }
 });
