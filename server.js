@@ -272,6 +272,83 @@ async function hamtaSmartBevattning() {
   }
 }
 
+// ---- AI-optimerade notiser (Claude) ----
+// Panelen räknar fram regelbaserade kandidatnotiser (frostrisk, torr jord,
+// skördepåminnelser, sensorfel) och skickar dem hit. Claude får samma
+// trädgårdssammanfattning som bevattningsinsikten och ombeds bara PRIORITERA,
+// SLÅ IHOP närbesläktade och SKRIVA OM texten mer konkret – aldrig hitta på
+// nya notiser. Id:t på varje kandidat är facit: allt Claude svarar med som
+// inte matchar ett redan skickat id kasseras, så ett påhitt aldrig kan bli en
+// falsk varning i panelen. Cachas per uppsättning kandidat-id:n så en
+// oförändrad lista inte kostar ett nytt anrop vid varje sidladdning.
+let notiserAiCache = null; // { nyckel, tid, resultat }
+const NOTISER_AI_CACHE_MS = 3 * 3600 * 1000;
+
+async function hamtaAiNotiser(kandidater) {
+  if (!ANTHROPIC_API_KEY) return { fel: "ANTHROPIC_API_KEY är inte konfigurerad", notiser: kandidater };
+  if (!Array.isArray(kandidater) || !kandidater.length) return { notiser: [] };
+  const nyckel = kandidater.map((k) => k.id).sort().join(",");
+  if (notiserAiCache && notiserAiCache.nyckel === nyckel && Date.now() - notiserAiCache.tid < NOTISER_AI_CACHE_MS) {
+    return notiserAiCache.resultat;
+  }
+  try {
+    const [d, vader] = await Promise.all([lasData(), hamtaVader()]);
+    const sammanfattning = await byggTradgardsSammanfattning(d, vader);
+    const kandidatText = kandidater.map((k) => `- id: ${k.id} | titel: ${k.titel} | text: ${k.text} | nivå: ${k.niva}`).join("\n");
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: ANTHROPIC_MODEL,
+        max_tokens: 1200,
+        messages: [{
+          role: "user",
+          content: `Du hjälper till att förbättra notiser i en trädgårdsapp. Nedan är dagens regelbaserade kandidatnotiser och en sammanfattning av trädgården.
+
+Uppgift:
+1. Sortera dem efter faktisk angelägenhet för DEN HÄR trädgården (t.ex. väger frostrisk för känsliga plantor tyngre än lätt torr jord i en tålig sort).
+2. Om två eller fler kandidater egentligen beskriver samma underliggande problem (t.ex. flera "kallt"-varningar samma natt), slå ihop dem till en – behåll första kandidatens id, nämn alla berörda platser i texten.
+3. Skriv om "text" till en kort, konkret, specifik mening (max ~20 ord) som väger in sammanfattningen nedan.
+
+Regler, viktigast: Hitta ALDRIG på mätvärden, platser eller fakta som inte står i kandidaterna eller sammanfattningen. Lägg ALDRIG till en notis utöver kandidaterna – bara sortera, slå ihop och skriv om. Varje id i ditt svar måste vara ett id som redan finns bland kandidaterna.
+
+Svara ENDAST med kompakt JSON, inget annat: {"notiser":[{"id":"...","titel":"...","text":"..."}]}
+
+Kandidater:
+${kandidatText}
+
+Trädgården:
+${sammanfattning}`,
+        }],
+      }),
+    });
+    if (!res.ok) return { fel: `Claude svarade ${res.status}`, notiser: kandidater };
+    const data = await res.json();
+    if (data.stop_reason === "refusal") return { fel: "Claude avböjde", notiser: kandidater };
+    const text = data.content?.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
+    const utanKodblock = text?.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+    const parsed = JSON.parse(utanKodblock ?? "");
+    const giltiga = new Map(kandidater.map((k) => [k.id, k]));
+    const sedda = new Set();
+    const rensat = [];
+    for (const n of parsed.notiser ?? []) {
+      const orig = giltiga.get(n?.id);
+      if (!orig || sedda.has(orig.id)) continue; // påhittat eller redan använt id – kasseras
+      sedda.add(orig.id);
+      rensat.push({ ...orig, titel: typeof n.titel === "string" && n.titel ? n.titel : orig.titel,
+        text: typeof n.text === "string" && n.text ? n.text : orig.text });
+    }
+    // Missade Claude en kandidat i sitt svar tas den med sist i original-
+    // form, hellre än att en riktig notis tyst försvinner ur listan.
+    for (const k of kandidater) if (!sedda.has(k.id)) rensat.push(k);
+    const resultat = { notiser: rensat, viaAi: true };
+    notiserAiCache = { nyckel, tid: Date.now(), resultat };
+    return resultat;
+  } catch (err) {
+    return { fel: err.message, notiser: kandidater };
+  }
+}
+
 // ---- AI-chatt (Claude, med bildstöd) ----
 // Användaren kan fråga t.ex. "varför ser den här plantan ut så här?" och
 // bifoga ett foto. Vi skickar med hela trädgårdssammanfattningen (zoner,
@@ -700,6 +777,14 @@ const server = createServer(async (req, res) => {
         d.notiser.push({ id, atgard: atgard === "klar" ? "klar" : "avvisad", tid: new Date().toISOString() });
       });
       return skickaJson(res, 200, data.notiser);
+    }
+    // AI-optimering av notiserna: panelen skickar sina regelbaserade
+    // kandidater, Claude prioriterar/slår ihop/skriver om dem (se
+    // hamtaAiNotiser). Faller tillbaka på kandidaterna oförändrade om
+    // ANTHROPIC_API_KEY saknas eller anropet misslyckas.
+    if (req.method === "POST" && p.endsWith("/api/notiser/ai")) {
+      const { kandidater } = await lasBody(req);
+      return skickaJson(res, 200, await hamtaAiNotiser(kandidater));
     }
     if (req.method === "POST" && p.endsWith("/api/chatt")) {
       const { meddelanden } = await lasBody(req);

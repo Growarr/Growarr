@@ -142,6 +142,19 @@ Två delar i ett repo:
      nästa dag (eller nästa månad för skördepåminnelser) — den är "klar för
      nu", inte borta för gott.
 
+     **AI-optimerad** (kräver `ANTHROPIC_API_KEY`) — de regelbaserade
+     kandidaterna ovan skickas till Claude tillsammans med samma
+     trädgårdssammanfattning som bevattningsinsikten använder. Claude
+     **prioriterar** dem efter faktisk angelägenhet för just er trädgård,
+     **slår ihop** närbesläktade notiser till en, och **skriver om** texten
+     till en kort, konkret mening. En liten **"✨ Prioriterat av AI"**-etikett
+     syns i panelen när det skett. Claude får aldrig hitta på nya notiser
+     eller fakta – varje id i svaret måste redan finnas bland kandidaterna,
+     annars kasseras det tyst. Cachas några timmar per uppsättning
+     kandidater (samma mönster som bevattningsinsikten); utan nyckel eller
+     om anropet misslyckas visas de vanliga, regelbaserade raderna precis
+     som vanligt.
+
    **Inställningar** (`/#installningar`) — allt ni fyller i eller lägger till:
    - **⚙️ Notiser** — ntfy-ämne och HA-webhook-URL för skördepåminnelser.
    - **Zoner** — lägg till nya bäddar, växthus, odlingslådor, inomhus/utomhus
@@ -293,6 +306,7 @@ på fel ställe.
 | GET | `/api/installningar` | – | Hämtar sparat ntfy-ämne/webhook-URL samt kartans riktning/skala |
 | POST | `/api/installningar` | `{ ntfyTopic?, webhookUrl?, norrGrader?, kartaBreddM? }` | Sparar inställningarna (via ⚙️ i panelen) |
 | POST | `/api/notiser` | `{ id, atgard: "klar"\|"avvisad" }` | Markerar en notis i notiscentret som hanterad, så den inte dyker upp igen |
+| POST | `/api/notiser/ai` | `{ kandidater: [{ id, titel, text, niva }] }` | Låter Claude prioritera/slå ihop/skriva om notiscentrets kandidater (kräver `ANTHROPIC_API_KEY`, annars returneras kandidaterna oförändrade) |
 
 ## Framtida utbyggnad
 

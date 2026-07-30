@@ -72,8 +72,18 @@
     display:none; z-index:40; }
   .notis-panel.oppen { display:block; }
   @media (max-width:720px) { .notis-panel { top:58px; right:14px; } }
-  .notis-topp { display:flex; align-items:center; margin-bottom:8px; }
-  .notis-topp .titel { font-weight:700; font-size:.92rem; font-family:"Outfit","Inter",sans-serif; }
+  .notis-topp { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .notis-topp .titel { font-weight:700; font-size:.92rem; font-family:"Outfit","Inter",sans-serif; flex:1; }
+  /* Diskret hint om att Claude prioriterat/skrivit om listan – syns bara
+     när det faktiskt hänt, ingen falsk "AI-driven"-känsla i övrigt. */
+  .ai-etikett { font-size:.66rem; font-weight:700; padding:3px 9px; border-radius:99px;
+    background:linear-gradient(135deg, color-mix(in srgb, var(--accent) 24%, transparent), color-mix(in srgb, var(--accent2) 24%, transparent));
+    color:var(--accent-h); white-space:nowrap; }
+  /* Mjuk kollaps när en notis hanteras, i stället för att den bara försvinner. */
+  .notis-rad { transition:max-height .22s ease, opacity .22s ease, padding .22s ease, margin .22s ease,
+      border-color .22s ease; overflow:hidden; }
+  .notis-rad.forsvinner { max-height:0 !important; opacity:0; padding-top:0; padding-bottom:0;
+    margin:0; border-top-color:transparent; }
   .notis-rad { display:flex; align-items:flex-start; gap:10px; padding:10px 4px;
     border-top:1px solid var(--border); }
   .notis-rad:first-child { border-top:0; }
@@ -753,7 +763,10 @@
       <span class="notis-badge" id="notisBadge" style="display:none">0</span>
     </button>
     <div class="notis-panel" id="notisPanel">
-      <div class="notis-topp"><span class="titel">Notiser</span></div>
+      <div class="notis-topp">
+        <span class="titel">Notiser</span>
+        <span class="ai-etikett" id="notisAiEtikett" style="display:none">✨ Prioriterat av AI</span>
+      </div>
       <div class="notis-lista" id="notisLista"></div>
     </div>
   </div>
@@ -2257,12 +2270,46 @@ function berakningNotiser() {
 function synligaNotiser() {
   return berakningNotiser().filter((n) => !notiserHanterade.some((h) => h.id === n.id));
 }
+// Claude får förbättra kandidatlistan (prioritera, slå ihop, skriva om) –
+// se hamtaAiNotiser i server.js. Nyckeln är uppsättningen kandidat-id:n, så
+// vi bara hämtar på nytt när listan faktiskt ändras, inte vid varje
+// omritning (fyra olika laddafunktioner ropar på renderaNotiser var för sig
+// under starten, med en delvis ifylld kandidatlista varje gång).
+let notiserAiState = null; // { nyckel, resultat }
+let notiserAiTimer = null;
+let notiserAiSenasteNyckel = null; // den senast efterfrågade uppsättningen
+async function hamtaAiForNotiser(nyckel, kandidater) {
+  let resultat;
+  try {
+    const res = await fetch(`${BAS}api/notiser/ai`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kandidater }),
+    });
+    resultat = await res.json();
+  } catch {
+    resultat = { notiser: kandidater };
+  }
+  // En nyare uppsättning har redan efterfrågats sen den här startade (t.ex.
+  // hann man klarmarkera en notis medan svaret var på väg) – då är det här
+  // svaret föråldrat och ska inte skriva över ett nyare.
+  if (nyckel !== notiserAiSenasteNyckel) return;
+  notiserAiState = { nyckel, resultat };
+  renderaNotiser();
+}
 function renderaNotiser() {
-  const lista = synligaNotiser();
+  const kandidater = synligaNotiser();
+  const nyckel = kandidater.map((k) => k.id).sort().join(",");
+  const aiTraff = notiserAiState?.nyckel === nyckel ? notiserAiState.resultat : null;
+  // AI-listan kan sakna en notis som just hanterats sen den hämtades in –
+  // filtrera mot de faktiskt synliga kandidaterna så inget klarmarkerat
+  // dyker upp igen bara för att det låg kvar i ett cachat AI-svar.
+  const lista = aiTraff?.viaAi ? aiTraff.notiser.filter((n) => kandidater.some((k) => k.id === n.id)) : kandidater;
+
   const badge = $("notisBadge");
   badge.textContent = String(lista.length);
   badge.style.display = lista.length ? "" : "none";
   $("notisBtn").classList.toggle("har-notiser", lista.length > 0);
+  $("notisAiEtikett").style.display = aiTraff?.viaAi ? "" : "none";
   $("notisLista").innerHTML = lista.length ? lista.map((n) => `
     <div class="notis-rad ${n.niva}" data-id="${esc(n.id)}">
       <span class="ikon">${n.ikon}</span>
@@ -2276,12 +2323,32 @@ function renderaNotiser() {
       </div>
     </div>`).join("")
     : '<div class="tom" style="padding:20px 4px">Inga uppgifter just nu – bra jobbat.</div>';
+
+  // Skicka kandidaterna till Claude i bakgrunden om listan skiljer sig från
+  // det vi redan har (eller väntar på). Panelen visar redan de vanliga,
+  // regelbaserade raderna direkt – det här förbättrar dem i efterhand utan
+  // att användaren behöver vänta på ett API-anrop. Debouncad en halv sekund
+  // så de fyra laddafunktionerna som ropar på renderaNotiser under starten
+  // (var och en med en mer komplett kandidatlista än den förra) slås ihop
+  // till ett enda, relevant anrop i stället för ett per mellansteg.
+  if (kandidater.length && nyckel !== notiserAiState?.nyckel) {
+    notiserAiSenasteNyckel = nyckel;
+    clearTimeout(notiserAiTimer);
+    notiserAiTimer = setTimeout(() => hamtaAiForNotiser(nyckel, kandidater), 500);
+  }
 }
 async function hanteraNotis(id, atgard) {
-  // Optimistiskt: ta bort ur listan direkt, skicka sen till servern. Går
-  // anropet fel dyker notisen upp igen vid nästa omritning – inget att
-  // egentligen städa upp, den var korrekt hela tiden fram tills dess.
+  // Mjuk kollaps innan raden faktiskt försvinner ur listan – en tvär
+  // innerHTML-omritning kändes ryckig. max-height sätts explicit till den
+  // uppmätta höjden innan klassen som animerar ner den till 0 läggs på,
+  // eftersom en CSS-transition inte kan animera från "auto".
+  const rad = document.querySelector(`.notis-rad[data-id="${CSS.escape(id)}"]`);
+  if (rad) {
+    rad.style.maxHeight = `${rad.offsetHeight}px`;
+    requestAnimationFrame(() => requestAnimationFrame(() => rad.classList.add("forsvinner")));
+  }
   notiserHanterade = [...notiserHanterade, { id, atgard, tid: new Date().toISOString() }];
+  await new Promise((r) => setTimeout(r, rad ? 220 : 0));
   renderaNotiser();
   try {
     await fetch(`${BAS}api/notiser`, {
