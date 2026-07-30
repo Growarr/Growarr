@@ -78,11 +78,17 @@ Två delar i ett repo:
 
      Ikonerna krymper automatiskt efter hur många de är och hur stor ytan
      är, så de aldrig svämmar över lådans kant.
-   - **Zondetaljer** — klicka på en zon eller planta i kartan för att den
-     markeras (ring runt kortet) och en panel längst ned dynamiskt visar och
-     låter er redigera jordtyp, fria anteckningar, koppla valfritt antal
-     HA-entiteter (senaste värde visas som en badge direkt på kartan, t.ex.
-     💧 42 % på ett växthus) samt en historik-graf per kopplad entitet.
+   - **Detaljer** — klicka på en zon eller planta i kartan för att den
+     markeras och visa/redigera antal, jordtyp, fria anteckningar, koppla
+     valfritt antal HA-entiteter (senaste värde visas som en badge direkt på
+     kartan, t.ex. 💧 42 % på ett växthus) samt en historik-graf per kopplad
+     entitet.
+
+     På en bred skärm är det en panel under kartan. **På telefonen glider den
+     i stället upp som ett bottom sheet** över kartan, med draglist,
+     bakgrundsdimning och svep nedåt för att stänga (eller ×, tryck utanför,
+     eller Esc) — samma gest som i appar på iOS och Android. Panelen låg
+     annars långt under vikningen på en telefon.
    - **Historik** — en samlad vy av alla kopplade entiteter över tid (loggas
      en gång i timmen). Byggs upp av sig själv från den dag ni kopplar en
      entitet — ingen bakåtgående data.

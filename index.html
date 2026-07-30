@@ -227,8 +227,9 @@
     0 22px 40px -18px rgba(0,0,0,.7); }
   .zon-kort.okategoriserat { background:var(--surface2); backdrop-filter:none; }
 
+  /* Rubrikerna på kartan är avsiktligt bara namnet – zontypen syns redan på
+     hur ytan är ritad, så en ikon till blev bara brus. */
   .zon-topp { display:flex; align-items:center; gap:7px; margin-bottom:8px; padding:0 3px; }
-  .zon-topp .ikon { font-size:1.05rem; flex:0 0 auto; }
   .zon-topp .namn { font-weight:650; font-size:.9rem; flex:1; min-width:0; overflow:hidden;
     text-overflow:ellipsis; white-space:nowrap; }
   .zon-enhet { background:var(--surface2); border:1px solid var(--border); border-radius:99px;
@@ -259,7 +260,6 @@
     display:flex; flex-direction:column; filter:drop-shadow(0 3px 6px rgba(0,0,0,.4)); }
   .zon-sektion .sektion-yta { position:relative; flex:1; min-height:0; }
   .zon-sektion .sektion-topp { display:flex; align-items:center; gap:4px; margin-bottom:3px; padding:0 2px; }
-  .zon-sektion .sektion-topp .ikon { font-size:.8rem; }
   .zon-sektion .sektion-topp .namn { font-size:.7rem; font-weight:650; flex:1; min-width:0;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#fff;
     text-shadow:0 1px 2px rgba(0,0,0,.5); }
@@ -436,10 +436,12 @@
   .modal h3 { font-size:1.1rem; margin-bottom:2px; }
   .modal .modal-sub { font-size:.8rem; color:var(--muted); margin-bottom:18px; }
   .modal .falt { margin-bottom:14px; }
-  .modal textarea { width:100%; min-height:70px; padding:10px 12px; border-radius:var(--r-sm);
+  /* Detaljpanelen har samma fält som popupen, så den måste med här – annars
+     blir anteckningsrutan webbläsarens vita standardruta i mörkt läge. */
+  .modal textarea, .detalj-panel textarea { width:100%; min-height:70px; padding:10px 12px; border-radius:var(--r-sm);
     border:1px solid var(--border); background:var(--surface2); color:var(--text); font:inherit;
     font-family:inherit; resize:vertical; }
-  .modal textarea:focus { outline:none; border-color:var(--accent);
+  .modal textarea:focus, .detalj-panel textarea:focus { outline:none; border-color:var(--accent);
     box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
   .modal-entiteter { margin-top:22px; padding-top:18px; border-top:1px solid var(--border); }
   .modal-lagg-entitet { display:flex; gap:8px; margin-top:14px; }
@@ -467,7 +469,45 @@
   .metrik-tile .not { font-size:.74rem; margin-top:6px; opacity:.85; }
   .metrik-tile.fel .varde { font-size:.86rem; color:var(--err); font-weight:600; }
 
+  /* ---- Detaljer: inbyggd panel på dator, bottom sheet på telefon ----
+     På en bred skärm finns plats för panelen bredvid/under kartan, men på
+     telefonen ligger den långt under vikningen. Där glider den i stället upp
+     som ett ark över kartan, med draglist, bakgrundsdimning och svep nedåt
+     för att stänga – samma gest som appar på både iOS och Android. */
+  .sheet-topp { display:flex; align-items:center; }
+  .sheet-topp h2 { flex:1; }
+  .sheet-strec, .sheet-stang, .sheet-bakgrund { display:none; }
   .detalj-panel .tom { padding:8px 0; }
+
+  @media (max-width:900px) {
+    .detalj-kort { position:fixed; left:0; right:0; bottom:0; top:auto; z-index:46; margin:0;
+      width:100%; max-height:86vh; overflow-y:auto; overscroll-behavior:contain;
+      border-radius:24px 24px 0 0; border-bottom:0;
+      padding:0 18px calc(22px + env(safe-area-inset-bottom, 0px));
+      transform:translateY(101%); visibility:hidden;
+      transition:transform .32s cubic-bezier(.32,.72,0,1), visibility .32s;
+      box-shadow:0 -22px 60px -16px rgba(0,0,0,.7); }
+    .detalj-kort.oppen { transform:translateY(0); visibility:visible; }
+    .detalj-kort.drar { transition:none; } /* följ fingret utan eftersläpning */
+    .sheet-topp { position:sticky; top:0; z-index:2; padding:26px 0 12px;
+      background:var(--surface); touch-action:none; cursor:grab; }
+    /* Absolut placerad – som flexbarn hamnade listen i vänsterkant */
+    .sheet-strec { display:block; position:absolute; left:50%; top:10px;
+      transform:translateX(-50%); width:42px; height:4px; border-radius:99px; background:var(--border); }
+    .sheet-topp h2 { margin-bottom:0; }
+    /* × i arkets huvud är enda stängknappen här – panelens egen "Avmarkera"
+       skulle bara bli en andra knapp för nästan samma sak. */
+    .detalj-head .tillbaka-btn { display:none; }
+    .sheet-stang { display:flex; align-items:center; justify-content:center;
+      width:32px; height:32px; padding:0; border-radius:50%; font-size:1.2rem; line-height:1;
+      background:var(--surface2); border:1px solid var(--border); box-shadow:none; color:var(--muted); }
+    .sheet-bakgrund { display:block; position:fixed; inset:0; z-index:45;
+      background:rgba(4,10,7,.55); backdrop-filter:blur(2px);
+      opacity:0; pointer-events:none; transition:opacity .28s ease; }
+    .sheet-bakgrund.oppen { opacity:1; pointer-events:auto; }
+    body.sheet-oppen { overflow:hidden; }
+    body.sheet-oppen .chatt-knapp { display:none; }
+  }
   .detalj-head { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
   .detalj-head .ikon { font-size:1.6rem; flex:0 0 auto; }
   .detalj-head h3 { font-size:1.05rem; margin-bottom:2px; }
@@ -568,8 +608,12 @@
         <div id="tradgardOkat" class="karta-grid"></div>
       </div>
 
-      <div class="card">
-        <h2>Zondetaljer</h2>
+      <div class="card detalj-kort" id="detaljKort">
+        <div class="sheet-topp" id="sheetTopp">
+          <span class="sheet-strec"></span>
+          <h2>Detaljer</h2>
+          <button class="sheet-stang" id="sheetStangBtn" title="Stäng">×</button>
+        </div>
         <div id="detaljPanel" class="detalj-panel">
           <div class="tom">Klicka på en zon eller planta i kartan ovan för att se och redigera detaljer här.</div>
         </div>
@@ -663,6 +707,8 @@
     </div>
   </div>
 </div>
+
+<div class="sheet-bakgrund" id="sheetBakgrund"></div>
 
 <div class="modal-bakgrund" id="modalBakgrund" style="display:none">
   <div class="modal" id="modalInnehall"></div>
@@ -1058,7 +1104,6 @@ function zonPosition(z, i) {
 // En sektion är en zon som ligger inuti en annan zon – t.ex. odlingslådor
 // och bänkar inne i ett växthus. Den ritas som en mindre yta i förälderns yta.
 function sektionHtml(sektion, grupper, i) {
-  const info = ZON_TYPER[sektion.typ] ?? ZON_TYPER.annat;
   const lista = grupper.get(sektion.id) ?? [];
   const vald = valtMal?.typ === "zon" && valtMal.id === sektion.id;
   const { x, y } = sektionPosition(sektion, i);
@@ -1066,7 +1111,6 @@ function sektionHtml(sektion, grupper, i) {
   return `<div class="zon-sektion yta ${esc(sektion.typ || "annat")}${vald ? " vald" : ""}" data-id="${esc(sektion.id)}"
       style="left:${x * 100}%; top:${y * 100}%; width:${b}px; height:${h}px">
       <div class="sektion-topp">
-        <span class="ikon">${info.ikon}</span>
         <span class="namn">${esc(sektion.namn)}</span>
         ${redigerarLayout ? `<button class="sektion-vand vand-btn" data-id="${esc(sektion.id)}" title="Vänd (byt bredd/höjd)">⟳</button>` : ""}
         ${redigerarLayout ? `<button class="sektion-ta-bort" data-id="${esc(sektion.id)}" title="Ta bort sektion">×</button>` : ""}
@@ -1104,7 +1148,6 @@ function renderaKarta() {
     $("kartaScen").innerHTML = '<div class="karta-tom">Inga zoner på den här kartan ännu – klicka på + för att lägga till en (växthus, bädd, odlingslåda …).</div>';
   } else {
     $("kartaScen").innerHTML = toppzoner.map((z, i) => {
-      const info = ZON_TYPER[z.typ] ?? ZON_TYPER.annat;
       const lista = grupper.get(z.id) ?? [];
       const sektioner = sektionerPer.get(z.id) ?? [];
       const { x, y } = zonPosition(z, i);
@@ -1119,7 +1162,6 @@ function renderaKarta() {
           style="left:${x * 100}%; top:${y * 100}%; width:${b}px">
         <div class="zon-topp">
           ${redigerarLayout ? `<span class="zon-drag" title="Dra kortet för att flytta">✥</span>` : ""}
-          <span class="ikon">${info.ikon}</span>
           <span class="namn">${esc(z.namn)}</span>
           ${enhetBadges}
           ${redigerarLayout ? `<button class="zon-vand vand-btn" data-id="${z.id}" title="Vänd (byt bredd/höjd)">⟳</button>` : ""}
@@ -1137,7 +1179,7 @@ function renderaKarta() {
   // alla rader (fyra klungor per rad i standardutlägget).
   const okatHojd = 40 + Math.ceil(okategoriserade.length / 4) * 52;
   $("tradgardOkat").innerHTML = okategoriserade.length ? `<div class="zon-kort okategoriserat">
-      <div class="zon-topp"><span class="ikon">📍</span><span class="namn">Utan zon</span></div>
+      <div class="zon-topp"><span class="namn">Utan zon</span></div>
       <div class="zon-yta yta annat" style="height:${okatHojd}px"><div class="zon-plantor">${plantorHtml(okategoriserade)}</div></div>
     </div>` : "";
   // Första gången en karta ritas (och efter flikbyte) zoomas den så hela
@@ -1711,17 +1753,67 @@ function renderaModal() {
 // popup, som dynamiskt visar det du senast klickade på (zon eller planta) –
 // jord, anteckningar, kopplade entiteter och en historik-graf per entitet.
 let valtMal = null; // { typ: "zon"|"odling", id }
+
+// På telefonen ligger detaljpanelen långt under kartan, så där glider den
+// upp som ett bottom sheet i stället. Samma DOM och samma innehåll – bara
+// CSS och de här två hjälparna skiljer.
+const arSmalSkarm = window.matchMedia("(max-width:900px)");
+function visaSheet(oppen) {
+  $("detaljKort").classList.toggle("oppen", oppen);
+  $("sheetBakgrund").classList.toggle("oppen", oppen);
+  document.body.classList.toggle("sheet-oppen", oppen);
+  if (!oppen) $("detaljKort").style.transform = "";
+}
+// Att stänga arket avmarkerar också – en kvarglömd ring på kartan utan panel
+// vore bara förvirrande, och panelens "Avmarkera" är dold i arkläget.
+function stangSheet() { avmarkeraMal(); }
+arSmalSkarm.addEventListener("change", () => visaSheet(arSmalSkarm.matches && Boolean(valtMal)));
+
 function valjMal(typ, id) {
   valtMal = { typ, id };
   renderaDetaljPanel();
   renderaKarta();
-  $("detaljPanel").closest(".card").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  if (arSmalSkarm.matches) {
+    visaSheet(true);
+    $("detaljKort").scrollTop = 0;
+  } else {
+    $("detaljPanel").closest(".card").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
 }
 function avmarkeraMal() {
   valtMal = null;
+  visaSheet(false);
   renderaDetaljPanel();
   renderaKarta();
 }
+
+// Svep ned på draglisten för att stänga – snappar tillbaka om man inte drar
+// tillräckligt långt.
+let sheetDrag = null;
+$("sheetTopp").addEventListener("pointerdown", (e) => {
+  if (!arSmalSkarm.matches || e.target.closest(".sheet-stang")) return;
+  sheetDrag = { startY: e.clientY, dy: 0 };
+  $("detaljKort").classList.add("drar");
+  try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* document-lyssnarna räcker */ }
+});
+document.addEventListener("pointermove", (e) => {
+  if (!sheetDrag) return;
+  sheetDrag.dy = Math.max(0, e.clientY - sheetDrag.startY);
+  $("detaljKort").style.transform = `translateY(${sheetDrag.dy}px)`;
+});
+document.addEventListener("pointerup", () => {
+  if (!sheetDrag) return;
+  const dy = sheetDrag.dy;
+  sheetDrag = null;
+  $("detaljKort").classList.remove("drar");
+  $("detaljKort").style.transform = "";
+  if (dy > 90) stangSheet();
+});
+$("sheetStangBtn").addEventListener("click", stangSheet);
+$("sheetBakgrund").addEventListener("click", stangSheet);
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && $("detaljKort").classList.contains("oppen")) stangSheet();
+});
 // Sektioner (t.ex. odlingslådor inne i ett växthus) hanteras direkt i
 // detaljpanelen, precis som plantorna.
 function zonSektionerHtml(z) {
@@ -1794,6 +1886,9 @@ function detaljHistorikHtml(enhetIds) {
 }
 function renderaDetaljPanel() {
   if (!valtMal) {
+    // Stäng arket också – annars blir det stående tomt om det man tittade på
+    // just raderades.
+    visaSheet(false);
     $("detaljPanel").innerHTML = '<div class="tom">Klicka på en zon eller planta i kartan ovan för att se och redigera detaljer här.</div>';
     return;
   }
