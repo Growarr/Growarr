@@ -170,6 +170,12 @@
      dra åt alla håll i redigeringsläget. */
   .karta-canvas.panorerbar { touch-action:pan-y; cursor:grab; }
   .karta-canvas.panorerar { cursor:grabbing; }
+  /* Utan e.preventDefault() på pointerdown (borttaget för att klick ska
+     fungera igen, se startaDrag) kan en musdragning råka markera text på
+     sidan i stället för att panorera/flytta. user-select:none under själva
+     dragningen löser det utan att blockera det vanliga klicket. */
+  .karta-canvas.panorerar, .karta-canvas.drar-innehall,
+  .zon-kort-canvas.dragging, .zon-sektion.dragging, .vaxt-grupp.dragging { user-select:none; }
   /* Scenen är ett fast modellrum, inte ramens storlek. Zonernas positioner
      lagras som andelar av scenen och deras mått i scenens enheter, så samma
      trädgård ser likadan ut på telefon som på dator – tidigare sträcktes den
@@ -495,14 +501,6 @@
   .metrik-tile .not { font-size:.74rem; margin-top:6px; opacity:.85; }
   .metrik-tile.fel .varde { font-size:.86rem; color:var(--err); font-weight:600; }
 
-  /* ---- Detaljer: inbyggd panel på dator, bottom sheet på telefon ----
-     På en bred skärm finns plats för panelen bredvid/under kartan, men på
-     telefonen ligger den långt under vikningen. Där glider den i stället upp
-     som ett ark över kartan, med draglist, bakgrundsdimning och svep nedåt
-     för att stänga – samma gest som appar på både iOS och Android. */
-  .sheet-topp { display:flex; align-items:center; }
-  .sheet-topp h2 { flex:1; }
-  .sheet-strec, .sheet-stang, .sheet-bakgrund { display:none; }
   .detalj-panel .tom { padding:8px 0; }
 
   .detalj-head { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
@@ -585,34 +583,63 @@
     .historik-grid, .karta-grid, .grid-kort { grid-template-columns:1fr; }
   }
 
+  /* ---- Detaljöverlaget: alltid ett flytande lager, aldrig en statisk kortplats ----
+     Tidigare låg panelen som ett vanligt kort mitt i vänsterkolumnen, vilket
+     på en dator med mycket innehåll ovanför (väder, karta) innebar att man
+     fick scrolla ner till botten av sidan varje gång man klickade på en zon
+     eller planta. Nu är den ett popup-lager på ALLA skärmstorlekar – ett
+     bottom sheet underifrån på mobil, en sidopanel från höger på dator –
+     så den syns direkt där man redan tittar, utan scroll. Grundreglerna här
+     gäller båda; media-frågorna nedan skiljer bara på geometrin.
+     OBS: reglerna behöver högre specificitet eller senare ordning än
+     .card ovan för att vinna över dess position:static/margin – .detalj-kort
+     har redan klassen "card" i HTML för den generella kortstilen (bakgrund,
+     border, radius), men positioneringen här skriver över den. */
+  .detalj-kort { position:fixed; z-index:46; margin:0; overflow-y:auto; overscroll-behavior:contain;
+    transition:transform .32s cubic-bezier(.32,.72,0,1), visibility .32s;
+    visibility:hidden; }
+  .detalj-kort.oppen { visibility:visible; }
+  .detalj-kort.drar { transition:none; } /* följ fingret utan eftersläpning */
+  .sheet-topp { position:sticky; top:0; z-index:2; display:flex; align-items:center;
+    padding:4px 0 12px; background:var(--surface); }
+  .sheet-topp h2 { flex:1; margin-bottom:0; }
+  /* × i huvudet är enda stängknappen på överlaget – panelens egen
+     "Avmarkera" skulle bara bli en andra knapp för nästan samma sak. */
+  .detalj-head .tillbaka-btn { display:none; }
+  .sheet-stang { display:flex; align-items:center; justify-content:center;
+    width:32px; height:32px; padding:0; border-radius:50%; font-size:1.2rem; line-height:1;
+    background:var(--surface2); border:1px solid var(--border); box-shadow:none; color:var(--muted); flex:0 0 auto; }
+  .sheet-strec { display:none; }
+  .sheet-bakgrund { position:fixed; inset:0; z-index:45;
+    background:rgba(4,10,7,.55); backdrop-filter:blur(2px);
+    opacity:0; pointer-events:none; transition:opacity .28s ease; }
+  .sheet-bakgrund.oppen { opacity:1; pointer-events:auto; }
+  body.sheet-oppen { overflow:hidden; }
+  body.sheet-oppen .chatt-knapp { display:none; }
+
+  /* Mobil: bottom sheet underifrån, med draglist för svep-för-att-stänga */
   @media (max-width:900px) {
-    .detalj-kort { position:fixed; left:0; right:0; bottom:0; top:auto; z-index:46; margin:0;
-      width:100%; max-height:86vh; overflow-y:auto; overscroll-behavior:contain;
-      border-radius:24px 24px 0 0; border-bottom:0;
+    .detalj-kort { left:0; right:0; bottom:0; top:auto;
+      width:100%; max-height:86vh; border-radius:24px 24px 0 0; border-bottom:0;
       padding:0 18px calc(22px + env(safe-area-inset-bottom, 0px));
-      transform:translateY(101%); visibility:hidden;
-      transition:transform .32s cubic-bezier(.32,.72,0,1), visibility .32s;
+      transform:translateY(101%);
       box-shadow:0 -22px 60px -16px rgba(0,0,0,.7); }
-    .detalj-kort.oppen { transform:translateY(0); visibility:visible; }
-    .detalj-kort.drar { transition:none; } /* följ fingret utan eftersläpning */
-    .sheet-topp { position:sticky; top:0; z-index:2; padding:26px 0 12px;
-      background:var(--surface); touch-action:none; cursor:grab; }
+    .detalj-kort.oppen { transform:translateY(0); }
+    .sheet-topp { padding-top:26px; touch-action:none; cursor:grab; }
     /* Absolut placerad – som flexbarn hamnade listen i vänsterkant */
     .sheet-strec { display:block; position:absolute; left:50%; top:10px;
       transform:translateX(-50%); width:42px; height:4px; border-radius:99px; background:var(--border); }
-    .sheet-topp h2 { margin-bottom:0; }
-    /* × i arkets huvud är enda stängknappen här – panelens egen "Avmarkera"
-       skulle bara bli en andra knapp för nästan samma sak. */
-    .detalj-head .tillbaka-btn { display:none; }
-    .sheet-stang { display:flex; align-items:center; justify-content:center;
-      width:32px; height:32px; padding:0; border-radius:50%; font-size:1.2rem; line-height:1;
-      background:var(--surface2); border:1px solid var(--border); box-shadow:none; color:var(--muted); }
-    .sheet-bakgrund { display:block; position:fixed; inset:0; z-index:45;
-      background:rgba(4,10,7,.55); backdrop-filter:blur(2px);
-      opacity:0; pointer-events:none; transition:opacity .28s ease; }
-    .sheet-bakgrund.oppen { opacity:1; pointer-events:auto; }
-    body.sheet-oppen { overflow:hidden; }
-    body.sheet-oppen .chatt-knapp { display:none; }
+  }
+
+  /* Dator: sidopanel som glider in från höger, som en innehållslåda man
+     kan titta i utan att lämna översikten man redan tittar på. */
+  @media (min-width:901px) {
+    .detalj-kort { top:0; right:0; bottom:0; left:auto;
+      width:min(420px, 94vw); max-height:100vh; border-radius:20px 0 0 20px;
+      padding:22px 26px; border-right:0;
+      transform:translateX(101%);
+      box-shadow:-26px 0 60px -20px rgba(0,0,0,.6); }
+    .detalj-kort.oppen { transform:translateX(0); }
   }
 </style>
 </head>
@@ -1611,11 +1638,26 @@ function zonMatt(z, harSektioner) {
 }
 
 function startaDrag(e, cfg, handle) {
-  e.preventDefault();
-  // dragState sätts FÖRST – setPointerCapture kan kasta på vissa pekskärmar,
-  // och vi lyssnar ändå på document, så dragningen klarar sig utan den.
-  dragState = { ...cfg, drogs: false, pointerId: e.pointerId, startX: e.clientX, startY: e.clientY };
-  try { handle.setPointerCapture(e.pointerId); } catch { /* document-lyssnarna räcker */ }
+  // OBS: INGET e.preventDefault() här. Att anropa preventDefault() på själva
+  // pointerdown-eventet gör att webbläsaren aldrig skickar det efterföljande
+  // click-eventet – oavsett om fingret sen faktiskt rör sig eller inte. Det
+  // gjorde att ett vanligt, orört tryck på kartan (för att markera en zon
+  // eller planta) slutade fungera helt, eftersom VARJE tryck på kartan nu
+  // startar en potentiell panorering här. En riktig dragning behöver ingen
+  // preventDefault ändå: CSS touch-action styr redan pekskärmens scroll, och
+  // nyligenDragen-flaggan (satt i dragEnd) hindrar en efterföljande dragning
+  // från att också tolkas som ett klick.
+  // OBS: setPointerCapture() anropas INTE här heller, av samma skäl som
+  // preventDefault ovan – fångar man pekaren redan vid pointerdown byter
+  // webbläsaren ut det efterföljande click-eventets target mot den fångande
+  // behållaren (hela kartan), i stället för elementet man faktiskt tryckte
+  // på. Då kan e.target.closest(".vaxt-fyll") aldrig hitta plantan igen
+  // (closest letar uppåt i trädet, och kartan är en förälder, inte samma
+  // eller ett barn), och ett vanligt klick för att markera slutar fungera
+  // helt. handle sparas i stället, och fångas i dragMove precis när en
+  // riktig dragning bekräftas (rört sig förbi tröskeln) – för sent för att
+  // kunna kapa klicket, men i god tid innan pekaren hinner lämna elementet.
+  dragState = { ...cfg, handle, drogs: false, pointerId: e.pointerId, startX: e.clientX, startY: e.clientY };
 }
 
 // Två fingrar på kartan = nypzoom. Pekarna spåras separat från dragState så
@@ -1713,6 +1755,8 @@ function dragMove(e) {
   if (!dragState.drogs) {
     if (Math.hypot(e.clientX - dragState.startX, e.clientY - dragState.startY) < DRAG_TROSKEL_PX) return;
     dragState.drogs = true;
+    // Fånga pekaren nu, inte vid pointerdown – se kommentaren i startaDrag.
+    try { dragState.handle.setPointerCapture(dragState.pointerId); } catch { /* document-lyssnarna räcker */ }
     dragState.el.classList.add(dragState.typ === "panorera" ? "panorerar" : "dragging");
     // Lådorna klipper sitt innehåll. Under en dragning måste det tillfälligt
     // få synas utanför, annars försvinner plantan man bär över till nästa låda.
@@ -1760,9 +1804,10 @@ function slappMal(e, dragenEl, valjare) {
   }
   return null;
 }
-// Andel av behållaren där pekaren släpptes. Innehåll i en låda hålls kvar i
-// lådan; zoner på kartan får hamna en bit utanför det nominella modellrummet,
-// eftersom kartan ändå anpassar sig efter var zonerna faktiskt ligger.
+// Andel av en NY behållare (vid ompoteringen till en annan zon/sektion) –
+// bara relevant när man faktiskt byter behållare, för då är den gamla
+// koordinaten meningslös i den nya rutan. En mild klämning håller kvar
+// objektet synligt inuti sin nya, oftast mindre, låda.
 function andelIBehallare(e, el, fritt = false) {
   const r = el.getBoundingClientRect();
   if (!r.width || !r.height) return { x: 0.5, y: 0.5 };
@@ -1790,23 +1835,30 @@ async function dragEnd(e) {
 
   if (s.typ === "planta") {
     // Släpps plantan i en annan låda flyttar den dit; utanför alla lådor
-    // stannar den kvar i sin egen och läggs bara närmast kanten.
-    const behallare = slappMal(e, s.el, ".zon-plantor") ?? s.container;
-    const agare = behallare.closest(".zon-sektion, .zon-kort-canvas");
-    const patch = andelIBehallare(e, behallare);
+    // stannar den kvar i sin egen. Byter man INTE behållare används exakt
+    // det x/y som redan syns på skärmen (från dragMove) – ingen omräkning,
+    // ingen klämning, så det aldrig kan bli en synlig skillnad vid släpp.
+    // Räknar man om ändå (med den klämda andelIBehallare) skulle en dragning
+    // långt mot kanten "hoppa tillbaka" i det ögonblick man släpper, eftersom
+    // den fria rörelsen under själva dragningen inte har någon sådan gräns.
+    const nyBehallare = slappMal(e, s.el, ".zon-plantor");
+    const agare = nyBehallare?.closest(".zon-sektion, .zon-kort-canvas");
     const o = odlingar.find((x) => x.id === s.id);
-    if (agare && agare.dataset.id !== o?.zonId) patch.zonId = agare.dataset.id;
+    const byterZon = Boolean(agare && agare.dataset.id !== (o?.zonId ?? ""));
+    const patch = byterZon ? andelIBehallare(e, nyBehallare) : { x: s.x, y: s.y };
+    if (byterZon) patch.zonId = agare.dataset.id;
     return sparaOdling(s.id, patch);
   }
   // Zon eller sektion. Släpps den över en annan zons yta blir den en sektion
-  // där; släpps den på tom karta blir den fristående. Det är så man får ut en
-  // odlingslåda ur växthuset igen.
+  // där; släpps den på tom karta blir den fristående (så man kan få ut en
+  // odlingslåda ur växthuset igen). Samma princip som för plantor: byter man
+  // inte förälder används den redan synliga, oklämda positionen rakt av.
   const yta = slappMal(e, s.el, ".zon-yta");
-  const nyForalder = yta ? (yta.closest(".zon-kort-canvas")?.dataset.id ?? "") : "";
-  const behallare = yta ?? $("kartaScen");
-  const patch = andelIBehallare(e, behallare, !yta);
   const z = zoner.find((x) => x.id === s.id);
-  if ((z?.foralderId ?? "") !== nyForalder) patch.foralderId = nyForalder;
+  const nyForalder = yta ? (yta.closest(".zon-kort-canvas")?.dataset.id ?? "") : "";
+  const byterForalder = (z?.foralderId ?? "") !== nyForalder;
+  const patch = byterForalder ? andelIBehallare(e, yta ?? $("kartaScen"), !yta) : { x: s.x, y: s.y };
+  if (byterForalder) patch.foralderId = nyForalder;
   return sparaZon(s.id, patch);
 }
 
@@ -2411,14 +2463,15 @@ function renderaModal() {
   }
 }
 
-// ---- Zondetaljer: en alltid-synlig panel under kartan istället för en
-// popup, som dynamiskt visar det du senast klickade på (zon eller planta) –
-// jord, anteckningar, kopplade entiteter och en historik-graf per entitet.
+// ---- Zondetaljer: ett popup-överlag som dynamiskt visar det du senast
+// klickade på (zon eller planta) – jord, anteckningar, kopplade entiteter
+// och en historik-graf per entitet. Ett bottom sheet underifrån på mobil,
+// en sidopanel från höger på dator – aldrig en statisk kortplats man måste
+// scrolla ner till, oavsett hur mycket som ligger ovanför i vänsterkolumnen.
 let valtMal = null; // { typ: "zon"|"odling", id }
 
-// På telefonen ligger detaljpanelen långt under kartan, så där glider den
-// upp som ett bottom sheet i stället. Samma DOM och samma innehåll – bara
-// CSS och de här två hjälparna skiljer.
+// Avgör bara om svep-för-att-stänga-gesten (draglisten) ska vara aktiv –
+// den gesten hör hemma på mobil, inte på en musstyrd sidopanel.
 const arSmalSkarm = window.matchMedia("(max-width:900px)");
 function visaSheet(oppen) {
   $("detaljKort").classList.toggle("oppen", oppen);
@@ -2426,21 +2479,16 @@ function visaSheet(oppen) {
   document.body.classList.toggle("sheet-oppen", oppen);
   if (!oppen) $("detaljKort").style.transform = "";
 }
-// Att stänga arket avmarkerar också – en kvarglömd ring på kartan utan panel
-// vore bara förvirrande, och panelens "Avmarkera" är dold i arkläget.
+// Att stänga popupen avmarkerar också – en kvarglömd ring på kartan utan
+// öppen panel vore bara förvirrande, och panelens "Avmarkera" är dold här.
 function stangSheet() { avmarkeraMal(); }
-arSmalSkarm.addEventListener("change", () => visaSheet(arSmalSkarm.matches && Boolean(valtMal)));
 
 function valjMal(typ, id) {
   valtMal = { typ, id };
   renderaDetaljPanel();
   renderaKarta();
-  if (arSmalSkarm.matches) {
-    visaSheet(true);
-    $("detaljKort").scrollTop = 0;
-  } else {
-    $("detaljPanel").closest(".card").scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }
+  visaSheet(true);
+  $("detaljKort").scrollTop = 0;
 }
 function avmarkeraMal() {
   valtMal = null;
