@@ -184,23 +184,6 @@
   .karta-zoom .zoom-niva { width:auto; min-width:48px; padding:0 8px; border-radius:99px; font-size:.74rem;
     font-weight:650; font-variant-numeric:tabular-nums; }
 
-  /* Mobil: kartan blir kvadratisk och zoomas automatiskt så hela trädgården
-     ryms – zonkorten har fasta pixelbredder och skulle annars sticka ut. */
-  @media (max-width:720px) {
-    .wrap { padding:0 14px; }
-    .card { padding:16px; margin-top:14px; }
-    .vy-header { padding-top:16px; }
-    .karta-header { flex-wrap:wrap; }
-    /* Bredden är given av skärmen, så höjden är det enda sättet att ge kartan
-       mer plats – och därmed en högre automatisk zoomnivå på stående kartor. */
-    .karta-canvas { aspect-ratio:4/5; min-height:min(58vh, 440px); }
-    .karta-zoom { top:8px; right:8px; }
-    .karta-plus { width:42px; height:42px; font-size:1.4rem; right:10px; bottom:-14px; }
-    .karta-flikar { gap:6px; margin-bottom:10px; }
-    .dash-grid { gap:14px; }
-    .metrik-grid { grid-template-columns:repeat(auto-fill,minmax(128px,1fr)); }
-    .historik-grid, .karta-grid, .grid-kort { grid-template-columns:1fr; }
-  }
   /* Bredden sätts inline per zon (styr även orienteringen) – ingen max-width
      här, den skulle klämma ihop breda växthus. */
   .zon-kort-canvas { position:absolute; transform:translate(-50%,-50%);
@@ -448,6 +431,26 @@
   .modal-entiteter { margin-top:22px; padding-top:18px; border-top:1px solid var(--border); }
   .modal-lagg-entitet { display:flex; gap:8px; margin-top:14px; }
   .modal-lagg-entitet select, .modal-lagg-entitet input { flex:1; }
+  /* Snabbtillägg av plantor – byggt för jordiga fingrar på en telefon:
+     stora tryckytor, inget tangentbord i det vanliga fallet. */
+  .sort-chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  .sort-chip { padding:10px 15px; border-radius:99px; font-size:.86rem; font-weight:600;
+    background:var(--surface2); color:var(--text); border:1px solid var(--border); box-shadow:none; }
+  .sort-chip:hover { border-color:var(--accent); transform:none; box-shadow:none; }
+  .sort-chip.aktiv { background:var(--grad); color:#04140e; border-color:transparent; }
+  .antal-rad { display:flex; align-items:center; gap:10px; margin-top:16px; }
+  .antal-rad .lbl { flex:1; margin:0; }
+  .antal-rad input { width:76px; text-align:center; font-size:1.1rem; font-weight:700;
+    font-variant-numeric:tabular-nums; }
+  .antal-btn { width:48px; height:48px; padding:0; border-radius:14px; font-size:1.5rem; line-height:1;
+    flex:0 0 auto; background:var(--surface2); color:var(--text); border:1px solid var(--border);
+    box-shadow:none; display:flex; align-items:center; justify-content:center; }
+  .antal-btn:hover { border-color:var(--accent); transform:none; box-shadow:none; }
+  .kryss-rad { display:flex; align-items:center; gap:10px; margin-top:14px; font-size:.82rem;
+    color:var(--muted); cursor:pointer; }
+  .kryss-rad input { width:auto; margin:0; }
+  .lagg-till-stor { width:100%; margin-top:14px; padding:14px; font-size:.95rem; }
+  .lagg-till-stor:disabled { opacity:.4; cursor:default; }
   .plant-lista { display:flex; flex-direction:column; gap:2px; }
   .plant-rad { display:flex; align-items:center; gap:10px; padding:7px 0; font-size:.88rem;
     border-top:1px solid var(--border); }
@@ -481,35 +484,6 @@
   .sheet-strec, .sheet-stang, .sheet-bakgrund { display:none; }
   .detalj-panel .tom { padding:8px 0; }
 
-  @media (max-width:900px) {
-    .detalj-kort { position:fixed; left:0; right:0; bottom:0; top:auto; z-index:46; margin:0;
-      width:100%; max-height:86vh; overflow-y:auto; overscroll-behavior:contain;
-      border-radius:24px 24px 0 0; border-bottom:0;
-      padding:0 18px calc(22px + env(safe-area-inset-bottom, 0px));
-      transform:translateY(101%); visibility:hidden;
-      transition:transform .32s cubic-bezier(.32,.72,0,1), visibility .32s;
-      box-shadow:0 -22px 60px -16px rgba(0,0,0,.7); }
-    .detalj-kort.oppen { transform:translateY(0); visibility:visible; }
-    .detalj-kort.drar { transition:none; } /* följ fingret utan eftersläpning */
-    .sheet-topp { position:sticky; top:0; z-index:2; padding:26px 0 12px;
-      background:var(--surface); touch-action:none; cursor:grab; }
-    /* Absolut placerad – som flexbarn hamnade listen i vänsterkant */
-    .sheet-strec { display:block; position:absolute; left:50%; top:10px;
-      transform:translateX(-50%); width:42px; height:4px; border-radius:99px; background:var(--border); }
-    .sheet-topp h2 { margin-bottom:0; }
-    /* × i arkets huvud är enda stängknappen här – panelens egen "Avmarkera"
-       skulle bara bli en andra knapp för nästan samma sak. */
-    .detalj-head .tillbaka-btn { display:none; }
-    .sheet-stang { display:flex; align-items:center; justify-content:center;
-      width:32px; height:32px; padding:0; border-radius:50%; font-size:1.2rem; line-height:1;
-      background:var(--surface2); border:1px solid var(--border); box-shadow:none; color:var(--muted); }
-    .sheet-bakgrund { display:block; position:fixed; inset:0; z-index:45;
-      background:rgba(4,10,7,.55); backdrop-filter:blur(2px);
-      opacity:0; pointer-events:none; transition:opacity .28s ease; }
-    .sheet-bakgrund.oppen { opacity:1; pointer-events:auto; }
-    body.sheet-oppen { overflow:hidden; }
-    body.sheet-oppen .chatt-knapp { display:none; }
-  }
   .detalj-head { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
   .detalj-head .ikon { font-size:1.6rem; flex:0 0 auto; }
   .detalj-head h3 { font-size:1.05rem; margin-bottom:2px; }
@@ -547,6 +521,63 @@
   .enhet-rad .entity-id { font-size:.74rem; color:var(--muted); display:block; }
   .enhet-rad .varde { font-weight:700; font-variant-numeric:tabular-nums; }
   .enhet-rad .varde.fel { color:var(--err); font-weight:500; font-size:.82rem; }
+
+  /* ---- Responsiva justeringar ----
+     Ligger sist i stilmallen med flit: flera av reglerna nedan har samma
+     specificitet som sina basregler, och då avgör ordningen. Tidigare låg
+     blocket längre upp, vilket gjorde att t.ex. .metrik-grid och
+     .historik-grid aldrig slog igenom på mobilen. */
+  /* Telefon */
+  @media (max-width:720px) {
+    .wrap { padding:0 14px; }
+    .card { padding:16px; margin-top:14px; }
+    .vy-header { padding-top:16px; }
+    .karta-header { flex-wrap:wrap; }
+    /* Bredden är given av skärmen, så höjden är det enda sättet att ge kartan
+       mer plats – och därmed en högre automatisk zoomnivå på stående kartor. */
+    .karta-canvas { aspect-ratio:4/5; min-height:min(58vh, 440px); }
+    .karta-zoom { top:8px; right:8px; }
+    .karta-plus { width:42px; height:42px; font-size:1.4rem; right:10px; bottom:-14px; }
+    .karta-flikar { gap:6px; margin-bottom:10px; }
+    /* Fält + rullgardin + knapp på en rad blir obrukbart smalt på en telefon */
+    .modal-lagg-entitet { flex-wrap:wrap; }
+    .modal-lagg-entitet input { flex:1 1 100%; } /* egen rad – annars klipps texten */
+    .modal-lagg-entitet select { flex:1 1 auto; min-width:0; max-width:none !important; }
+    .modal-lagg-entitet button { flex:0 0 auto; }
+    .dash-grid { gap:14px; }
+    .metrik-grid { grid-template-columns:repeat(auto-fill,minmax(128px,1fr)); }
+    .historik-grid, .karta-grid, .grid-kort { grid-template-columns:1fr; }
+  }
+
+  @media (max-width:900px) {
+    .detalj-kort { position:fixed; left:0; right:0; bottom:0; top:auto; z-index:46; margin:0;
+      width:100%; max-height:86vh; overflow-y:auto; overscroll-behavior:contain;
+      border-radius:24px 24px 0 0; border-bottom:0;
+      padding:0 18px calc(22px + env(safe-area-inset-bottom, 0px));
+      transform:translateY(101%); visibility:hidden;
+      transition:transform .32s cubic-bezier(.32,.72,0,1), visibility .32s;
+      box-shadow:0 -22px 60px -16px rgba(0,0,0,.7); }
+    .detalj-kort.oppen { transform:translateY(0); visibility:visible; }
+    .detalj-kort.drar { transition:none; } /* följ fingret utan eftersläpning */
+    .sheet-topp { position:sticky; top:0; z-index:2; padding:26px 0 12px;
+      background:var(--surface); touch-action:none; cursor:grab; }
+    /* Absolut placerad – som flexbarn hamnade listen i vänsterkant */
+    .sheet-strec { display:block; position:absolute; left:50%; top:10px;
+      transform:translateX(-50%); width:42px; height:4px; border-radius:99px; background:var(--border); }
+    .sheet-topp h2 { margin-bottom:0; }
+    /* × i arkets huvud är enda stängknappen här – panelens egen "Avmarkera"
+       skulle bara bli en andra knapp för nästan samma sak. */
+    .detalj-head .tillbaka-btn { display:none; }
+    .sheet-stang { display:flex; align-items:center; justify-content:center;
+      width:32px; height:32px; padding:0; border-radius:50%; font-size:1.2rem; line-height:1;
+      background:var(--surface2); border:1px solid var(--border); box-shadow:none; color:var(--muted); }
+    .sheet-bakgrund { display:block; position:fixed; inset:0; z-index:45;
+      background:rgba(4,10,7,.55); backdrop-filter:blur(2px);
+      opacity:0; pointer-events:none; transition:opacity .28s ease; }
+    .sheet-bakgrund.oppen { opacity:1; pointer-events:auto; }
+    body.sheet-oppen { overflow:hidden; }
+    body.sheet-oppen .chatt-knapp { display:none; }
+  }
 </style>
 </head>
 <body>
@@ -1525,6 +1556,11 @@ async function laddaHaEntiteter() {
   $("haEntiteterList").innerHTML = haEntiteter.map((e) => `<option value="${esc(e.entityId)}">${esc(e.namn)}</option>`).join("");
   $("eHint").textContent = haEntiteter.length ? "" : "Ingen entitetslista tillgänglig (kontrollera HA_TOKEN) – ni kan fortfarande skriva ett entity_id manuellt.";
 }
+// Panelen ritas om, så fälten nås via delegering i stället för direkt bindning
+document.addEventListener("input", (e) => {
+  if (e.target.id === "zNyPlanta" || e.target.id === "zNyPlantaAntal") uppdateraSnabbknapp();
+});
+
 $("eEntityId").addEventListener("input", () => {
   const match = haEntiteter.find((e) => e.entityId === $("eEntityId").value);
   if (match && !$("eNamn").value.trim()) $("eNamn").value = match.namn;
@@ -1867,17 +1903,58 @@ function zonPlantorHtml(z) {
         <span class="varde">${antalFor(o)} st${layoutFor(o) === "fyll" ? " · fyller ytan" : ""}${o.skordManad ? ` · ${esc(manadNamn(o.skordManad))}` : ""}</span>
         ${redigerarLayout ? `<button class="ta-bort odling-ta-bort" data-id="${esc(o.id)}" title="Ta bort planta" style="position:static">×</button>` : ""}
       </div>`).join("")}</div>` : '<div class="tom">Inga plantor här än.</div>'}
-    <div class="modal-lagg-entitet">
-      <input type="text" id="zNyPlanta" placeholder="Ny planta, t.ex. Gurkor">
-      <input type="number" id="zNyPlantaAntal" min="1" max="200" value="1" title="Antal (st)" style="max-width:82px">
-      <button id="zNyPlantaBtn">Lägg till</button>
+    <label class="lbl" style="margin-top:18px">Lägg till – tryck på en sort</label>
+    <div class="sort-chips">
+      ${sortForslag().map((n) => `<button class="sort-chip" data-sort="${esc(n)}">${ikonForVaxt(n)} ${esc(n)}</button>`).join("")}
+      <button class="sort-chip sort-annat" data-sort="">✎ Annat</button>
     </div>
-    <label class="lbl" style="display:flex; align-items:center; gap:8px; margin-top:10px; cursor:pointer">
-      <input type="checkbox" id="zNyPlantaFyll" style="width:auto; margin:0">
-      Fyll hela ytan med sorten (i stället för en samlad klunga)
+    <input type="text" id="zNyPlanta" placeholder="Skriv sortens namn" style="display:none; margin-top:10px">
+    <div class="antal-rad">
+      <span class="lbl">Antal (st)</span>
+      <button class="antal-btn" id="antalNer" title="Färre">−</button>
+      <input type="number" id="zNyPlantaAntal" min="1" max="200" value="1" title="Antal (st)">
+      <button class="antal-btn" id="antalUpp" title="Fler">+</button>
+    </div>
+    <label class="kryss-rad">
+      <input type="checkbox" id="zNyPlantaFyll">
+      Fyll hela ytan med sorten
     </label>
+    <button id="zNyPlantaBtn" class="lagg-till-stor" disabled>Välj en sort ovan</button>
     ${redigerarLayout ? "" : '<p class="lbl" style="margin-top:8px">Slå på <strong>Redigera</strong> ovanför kartan för att kunna ta bort plantor.</p>'}
   </div>`;
+}
+// Förslagen är era egna sorter först, vanligast överst – det man planterar
+// mest av är det man planterar igen. Fylls på med vanliga köksväxter tills
+// raden är full, så listan är användbar även första gången.
+const VANLIGA_SORTER = ["Tomater", "Gurkor", "Sallad", "Morötter", "Rädisor", "Potatis",
+  "Jordgubbar", "Basilika", "Zucchini", "Ärtor", "Bönor", "Rödbetor", "Purjolök", "Dill"];
+function sortForslag(maxAntal = 10) {
+  const antalPer = new Map();
+  for (const o of odlingar) antalPer.set(o.namn, (antalPer.get(o.namn) ?? 0) + 1);
+  const ut = [...antalPer.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "sv"))
+    .map(([namn]) => namn);
+  for (const namn of VANLIGA_SORTER) {
+    if (ut.length >= maxAntal) break;
+    if (!ut.some((x) => x.toLowerCase() === namn.toLowerCase())) ut.push(namn);
+  }
+  return ut.slice(0, maxAntal);
+}
+// Knappen säger exakt vad som händer ("Lägg till 6 × Gurkor") så man slipper
+// läsa tillbaka i fälten innan man trycker.
+function uppdateraSnabbknapp() {
+  const btn = $("zNyPlantaBtn");
+  if (!btn) return;
+  const namn = ($("zNyPlanta")?.value ?? "").trim();
+  const antal = Number($("zNyPlantaAntal")?.value) || 1;
+  btn.disabled = !namn;
+  btn.textContent = namn ? `Lägg till ${antal} × ${namn}` : "Välj en sort ovan";
+}
+function stegaAntal(steg) {
+  const falt = $("zNyPlantaAntal");
+  if (!falt) return;
+  falt.value = Math.min(200, Math.max(1, (Number(falt.value) || 1) + steg));
+  uppdateraSnabbknapp();
 }
 function detaljHistorikHtml(enhetIds) {
   const mal = (enhetIds ?? []).map((eid) => {
@@ -2088,6 +2165,22 @@ document.addEventListener("click", async (e) => {
     renderaDetaljPanel();
     return;
   }
+
+  // Snabbtillägg: välj sort med ett tryck. DOM:en uppdateras på plats i
+  // stället för att panelen ritas om – annars tappar arket sin scrollposition
+  // mitt i att man håller på.
+  const sortChip = e.target.closest(".sort-chip");
+  if (sortChip) {
+    const annat = sortChip.classList.contains("sort-annat");
+    document.querySelectorAll(".sort-chip").forEach((c) => c.classList.toggle("aktiv", c === sortChip));
+    const fritext = $("zNyPlanta");
+    fritext.style.display = annat ? "" : "none";
+    if (annat) { fritext.value = ""; fritext.focus(); } else fritext.value = sortChip.dataset.sort;
+    uppdateraSnabbknapp();
+    return;
+  }
+  if (e.target.closest("#antalNer")) { stegaAntal(-1); return; }
+  if (e.target.closest("#antalUpp")) { stegaAntal(1); return; }
 
   // Lägg till planta direkt i den valda zonen
   if (e.target.closest("#zNyPlantaBtn") && valtMal?.typ === "zon") {

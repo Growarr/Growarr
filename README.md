@@ -85,6 +85,14 @@ Två delar i ett repo:
 
      Ikonerna krymper automatiskt efter hur många de är och hur stor ytan
      är, så de aldrig svämmar över lådans kant.
+   - **Snabbtillägg utan tangentbord** — klicka på en zon och lägg till
+     plantor med tre tryck: en sort, antalet, spara. Sortförslagen är era
+     egna sorter med de vanligaste överst (påfyllda med vanliga köksväxter
+     tills raden är full), antalet har stora − / +-knappar, och knappen
+     säger exakt vad som händer ("Lägg till 6 × Gurkor"). Byggt för att
+     fungera med jordiga fingrar på en telefon. Behöver ni en sort som inte
+     finns i listan, tryck **✎ Annat** – och där går telefonens egen
+     diktering i tangentbordet utmärkt att använda.
    - **Detaljer** — klicka på en zon eller planta i kartan för att den
      markeras och visa/redigera antal, jordtyp, fria anteckningar, koppla
      valfritt antal HA-entiteter (senaste värde visas som en badge direkt på
