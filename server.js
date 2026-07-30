@@ -36,9 +36,10 @@ async function lasData() {
     return {
       kartor: d.kartor ?? [], zoner: d.zoner ?? [], odlingar: d.odlingar ?? [], enheter: d.enheter ?? [],
       widgets: d.widgets ?? [], installningar: d.installningar ?? {}, historik: d.historik ?? [],
+      notiser: d.notiser ?? [],
     };
   } catch {
-    return { kartor: [], zoner: [], odlingar: [], enheter: [], widgets: [], installningar: {}, historik: [] };
+    return { kartor: [], zoner: [], odlingar: [], enheter: [], widgets: [], installningar: {}, historik: [], notiser: [] };
   }
 }
 async function skrivData(data) {
@@ -683,6 +684,22 @@ const server = createServer(async (req, res) => {
     if (req.method === "GET" && p.endsWith("/api/historik")) {
       const { historik } = await lasData();
       return skickaJson(res, 200, historik);
+    }
+    // Notiscentret räknar fram själva listan i panelen (frostrisk, torr jord,
+    // skördepåminnelser …) från data som redan finns – servern lagrar bara
+    // VILKA notiser man redan hanterat, så de inte dyker upp igen. Id:t byggs
+    // av panelen och innehåller redan datum för dagsaktuella notiser, så en
+    // "avvisad idag"-notis kommer tillbaka av sig själv nästa dag om läget
+    // fortfarande gäller då.
+    if (req.method === "POST" && p.endsWith("/api/notiser")) {
+      const { id, atgard } = await lasBody(req);
+      if (!id) return skickaJson(res, 400, { fel: "id saknas" });
+      const data = await muteraData((d) => {
+        const gransTid = Date.now() - 45 * 24 * 3600 * 1000; // städa bort gamla poster
+        d.notiser = (d.notiser ?? []).filter((n) => new Date(n.tid).getTime() >= gransTid && n.id !== id);
+        d.notiser.push({ id, atgard: atgard === "klar" ? "klar" : "avvisad", tid: new Date().toISOString() });
+      });
+      return skickaJson(res, 200, data.notiser);
     }
     if (req.method === "POST" && p.endsWith("/api/chatt")) {
       const { meddelanden } = await lasBody(req);

@@ -131,6 +131,16 @@ Två delar i ett repo:
      utskriftsfärdig kod att tejpa på lådan. Skanna den med telefonens
      kamera och zonen öppnas direkt (`#zon=<id>`) — ingen kartnavigering.
      Kodas och ritas helt lokalt (ingen extern tjänst, ingen nätverksbild).
+   - **🔔 Notiscenter** — klockan högst upp till höger (bredvid "Skapa nytt")
+     samlar aktuella uppgifter räknade fram från er egen data: frostrisk
+     (zonvis kalibrerad där det går), torr/för blöt jord, ovanligt kallt
+     eller varmt, sensorer som inte går att nå, samt skördepåminnelser för
+     odlingar vars skördemånad är nu. Varje notis går att **markera som
+     klar (✓)** eller **avvisa (×)** — valet sparas på servern så det inte
+     kommer tillbaka vid nästa besök eller på en annan enhet. En hanterad
+     notis dyker upp igen automatiskt om samma läge fortfarande gäller
+     nästa dag (eller nästa månad för skördepåminnelser) — den är "klar för
+     nu", inte borta för gott.
 
    **Inställningar** (`/#installningar`) — allt ni fyller i eller lägger till:
    - **⚙️ Notiser** — ntfy-ämne och HA-webhook-URL för skördepåminnelser.
@@ -282,6 +292,7 @@ på fel ställe.
 | POST | `/api/chatt` | `{ meddelanden: [{ roll, text, bild? }] }` | AI-chatt med valfritt foto (`bild: { typ, data }`, base64) |
 | GET | `/api/installningar` | – | Hämtar sparat ntfy-ämne/webhook-URL samt kartans riktning/skala |
 | POST | `/api/installningar` | `{ ntfyTopic?, webhookUrl?, norrGrader?, kartaBreddM? }` | Sparar inställningarna (via ⚙️ i panelen) |
+| POST | `/api/notiser` | `{ id, atgard: "klar"\|"avvisad" }` | Markerar en notis i notiscentret som hanterad, så den inte dyker upp igen |
 
 ## Framtida utbyggnad
 

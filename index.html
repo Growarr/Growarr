@@ -44,8 +44,54 @@
   .vy-titel { font-size:1.3rem; font-weight:700; letter-spacing:-.01em; }
   .skapa-btn { display:flex; align-items:center; gap:7px; padding:10px 18px 10px 14px; font-size:.86rem; }
   /* Ligger fast uppe till höger så den finns på både översikt och inställningar */
-  .skapa-btn-fast { position:fixed; top:20px; right:24px; z-index:30; }
-  @media (max-width:720px) { .skapa-btn-fast { top:12px; right:14px; padding:8px 14px 8px 11px; font-size:.8rem; } }
+  .topp-verktyg-fast { position:fixed; top:20px; right:24px; z-index:30; display:flex; align-items:center; gap:10px; }
+  @media (max-width:720px) {
+    .topp-verktyg-fast { top:12px; right:14px; gap:6px; }
+    .topp-verktyg-fast .skapa-btn { padding:8px 14px 8px 11px; font-size:.8rem; }
+  }
+
+  /* ---- Notiscenter: klocka + dropdown-panel, samma mönster som en vanlig
+     admin-panels aviseringscenter. Räknas fram klientsidan från data som
+     redan finns (väder, sensorer, odlingar); servern minns bara vilka man
+     redan hanterat. */
+  .notis-btn { position:relative; width:40px; height:40px; padding:0; border-radius:50%;
+    background:var(--surface2); border:1px solid var(--border); color:var(--muted); box-shadow:none;
+    display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+  .notis-btn:hover { color:var(--text); transform:none; box-shadow:none; }
+  .notis-btn.har-notiser { color:var(--warn); border-color:color-mix(in srgb, var(--warn) 45%, var(--border)); }
+  .notis-badge { position:absolute; top:-4px; right:-4px; min-width:18px; height:18px; padding:0 4px;
+    border-radius:99px; background:var(--err); color:#fff; font-size:.66rem; font-weight:700;
+    line-height:18px; text-align:center; box-shadow:0 0 0 2px var(--bg); }
+  /* Fast positionerad mot skärmkanten (inte "position:absolute" mot sin
+     plats i verktygsraden) – annars beror panelens position på var
+     klockan råkar hamna i flex-raden, och på en smal skärm sticker den ut
+     utanför vänsterkanten i stället för att hålla sig vid höger. */
+  .notis-panel { position:fixed; top:68px; right:24px; width:min(360px, calc(100vw - 32px));
+    max-height:min(70vh, 520px); overflow-y:auto; background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--r); box-shadow:0 24px 50px -16px rgba(0,0,0,.55); padding:14px;
+    display:none; z-index:40; }
+  .notis-panel.oppen { display:block; }
+  @media (max-width:720px) { .notis-panel { top:58px; right:14px; } }
+  .notis-topp { display:flex; align-items:center; margin-bottom:8px; }
+  .notis-topp .titel { font-weight:700; font-size:.92rem; font-family:"Outfit","Inter",sans-serif; }
+  .notis-rad { display:flex; align-items:flex-start; gap:10px; padding:10px 4px;
+    border-top:1px solid var(--border); }
+  .notis-rad:first-child { border-top:0; }
+  .notis-rad .ikon { flex:0 0 auto; width:32px; height:32px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-size:1rem;
+    background:color-mix(in srgb, var(--text) 8%, transparent); }
+  .notis-rad.varning .ikon { background:color-mix(in srgb, var(--warn) 22%, transparent); }
+  .notis-rad.fel .ikon { background:color-mix(in srgb, var(--err) 22%, transparent); }
+  .notis-rad.info .ikon { background:color-mix(in srgb, var(--accent) 20%, transparent); }
+  .notis-rad .info { flex:1; min-width:0; }
+  .notis-rad .titel { font-weight:650; font-size:.86rem; }
+  .notis-rad .text { font-size:.78rem; color:var(--muted); margin-top:2px; }
+  .notis-atgarder { display:flex; gap:4px; flex:0 0 auto; }
+  .notis-klar, .notis-avvisa { width:26px; height:26px; padding:0; border-radius:50%; font-size:.85rem;
+    line-height:1; background:var(--surface2); border:1px solid var(--border); color:var(--muted); box-shadow:none;
+    display:flex; align-items:center; justify-content:center; }
+  .notis-klar:hover { color:var(--ok); border-color:var(--ok); transform:none; }
+  .notis-avvisa:hover { color:var(--err); border-color:var(--err); transform:none; }
 
   .modal-bred { max-width:620px; }
   .skapa-flikar { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
@@ -588,7 +634,7 @@
 
   @media print {
     body { background:#fff; padding:0; }
-    .app-shell, .chatt-knapp, .chatt-panel, .skapa-btn-fast, .sheet-bakgrund { display:none !important; }
+    .app-shell, .chatt-knapp, .chatt-panel, .topp-verktyg-fast, .sheet-bakgrund { display:none !important; }
     .modal-bakgrund { position:static; background:none; backdrop-filter:none; padding:0; display:block !important; }
     .modal { max-width:none; width:auto; box-shadow:none; border:0; background:none; padding:0; overflow:visible; }
     .qr-dolj-vid-utskrift { display:none !important; }
@@ -700,10 +746,22 @@
 </nav>
 <div class="app-content">
 
-<button class="skapa-btn skapa-btn-fast" id="skapaBtn" title="Skapa nytt">
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-  Skapa nytt
-</button>
+<div class="topp-verktyg-fast">
+  <div style="position:relative">
+    <button class="notis-btn" id="notisBtn" title="Notiser">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span class="notis-badge" id="notisBadge" style="display:none">0</span>
+    </button>
+    <div class="notis-panel" id="notisPanel">
+      <div class="notis-topp"><span class="titel">Notiser</span></div>
+      <div class="notis-lista" id="notisLista"></div>
+    </div>
+  </div>
+  <button class="skapa-btn" id="skapaBtn" title="Skapa nytt">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    Skapa nytt
+  </button>
+</div>
 
 <div class="wrap" id="dashboardVy">
 
@@ -1026,6 +1084,7 @@ let senasteVader = null;
 let enheterStatus = [];
 let historik = [];
 let installningar = {};
+let notiserHanterade = []; // { id, atgard, tid } – hämtade från servern
 let modalKontext = null; // bara för "ny-zon"-popupen (+ på kartan) – { typ: "ny-zon" }
 // Dragning av zoner är avstängd som standard och slås bara på via "Redigera
 // layout" – annars kan ett vanligt klick för att markera en zon råka tolkas
@@ -1051,6 +1110,7 @@ async function laddaVader() {
     senasteVader = data;
     if (Number.isFinite(data.lat) && Number.isFinite(data.lon)) { geoLat = data.lat; geoLon = data.lon; }
     renderaVader(data);
+    renderaNotiser();
   } catch (e) {
     $("vaderInnehall").innerHTML = `<div class="status err">Kunde inte hämta väder: ${e.message}</div>`;
     $("bevattningInnehall").innerHTML = `<div class="status err">Kunde inte hämta väder: ${e.message}</div>`;
@@ -1160,7 +1220,8 @@ async function laddaOdlingar() {
     zoner = data.zoner ?? [];
     kartor = data.kartor ?? [];
     widgets = data.widgets ?? [];
-  } catch { odlingar = []; zoner = []; kartor = []; widgets = []; }
+    notiserHanterade = data.notiser ?? [];
+  } catch { odlingar = []; zoner = []; kartor = []; widgets = []; notiserHanterade = []; }
   // Håll aktiv flik giltig även om kartan tagits bort i en annan flik/enhet.
   if (!kartor.some((k) => k.id === aktivKartaId)) aktivKartaId = kartor[0]?.id ?? null;
   renderaKartaFlikar();
@@ -1168,6 +1229,7 @@ async function laddaOdlingar() {
   renderaKarta();
   renderaHistorik();
   renderaWidgets();
+  renderaNotiser();
 }
 function renderaKartaFlikar() {
   $("kartaFlikar").innerHTML = kartor.map((k) => `
@@ -2004,6 +2066,7 @@ async function laddaEnheter() {
     renderaKarta();
     renderaHistorik();
     renderaWidgets();
+    renderaNotiser();
     if (valtMal) renderaDetaljPanel();
   } catch (e) {
     $("enheterLista").innerHTML = `<div class="status err">Kunde inte hämta enheter: ${e.message}</div>`;
@@ -2116,6 +2179,7 @@ async function laddaHistorikData() {
     historik = await res.json();
   } catch { historik = []; }
   renderaHistorik();
+  renderaNotiser(); // frostkalibreringen behöver historiken
 }
 function historikMal() {
   const mal = [];
@@ -2129,6 +2193,116 @@ function historikMal() {
   }
   return mal;
 }
+// ---- Notiscenter ----
+// Räknar fram en lista med aktuella uppgifter/varningar från data vi redan
+// har laddat (väder, sensorer, odlingar) – inget eget API-anrop krävs för
+// själva innehållet. Id:t för dagsaktuella notiser innehåller dagens datum
+// (skördepåminnelser år-månad), så en avvisad eller klarmarkerad notis
+// kommer tillbaka av sig själv om samma läge fortfarande gäller nästa dag/
+// månad – i stället för att vara borta för gott efter ett enda klick.
+function dagensDatum() { return new Date().toISOString().slice(0, 10); }
+function berakningNotiser() {
+  const notiser = [];
+  const idag = dagensDatum();
+
+  // Frost – zonvis kalibrerad prognos där vi har underlag för det, annars
+  // SMHI:s regionala siffra som en enda generell varning.
+  const zonFrost = frostPerZon().filter((z) => z.min <= FROST_TROSKEL);
+  if (zonFrost.length) {
+    for (const z of zonFrost) {
+      notiser.push({
+        id: `frost-zon-${z.namn}-${idag}`, ikon: "❄️", niva: "varning",
+        titel: `Frostrisk i ${z.namn}`,
+        text: `Ner mot ${z.min.toFixed(1).replace(".", ",")}° i natt, kalibrerat mot era egna mätningar.`,
+      });
+    }
+  } else if (senasteVader?.dagar?.some((d) => d.min <= FROST_TROSKEL)) {
+    notiser.push({
+      id: `frost-allman-${idag}`, ikon: "❄️", niva: "varning", titel: "Frostrisk",
+      text: `SMHI väntar ${FROST_TROSKEL}° eller kallare någon av de kommande dagarna – täck ömtåliga plantor.`,
+    });
+  }
+
+  // Skördepåminnelser – odlingar vars skördemånad är just nu.
+  const nuManad = new Date().toISOString().slice(0, 7);
+  for (const o of odlingar) {
+    if (o.skordManad !== nuManad) continue;
+    const zon = zoner.find((z) => z.id === o.zonId);
+    notiser.push({
+      id: `skord-${o.id}-${nuManad}`, ikon: ikonForVaxt(o.namn), niva: "info",
+      titel: `Dags att skörda ${o.namn}`, text: zon ? `${zon.namn} · ${manadNamn(o.skordManad)}` : manadNamn(o.skordManad),
+    });
+  }
+
+  // Sensorer som inte går att nå, eller som visar ett värde utanför det
+  // normala (torrt, för blött, kallt, varmt) – en per entitet och dag.
+  for (const m of historikMal()) {
+    if (m.enhet.fel) {
+      notiser.push({
+        id: `fel-${m.enhetId}-${idag}`, ikon: "📡", niva: "fel",
+        titel: `${m.label}: enheten svarar inte`, text: `${m.enhet.namn} · ${m.enhet.fel}`,
+      });
+      continue;
+    }
+    const status = metrikStatus(m.enhet.enhet, m.enhet.state);
+    if (status.niva === "varning") {
+      notiser.push({
+        id: `varning-${m.enhetId}-${idag}`, ikon: ikonForEnhet(m.enhet.enhet), niva: "varning",
+        titel: `${m.label}: ${status.text}`, text: `${m.enhet.namn} · ${m.enhet.state}${m.enhet.enhet ?? ""}`,
+      });
+    }
+  }
+  return notiser;
+}
+function synligaNotiser() {
+  return berakningNotiser().filter((n) => !notiserHanterade.some((h) => h.id === n.id));
+}
+function renderaNotiser() {
+  const lista = synligaNotiser();
+  const badge = $("notisBadge");
+  badge.textContent = String(lista.length);
+  badge.style.display = lista.length ? "" : "none";
+  $("notisBtn").classList.toggle("har-notiser", lista.length > 0);
+  $("notisLista").innerHTML = lista.length ? lista.map((n) => `
+    <div class="notis-rad ${n.niva}" data-id="${esc(n.id)}">
+      <span class="ikon">${n.ikon}</span>
+      <div class="info">
+        <div class="titel">${esc(n.titel)}</div>
+        <div class="text">${esc(n.text)}</div>
+      </div>
+      <div class="notis-atgarder">
+        <button class="notis-klar" data-id="${esc(n.id)}" title="Markera som klar">✓</button>
+        <button class="notis-avvisa" data-id="${esc(n.id)}" title="Avvisa">×</button>
+      </div>
+    </div>`).join("")
+    : '<div class="tom" style="padding:20px 4px">Inga uppgifter just nu – bra jobbat.</div>';
+}
+async function hanteraNotis(id, atgard) {
+  // Optimistiskt: ta bort ur listan direkt, skicka sen till servern. Går
+  // anropet fel dyker notisen upp igen vid nästa omritning – inget att
+  // egentligen städa upp, den var korrekt hela tiden fram tills dess.
+  notiserHanterade = [...notiserHanterade, { id, atgard, tid: new Date().toISOString() }];
+  renderaNotiser();
+  try {
+    await fetch(`${BAS}api/notiser`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, atgard }),
+    });
+  } catch { /* återkommer av sig själv nästa laddning om det inte sparades */ }
+}
+$("notisBtn").addEventListener("click", () => {
+  $("notisPanel").classList.toggle("oppen");
+});
+document.addEventListener("click", (e) => {
+  if (e.target.closest(".notis-klar")) { hanteraNotis(e.target.closest(".notis-klar").dataset.id, "klar"); return; }
+  if (e.target.closest(".notis-avvisa")) { hanteraNotis(e.target.closest(".notis-avvisa").dataset.id, "avvisad"); return; }
+  // Klick utanför panelen och bortom bell-knappen stänger den, precis som
+  // en vanlig dropdown.
+  if ($("notisPanel").classList.contains("oppen") && !e.target.closest("#notisPanel, #notisBtn")) {
+    $("notisPanel").classList.remove("oppen");
+  }
+});
+
 function sparkline(punkter) {
   if (punkter.length < 2) return '<div class="tom" style="padding:18px 0">Samlar data … kolla tillbaka om ett tag.</div>';
   const varden = punkter.map((p) => p.varde);
