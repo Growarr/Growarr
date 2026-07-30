@@ -11,9 +11,14 @@ const NTFY_TOPIC = process.env.NTFY_TOPIC;
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
 const TIMMAR_FRAMAT = 36;
 
+// Saknade koordinater är inte ett fel utan en okonfigurerad bevakning. Ett
+// nattligt schemalagt jobb som kraschar varje dygn blir bara brus i Actions-
+// loggen (och mejl om misslyckade körningar), så vi hoppar över tyst istället.
 if (!LAT || !LON) {
-  console.error("GEO_LAT och GEO_LON måste vara satta (koordinater för trädgården, t.ex. 59.85 och 17.63).");
-  process.exit(1);
+  console.log("Hoppar över: GEO_LAT och GEO_LON är inte satta som repo-secrets.");
+  console.log("Sätt dem under Settings → Secrets and variables → Actions för att slå på frostvarningen,");
+  console.log("t.ex. GEO_LAT=59.85 och GEO_LON=17.63.");
+  process.exit(0);
 }
 
 // SMHI stängde av gamla pmp3g-API:t 31 mars 2026 – snow1g ersatte det, med

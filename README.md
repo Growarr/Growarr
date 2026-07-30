@@ -39,19 +39,45 @@ Två delar i ett repo:
      odlingslåda kan lika gärna stå fristående på kartan. Skapas via
      **+ Skapa nytt → Zon → Placering**, eller direkt från Zondetaljer.
      Tas en zon bort raderas inte dess sektioner – de blir fristående.
-   - **Trädgårdskarta** — en fritt placerbar karta. Klicka **Redigera layout**
-     för att slå på flytt-läge, och **Klar, lås positionerna** när ni är nöjda.
-     I redigeringsläge går det att:
+   - **Trädgårdskarta** — en fritt placerbar karta, ritad uppifrån: växthus
+     som glasparti med takås, odlingslådor som träramar runt mörk jord,
+     utomhusbäddar som organiska jordformer och inomhuszoner som ljusa hyllor
+     med terrakottakrukor. Samma utseende oavsett om lådan står fristående
+     eller är en sektion inuti ett växthus.
+
+     **Zoomreglaget uppe till höger på kartan** har − / + och en knapp som
+     visar zoomnivån – klicka den för att anpassa vyn så hela trädgården
+     ryms. Kartan går också att dra för att panorera, nypa med två fingrar
+     på pekskärm, och ctrl/⌘ + rulle på dator. På mobilen anpassas zoomen
+     automatiskt vid första ritningen, vid flikbyte och vid skärmrotation,
+     så zonerna aldrig sticker utanför ramen. Lodräta svep skrollar sidan
+     som vanligt.
+
+     Klicka **Redigera layout** för att slå på flytt-läge, och **Klar, lås
+     positionerna** när ni är nöjda. I redigeringsläge går det att:
      - **dra zoner** dit ni vill på kartan,
      - **dra sektioner** (odlingslådor, bänkar) till rätt plats *inuti* en zon,
-     - **dra enskilda plantor** till rätt plats i sin låda eller bädd,
+     - **dra plantor** till rätt plats i sin låda eller bädd,
      - **ändra storlek** genom att dra i hörnhandtaget, och
      - **vända** en zon eller låda med ⟳ (byter bredd/höjd), så en låda kan
        ligga längs med eller stå på tvären.
 
-     Allt sparas automatiskt. Varje zon är färgad efter sin typ, med ett
-     auto-gissat växtemoji per planta. Odlingar utan zon hamnar i en egen
+     Allt sparas automatiskt. Odlingar utan zon hamnar i en egen
      "Okategoriserat"-grupp under kartan.
+   - **Antal och fyllda ytor** — en odling är *en sort på en plats* och bär
+     ett antal (st), som anges både när den skapas och går att ändra efteråt.
+     Antalet ritas som lika många ikoner, så en låda med sex gurkor faktiskt
+     ser ut att innehålla sex gurkor, med en liten siffra som gör mängden
+     exakt. Två utseenden:
+     - **Samlade på en plats** – ikonerna står i en klunga som flyttas som
+       ett objekt. Bra när flera sorter delar på samma bädd.
+     - **Fyll hela ytan** – sorten sprids jämnt över hela lådan, i stället
+       för att man lägger till plantorna en och en. Perfekt för en låda med
+       bara gurkor. Ligger två fyllda sorter i samma yta delar de den
+       mellan sig, så "halva lådan morötter, halva rödbetor" också går.
+
+     Ikonerna krymper automatiskt efter hur många de är och hur stor ytan
+     är, så de aldrig svämmar över lådans kant.
    - **Zondetaljer** — klicka på en zon eller planta i kartan för att den
      markeras (ring runt kortet) och en panel längst ned dynamiskt visar och
      låter er redigera jordtyp, fria anteckningar, koppla valfritt antal
@@ -132,6 +158,10 @@ repo-secrets enligt nedan.
 4. Fliken **Actions** → **Frostvarning** → **Run workflow** för att testa
    direkt, annars körs den automatiskt varje kväll kl 18 (sommartid).
 
+Utan `GEO_LAT`/`GEO_LON` hoppar jobbet över och loggar varför, i stället för
+att misslyckas — annars hade den schemalagda körningen larmat varje natt bara
+för att bevakningen inte var påslagen än.
+
 ## Panelen – kom igång
 
 ```bash
@@ -183,8 +213,8 @@ på fel ställe.
 | GET | `/` | – | Panelen (HTML) |
 | GET | `/api/vader` | – | 5-dagars väderprognos från SMHI |
 | GET | `/api/odlingar` | – | Hämtar zoner + odlingsjournalen |
-| POST | `/api/odlingar` | `{ namn, zonId?, planterad?, skordFonster?, skordManad?, anteckning? }` | Lägger till en odling |
-| POST | `/api/odlingar/uppdatera` | `{ id, planterad?, skordFonster?, skordManad?, anteckning?, jord?, enhetIds? }` | Uppdaterar en odling (via Zondetaljer-panelen) |
+| POST | `/api/odlingar` | `{ namn, zonId?, antal?, layout?, planterad?, skordFonster?, skordManad?, anteckning? }` | Lägger till en odling (`antal`: 1–200 st, `layout`: `klunga`/`fyll`) |
+| POST | `/api/odlingar/uppdatera` | `{ id, antal?, layout?, x?, y?, planterad?, skordFonster?, skordManad?, anteckning?, jord?, enhetIds? }` | Uppdaterar en odling, inkl. antal, utseende och plats i sin zon |
 | POST | `/api/odlingar/ta-bort` | `{ id }` | Tar bort en odling |
 | POST | `/api/zoner` | `{ namn, typ?, x?, y?, kartaId?, foralderId? }` | Lägger till en zon (`typ`: `vaxthus`/`utomhus`/`inomhus`/`odlingslada`/`annat`). Med `foralderId` blir den en sektion inuti den zonen |
 | POST | `/api/kartor` | `{ namn }` | Lägger till en trädgårdskarta (flik) |
@@ -194,7 +224,7 @@ på fel ställe.
 | POST | `/api/widgets/ordna` | `{ ids: [...] }` | Sparar ny ordning på blocken (↑/↓ i panelen) |
 | POST | `/api/widgets/ta-bort` | `{ id }` | Tar bort ett eget block |
 | GET | `/api/kamera?entityId=` | – | Proxar en ögonblicksbild från en HA-kameraentitet (HA-token stannar på servern) |
-| POST | `/api/zoner/uppdatera` | `{ id, jord?, anteckning?, enhetIds?, x?, y?, foralderId? }` | Uppdaterar en zon, inkl. position på kartan (dragning) och vilken zon den ligger i |
+| POST | `/api/zoner/uppdatera` | `{ id, jord?, anteckning?, enhetIds?, x?, y?, bredd?, hojd?, foralderId? }` | Uppdaterar en zon, inkl. position och storlek på kartan (dragning) och vilken zon den ligger i |
 | POST | `/api/zoner/ta-bort` | `{ id }` | Tar bort en zon (plantor blir okategoriserade, sektioner flyttas upp en nivå) |
 | GET | `/api/enheter/status` | – | Hämtar nuvarande tillstånd för alla bevakade HA-entiteter |
 | POST | `/api/enheter` | `{ entityId, namn? }` | Lägger till en bevakad HA-entitet |

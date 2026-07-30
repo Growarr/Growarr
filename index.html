@@ -124,7 +124,7 @@
   .widget-ta-bort:hover:not(:disabled) { color:var(--err) !important; }
 
   label.lbl { display:block; font-size:.78rem; color:var(--muted); margin-bottom:6px; font-weight:500; }
-  input[type=text], input[type=date], select {
+  input[type=text], input[type=date], input[type=month], input[type=number], select {
     width:100%; padding:10px 12px; border-radius:var(--r-sm); border:1px solid var(--border);
     background:var(--surface2); color:var(--text); font-size:.92rem; font-family:inherit;
     transition:border-color .15s, box-shadow .15s; }
@@ -146,16 +146,59 @@
     border-color:color-mix(in srgb, var(--warn) 50%, var(--border)); }
   .karta-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; margin-top:4px; }
   .karta-canvas-wrap { position:relative; }
-  .karta-canvas { position:relative; width:100%; aspect-ratio:16/11; min-height:380px; border-radius:var(--r-sm);
+  /* Ramen är fast; allt innehåll ligger i .karta-scen som zoomas och panoreras.
+     Rutnätet ligger kvar på ramen så det inte panoreras bort i kanterna. */
+  .karta-canvas { position:relative; width:100%; aspect-ratio:16/10; min-height:380px; border-radius:16px;
     margin-top:4px; overflow:hidden; background:
-      radial-gradient(60% 50% at 20% 15%, color-mix(in srgb, var(--accent) 10%, transparent), transparent),
-      linear-gradient(90deg, color-mix(in srgb, var(--text) 5%, transparent) 1px, transparent 1px) 0 0/32px 32px,
-      linear-gradient(color-mix(in srgb, var(--text) 5%, transparent) 1px, transparent 1px) 0 0/32px 32px,
-      linear-gradient(160deg, color-mix(in srgb, var(--accent) 8%, var(--surface2)), var(--surface2));
-    border:1px solid var(--border); transition:box-shadow .2s ease; }
+      radial-gradient(110% 80% at 50% -15%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 68%),
+      radial-gradient(80% 70% at 105% 110%, color-mix(in srgb, var(--accent2) 11%, transparent), transparent 70%),
+      linear-gradient(90deg, color-mix(in srgb, var(--text) 4%, transparent) 1px, transparent 1px) 0 0/24px 24px,
+      linear-gradient(color-mix(in srgb, var(--text) 4%, transparent) 1px, transparent 1px) 0 0/24px 24px,
+      linear-gradient(90deg, color-mix(in srgb, var(--text) 7%, transparent) 1px, transparent 1px) 0 0/120px 120px,
+      linear-gradient(color-mix(in srgb, var(--text) 7%, transparent) 1px, transparent 1px) 0 0/120px 120px,
+      linear-gradient(165deg, color-mix(in srgb, var(--accent) 7%, var(--surface2)), var(--surface2));
+    border:1px solid var(--border); transition:box-shadow .2s ease;
+    box-shadow:inset 0 1px 0 color-mix(in srgb, var(--text) 6%, transparent),
+      inset 0 0 70px -24px rgba(0,0,0,.55); }
   .karta-canvas.redigerar { box-shadow:inset 0 0 0 2px var(--warn); }
+  /* pan-y: lodräta svep skrollar sidan som vanligt (annars låser kartan fast
+     halva mobilskärmen), vågräta drar kartan i sidled. Två fingrar zoomar och
+     panorerar fritt. Zonerna själva har touch-action:none och går alltid att
+     dra åt alla håll i redigeringsläget. */
+  .karta-canvas.panorerbar { touch-action:pan-y; cursor:grab; }
+  .karta-canvas.panorerar { cursor:grabbing; }
+  .karta-scen { position:absolute; inset:0; transform-origin:0 0; will-change:transform; }
   .karta-plus { position:absolute; bottom:-16px; right:14px; width:48px; height:48px; border-radius:50%;
     font-size:1.6rem; line-height:1; display:flex; align-items:center; justify-content:center; padding:0; z-index:5; }
+
+  /* Zoomreglage, flytande högst upp på kartan */
+  .karta-zoom { position:absolute; top:10px; right:10px; z-index:8; display:flex; align-items:center; gap:2px;
+    padding:4px; border-radius:99px; background:color-mix(in srgb, var(--surface) 82%, transparent);
+    border:1px solid var(--border); backdrop-filter:blur(10px);
+    box-shadow:0 8px 22px -12px rgba(0,0,0,.6); }
+  .karta-zoom button { width:30px; height:30px; padding:0; border-radius:50%; font-size:1.05rem; line-height:1;
+    background:none; border:0; box-shadow:none; color:var(--muted);
+    display:flex; align-items:center; justify-content:center; }
+  .karta-zoom button:hover:not(:disabled) { background:var(--surface2); color:var(--text); transform:none; box-shadow:none; }
+  .karta-zoom button:disabled { opacity:.3; cursor:default; }
+  .karta-zoom .zoom-niva { width:auto; min-width:48px; padding:0 8px; border-radius:99px; font-size:.74rem;
+    font-weight:650; font-variant-numeric:tabular-nums; }
+
+  /* Mobil: kartan blir kvadratisk och zoomas automatiskt så hela trädgården
+     ryms – zonkorten har fasta pixelbredder och skulle annars sticka ut. */
+  @media (max-width:720px) {
+    .wrap { padding:0 14px; }
+    .card { padding:16px; margin-top:14px; }
+    .vy-header { padding-top:16px; }
+    .karta-header { flex-wrap:wrap; }
+    .karta-canvas { aspect-ratio:1/1; min-height:0; }
+    .karta-zoom { top:8px; right:8px; }
+    .karta-plus { width:42px; height:42px; font-size:1.4rem; right:10px; bottom:-14px; }
+    .karta-flikar { gap:6px; margin-bottom:10px; }
+    .dash-grid { gap:14px; }
+    .metrik-grid { grid-template-columns:repeat(auto-fill,minmax(128px,1fr)); }
+    .historik-grid, .karta-grid, .grid-kort { grid-template-columns:1fr; }
+  }
   /* Bredden sätts inline per zon (styr även orienteringen) – ingen max-width
      här, den skulle klämma ihop breda växthus. */
   .zon-kort-canvas { position:absolute; transform:translate(-50%,-50%);
@@ -175,14 +218,16 @@
   /* OBS: sätt inte position här – .zon-kort-canvas ovan sätter position:absolute
      och deklareras tidigare, så en position här skulle vinna på lika specificitet
      och göra att korten staplas istället för att placeras på kartan. */
-  .zon-kort { border-radius:16px; padding:12px; background:var(--surface);
-    border:1px solid var(--border); color:var(--text);
-    box-shadow:0 10px 26px -14px rgba(0,0,0,.4); transition:box-shadow .15s ease; }
-  .zon-kort:hover { box-shadow:0 16px 34px -14px rgba(0,0,0,.5); }
-  .zon-kort.vald { box-shadow:0 0 0 2px var(--accent), 0 16px 34px -14px rgba(0,0,0,.5); }
-  .zon-kort.okategoriserat { background:var(--surface2); }
+  .zon-kort { border-radius:18px; padding:9px 10px 10px; color:var(--text);
+    background:color-mix(in srgb, var(--surface) 86%, transparent); backdrop-filter:blur(8px);
+    border:1px solid color-mix(in srgb, var(--text) 9%, transparent);
+    box-shadow:inset 0 1px 0 color-mix(in srgb, var(--text) 7%, transparent),
+      0 18px 34px -18px rgba(0,0,0,.65); transition:box-shadow .15s ease, border-color .15s ease; }
+  .zon-kort:hover { box-shadow:inset 0 1px 0 color-mix(in srgb, var(--text) 7%, transparent),
+    0 22px 40px -18px rgba(0,0,0,.7); }
+  .zon-kort.okategoriserat { background:var(--surface2); backdrop-filter:none; }
 
-  .zon-topp { display:flex; align-items:center; gap:8px; margin-bottom:10px; padding:0 2px; }
+  .zon-topp { display:flex; align-items:center; gap:7px; margin-bottom:8px; padding:0 3px; }
   .zon-topp .ikon { font-size:1.05rem; flex:0 0 auto; }
   .zon-topp .namn { font-weight:650; font-size:.9rem; flex:1; min-width:0; overflow:hidden;
     text-overflow:ellipsis; white-space:nowrap; }
@@ -193,7 +238,11 @@
     display:flex; align-items:center; justify-content:center; line-height:1; flex:0 0 auto; }
   .zon-ta-bort:hover { color:var(--err); border-color:var(--err); transform:none; }
 
-  /* ---- Ytan: zonen sedd uppifrån ---- */
+  /* ---- Ytan: zonen sedd uppifrån ----
+     Klassen .yta bär själva utseendet per zontyp och sitter på både zonens
+     stora yta och på sektionerna inuti den, så en odlingslåda ser likadan ut
+     oavsett om den står fritt eller inne i ett växthus. .zon-yta och
+     .zon-sektion sköter bara måtten runt omkring. */
   .zon-yta { position:relative; border-radius:12px; min-height:92px; padding:12px; overflow:hidden; }
   /* Tomtexterna centreras eftersom plantlagret nu är ett absolut positionslager */
   .zon-plantor .zon-tom, .zon-plantor .sektion-tom { position:absolute; left:50%; top:50%;
@@ -203,20 +252,25 @@
   /* Sektioner inuti en zon – t.ex. odlingslådor och bänkar i ett växthus.
      Placeras fritt i förälderns yta med egen storlek, så orienteringen
      (liggande låda vs stående) styrs av bredd/höjd. */
-  .zon-sektion { position:absolute; transform:translate(-50%,-50%); border-radius:9px; padding:6px;
+  /* Skuggan läggs som filter, inte box-shadow – ytstilarna nedan har högre
+     specificitet och skulle annars skriva över den. */
+  .zon-sektion { position:absolute; transform:translate(-50%,-50%); border-radius:9px; padding:5px;
     cursor:pointer; overflow:hidden; z-index:2; touch-action:none;
-    display:flex; flex-direction:column; box-shadow:0 3px 10px -3px rgba(0,0,0,.4); }
+    display:flex; flex-direction:column; filter:drop-shadow(0 3px 6px rgba(0,0,0,.4)); }
   .zon-sektion .sektion-yta { position:relative; flex:1; min-height:0; }
-  .zon-sektion .sektion-topp { display:flex; align-items:center; gap:4px; margin-bottom:4px; }
-  .zon-sektion .sektion-topp .ikon { font-size:.85rem; }
+  .zon-sektion .sektion-topp { display:flex; align-items:center; gap:4px; margin-bottom:3px; padding:0 2px; }
+  .zon-sektion .sektion-topp .ikon { font-size:.8rem; }
   .zon-sektion .sektion-topp .namn { font-size:.7rem; font-weight:650; flex:1; min-width:0;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#fff;
-    text-shadow:0 1px 2px rgba(0,0,0,.45); }
-  .zon-yta.inomhus .zon-sektion .sektion-topp .namn,
-  .zon-yta.annat .zon-sektion .sektion-topp .namn { color:var(--text); text-shadow:none; }
-  .zon-sektion .vaxt-punkt { width:26px; height:26px; font-size:.82rem; }
-  .zon-sektion.vald { box-shadow:0 0 0 2px var(--accent), 0 3px 10px -3px rgba(0,0,0,.4); }
-  .zon-sektion.dragging { z-index:12; box-shadow:0 12px 26px -6px rgba(0,0,0,.5); transition:none; }
+    text-shadow:0 1px 2px rgba(0,0,0,.5); }
+  /* Ljusa ytor (glas, hylla, neutral platta) behöver mörk text i stället */
+  .zon-sektion.vaxthus .sektion-topp .namn,
+  .zon-sektion.inomhus .sektion-topp .namn,
+  .zon-sektion.annat .sektion-topp .namn { color:#1c2b23; text-shadow:none; }
+  /* outline och filter, inte box-shadow – ytstilarna nedan har högre
+     specificitet och skulle skriva över en box-shadow här. */
+  .zon-sektion.vald { outline:2px solid var(--accent); outline-offset:-2px; }
+  .zon-sektion.dragging { z-index:12; filter:drop-shadow(0 10px 16px rgba(0,0,0,.55)); transition:none; }
   .zon-sektion .sektion-ta-bort { background:rgba(255,255,255,.28); border:0; box-shadow:none; color:#fff;
     width:17px; height:17px; border-radius:50%; padding:0; font-size:.7rem; line-height:1; cursor:pointer;
     display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
@@ -234,63 +288,98 @@
     display:flex; align-items:center; justify-content:center; cursor:pointer; }
   .vand-btn:hover { color:var(--text); border-color:var(--accent); transform:none; }
   .sektion-vand { background:rgba(255,255,255,.3); border:0; color:#fff; width:16px; height:16px; font-size:.62rem; }
-  /* I redigeringsläge kan plantorna dras – annars är de bara klickbara */
-  .karta-canvas.redigerar .vaxt-punkt { cursor:grab; touch-action:none; }
-  .vaxt-punkt.dragging { z-index:15; transform:translate(-50%,-50%) scale(1.15); transition:none; }
+  /* I redigeringsläge kan plantgrupperna dras – annars är de bara klickbara */
+  .karta-canvas.redigerar .vaxt-grupp { cursor:grab; touch-action:none; }
+  .vaxt-grupp.dragging { z-index:15; transform:translate(-50%,-50%) scale(1.1); transition:none; }
   .sektion-tom { font-size:.66rem; color:rgba(255,255,255,.8); text-shadow:0 1px 2px rgba(0,0,0,.4); }
-  .zon-yta.inomhus .sektion-tom, .zon-yta.annat .sektion-tom { color:var(--muted); text-shadow:none; }
-  /* Plantorna ligger fritt placerade i sin zon eller sektion (0–1 av ytan).
-     OBS: alla transform-regler måste behålla translate(-50%,-50%) – annars
-     hoppar punkten ur sin position (samma fälla som zonkorten hade). */
-  .vaxt-punkt { position:absolute; transform:translate(-50%,-50%); width:34px; height:34px; border-radius:50%;
-    display:flex; align-items:center; justify-content:center; font-size:1.05rem; cursor:pointer;
-    background:rgba(255,255,255,.92);
-    box-shadow:0 2px 6px rgba(0,0,0,.28), inset 0 0 0 1px rgba(255,255,255,.7); transition:box-shadow .12s ease; }
-  .vaxt-punkt:hover { box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 65%, transparent), 0 2px 6px rgba(0,0,0,.28); }
-  .vaxt-punkt.vald { box-shadow:0 0 0 2px var(--accent), 0 2px 6px rgba(0,0,0,.28); }
-  .vaxt-punkt.skord::after { content:""; position:absolute; width:9px; height:9px; border-radius:50%;
-    background:var(--warn); transform:translate(13px,-13px); box-shadow:0 0 0 2px var(--surface); }
+  .zon-sektion.vaxthus .sektion-tom, .zon-sektion.inomhus .sektion-tom,
+  .zon-sektion.annat .sektion-tom { color:#5c7267; text-shadow:none; }
+
+  /* En odling = en sort på en plats, med ett antal. Antalet ritas som lika
+     många ikoner, samlade i en klunga på sin punkt i zonen (0–1 av ytan) –
+     eller utspridda över hela ytan när odlingen är satt att "fylla" den.
+     OBS: alla transform-regler på .vaxt-grupp måste behålla
+     translate(-50%,-50%) – annars hoppar klungan ur sin position (samma
+     fälla som zonkorten hade). */
+  .vaxt-grupp { position:absolute; transform:translate(-50%,-50%); cursor:pointer;
+    display:flex; flex-wrap:wrap; gap:2px; justify-content:center; align-content:center;
+    padding:3px; border-radius:13px; transition:box-shadow .12s ease, background .12s ease; }
+  .vaxt-grupp:hover { background:color-mix(in srgb, var(--accent) 18%, transparent);
+    box-shadow:0 0 0 1.5px color-mix(in srgb, var(--accent) 55%, transparent); }
+  .vaxt-grupp.vald { background:color-mix(in srgb, var(--accent) 22%, transparent);
+    box-shadow:0 0 0 2px var(--accent); }
+  .vaxt-ikon { display:flex; align-items:center; justify-content:center; border-radius:50%; line-height:1;
+    flex:0 0 auto; background:radial-gradient(circle at 33% 27%, #ffffff, #e6f1ea);
+    box-shadow:0 2px 5px rgba(0,0,0,.32), inset 0 0 0 1px rgba(255,255,255,.85); }
+  /* Antalet i siffror – ikonerna visar mängden, chippet gör den exakt */
+  .vaxt-antal { position:absolute; right:-7px; bottom:-6px; min-width:17px; height:17px; padding:0 4px;
+    border-radius:99px; background:var(--surface); color:var(--text); border:1px solid var(--border);
+    font-size:.62rem; font-weight:700; font-variant-numeric:tabular-nums; line-height:15px; text-align:center;
+    box-shadow:0 2px 5px rgba(0,0,0,.3); }
+  .vaxt-grupp.skord::before { content:""; position:absolute; left:-4px; top:-4px; width:10px; height:10px;
+    border-radius:50%; background:var(--warn); box-shadow:0 0 0 2px var(--surface); z-index:2; }
+  /* Fyllda ytor: samma sort jämnt utspridd över hela zonen eller lådan */
+  .vaxt-fyll { position:absolute; display:grid; place-items:center; padding:7px; cursor:pointer;
+    border-radius:9px; transition:box-shadow .12s ease, background .12s ease; }
+  .vaxt-fyll:hover { background:color-mix(in srgb, var(--accent) 14%, transparent); }
+  .vaxt-fyll.vald { background:color-mix(in srgb, var(--accent) 18%, transparent);
+    box-shadow:inset 0 0 0 2px var(--accent); }
+  /* Mitt på nederkanten – hörnen ligger utanför de organiska bäddformerna
+     och skulle klippas bort av deras border-radius. */
+  .vaxt-fyll .vaxt-antal { right:auto; left:50%; bottom:1px; transform:translateX(-50%); }
   .zon-tom { font-size:.76rem; color:rgba(255,255,255,.85); text-shadow:0 1px 2px rgba(0,0,0,.35); }
-  .zon-yta.inomhus .zon-tom, .zon-yta.annat .zon-tom { color:var(--muted); text-shadow:none; }
+  .yta.inomhus .zon-tom, .yta.annat .zon-tom { color:var(--muted); text-shadow:none; }
 
-  /* Växthus: glasparti uppifrån med takås och rutindelning */
-  .zon-yta.vaxthus { border:2px solid #93cbb4;
+  /* Växthus: glasparti uppifrån – ljusstråk över rutorna, takås på mitten
+     och en vit karm som ger känslan av aluminiumprofilerna. */
+  .yta.vaxthus { border:2px solid #a3d6c1; border-radius:11px;
     background:
-      linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,.15)),
-      repeating-linear-gradient(90deg, rgba(255,255,255,.55) 0 1.5px, transparent 1.5px 30px),
-      linear-gradient(150deg, #cdeadd, #a9dcc6);
-    box-shadow:inset 0 0 0 3px rgba(255,255,255,.4); }
-  .zon-yta.vaxthus::before { content:""; position:absolute; left:8px; right:8px; top:50%;
-    height:2px; background:rgba(255,255,255,.75); border-radius:2px; }
+      linear-gradient(112deg, rgba(255,255,255,.62) 0 16%, rgba(255,255,255,.10) 38%, rgba(255,255,255,0) 55%),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.5) 0 1.5px, transparent 1.5px 27px),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.26) 0 1.5px, transparent 1.5px 27px),
+      linear-gradient(150deg, #d9f1e7, #a6dbc5);
+    box-shadow:inset 0 0 0 3px rgba(255,255,255,.5), inset 0 10px 22px -12px rgba(0,0,0,.3); }
+  .yta.vaxthus::before { content:""; position:absolute; left:10px; right:10px; top:50%; height:3px;
+    background:linear-gradient(90deg, transparent, rgba(255,255,255,.95) 10%, rgba(255,255,255,.95) 90%, transparent);
+    border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,.16); }
 
-  /* Odlingslåda: träram runt mörk jord */
-  .zon-yta.odlingslada { border:6px solid #b07c46; border-radius:10px;
+  /* Odlingslåda: träram runt mörk, grynig jord */
+  .yta.odlingslada { border:5px solid #a9793f; border-radius:9px;
     background:
-      repeating-linear-gradient(90deg, rgba(0,0,0,.07) 0 1.5px, transparent 1.5px 22px),
-      radial-gradient(circle at 30% 25%, rgba(255,255,255,.06), transparent 60%),
-      linear-gradient(160deg, #6d4c31, #573c26);
-    box-shadow:inset 0 3px 10px rgba(0,0,0,.35); }
+      radial-gradient(circle at 22% 32%, rgba(255,255,255,.07) 0 1px, transparent 1.6px) 0 0/13px 13px,
+      radial-gradient(circle at 68% 74%, rgba(0,0,0,.2) 0 1.4px, transparent 2px) 0 0/17px 17px,
+      repeating-linear-gradient(90deg, rgba(0,0,0,.1) 0 1.5px, transparent 1.5px 26px),
+      linear-gradient(160deg, #6f4e33, #4d3421);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.1), inset 0 4px 13px rgba(0,0,0,.48); }
 
-  /* Utomhusbädd: mjuk, organisk jordform */
-  .zon-yta.utomhus { border:2px solid #8d6848;
+  /* Utomhusbädd: mjuk, organisk jordform med grynig yta */
+  .yta.utomhus { border:2px solid #8d6848;
     border-radius:42% 46% 40% 48% / 46% 40% 48% 42%;
     background:
-      radial-gradient(circle at 28% 28%, rgba(0,0,0,.14), transparent 62%),
-      radial-gradient(circle at 72% 70%, rgba(0,0,0,.12), transparent 58%),
-      linear-gradient(155deg, #7c5838, #614228); }
+      radial-gradient(circle at 26% 34%, rgba(255,255,255,.06) 0 1px, transparent 1.6px) 0 0/15px 15px,
+      radial-gradient(circle at 72% 66%, rgba(0,0,0,.18) 0 1.4px, transparent 2px) 0 0/19px 19px,
+      radial-gradient(circle at 28% 28%, rgba(0,0,0,.15), transparent 62%),
+      radial-gradient(circle at 72% 70%, rgba(0,0,0,.13), transparent 58%),
+      linear-gradient(155deg, #7c5838, #5b3e26);
+    box-shadow:inset 0 3px 12px rgba(0,0,0,.3); }
 
-  /* Inomhus / krukor: ljus hylla med varmt trä nedtill */
-  .zon-yta.inomhus { border:2px solid #d3c0e2; border-radius:12px;
-    background:linear-gradient(170deg, #faf5fd, #ece0f4); }
-  .zon-yta.inomhus::before { content:""; position:absolute; left:0; right:0; bottom:0; height:12px;
-    background:linear-gradient(180deg, #d8b98f, #c2a072); }
-  .zon-yta.inomhus .vaxt-punkt { border-radius:8px 8px 12px 12px;
-    background:linear-gradient(170deg, #e9a06a, #cf7f48);
-    box-shadow:0 2px 5px rgba(0,0,0,.2), inset 0 0 0 1px rgba(255,255,255,.35); }
+  /* Inomhus / krukor: ljus hylla med varm trälist framkant */
+  .yta.inomhus { border:2px solid #d8c6e6; border-radius:12px;
+    background:linear-gradient(170deg, #fdfaff, #ebdff3);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.9), inset 0 -14px 18px -14px rgba(0,0,0,.18); }
+  .yta.inomhus::before { content:""; position:absolute; left:0; right:0; bottom:0; height:11px;
+    background:linear-gradient(180deg, #ddc096, #bd9a68);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.45); }
+  /* Krukorna: koniska terrakottakrukor med rand upptill istället för cirklar */
+  .yta.inomhus .vaxt-ikon { border-radius:5px 5px 42% 42%;
+    background:linear-gradient(170deg, #eda971, #c9773f);
+    box-shadow:0 2px 5px rgba(0,0,0,.24), inset 0 3px 0 -1px rgba(255,255,255,.4),
+      inset 0 0 0 1px rgba(255,255,255,.3); }
 
   /* Annat: neutral platta */
-  .zon-yta.annat { border:2px dashed var(--border); border-radius:12px; background:var(--surface2); }
-  .zon-yta.annat .vaxt-punkt { background:var(--surface); box-shadow:0 2px 5px rgba(0,0,0,.15), inset 0 0 0 1px var(--border); }
+  .yta.annat { border:2px dashed var(--border); border-radius:12px; background:var(--surface2); }
+  .yta.annat .vaxt-ikon { background:var(--surface);
+    box-shadow:0 2px 5px rgba(0,0,0,.15), inset 0 0 0 1px var(--border); }
 
   .historik-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin-top:4px; }
   .historik-kort { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r-sm); padding:16px; }
@@ -383,8 +472,9 @@
   .detalj-head .ikon { font-size:1.6rem; flex:0 0 auto; }
   .detalj-head h3 { font-size:1.05rem; margin-bottom:2px; }
   .detalj-head .tillbaka-btn { margin-left:auto; flex:0 0 auto; padding:6px 4px; }
-  .zon-kort.vald { box-shadow:0 0 0 3px var(--accent), 0 14px 30px -10px rgba(0,0,0,.4); }
-  .vaxt-chip.vald { box-shadow:0 0 0 2px var(--accent); }
+  .zon-kort.vald { border-color:color-mix(in srgb, var(--accent) 60%, transparent);
+    box-shadow:0 0 0 2px var(--accent), 0 0 30px -6px color-mix(in srgb, var(--accent) 60%, transparent),
+      0 18px 34px -18px rgba(0,0,0,.65); }
 
   button { border:0; border-radius:99px; padding:10px 20px; font-size:.88rem; font-weight:600;
     font-family:inherit; cursor:pointer; background:var(--grad); color:#04140e;
@@ -465,7 +555,14 @@
         </div>
         <div class="karta-flikar" id="kartaFlikar"></div>
         <div class="karta-canvas-wrap">
-          <div id="tradgardKarta" class="karta-canvas"></div>
+          <div id="tradgardKarta" class="karta-canvas">
+            <div id="kartaScen" class="karta-scen"></div>
+            <div class="karta-zoom">
+              <button id="zoomUtBtn" title="Zooma ut">−</button>
+              <button class="zoom-niva" id="zoomPassaBtn" title="Anpassa så hela trädgården syns">100%</button>
+              <button id="zoomInBtn" title="Zooma in">+</button>
+            </div>
+          </div>
           <button class="karta-plus" id="kartaPlusBtn" title="Lägg till zon på kartan">+</button>
         </div>
         <div id="tradgardOkat" class="karta-grid"></div>
@@ -608,6 +705,15 @@
         <div><label class="lbl">Zon</label><select id="oZon"><option value="">Ingen zon</option></select></div>
       </div>
       <div class="skapa-rad" style="margin-top:12px">
+        <div><label class="lbl">Antal (st)</label><input type="number" id="oAntal" min="1" max="200" value="1"></div>
+        <div><label class="lbl">På kartan</label>
+          <select id="oLayout">
+            <option value="klunga">Samlade på en plats</option>
+            <option value="fyll">Fyll hela ytan</option>
+          </select>
+        </div>
+      </div>
+      <div class="skapa-rad" style="margin-top:12px">
         <div><label class="lbl">Planterad</label><input type="date" id="oPlanterad"></div>
         <div><label class="lbl">Skördemånad</label><input type="month" id="oSkordManad"></div>
       </div>
@@ -675,11 +781,12 @@ function fargForNamn(namn) {
   return FARGPALETT[h % FARGPALETT.length];
 }
 const ZON_TYPER = {
-  vaxthus: { namn: "Växthus", ikon: "🏡", grad: "linear-gradient(135deg, #f59e0b, #f97316)" },
-  utomhus: { namn: "Utomhusbädd", ikon: "🌤️", grad: "linear-gradient(135deg, #34d399, #22c1c3)" },
-  inomhus: { namn: "Inomhus", ikon: "🪴", grad: "linear-gradient(135deg, #a78bfa, #f472b6)" },
-  odlingslada: { namn: "Odlingslåda", ikon: "📦", grad: "linear-gradient(135deg, #d97706, #7c4a12)" },
-  annat: { namn: "Annat", ikon: "📍", grad: "linear-gradient(135deg, #64748b, #334155)" },
+  // Utseendet på ytan ligger i CSS (.yta.<typ>) – här bara namn och ikon.
+  vaxthus: { namn: "Växthus", ikon: "🏡" },
+  utomhus: { namn: "Utomhusbädd", ikon: "🌤️" },
+  inomhus: { namn: "Inomhus", ikon: "🪴" },
+  odlingslada: { namn: "Odlingslåda", ikon: "📦" },
+  annat: { namn: "Annat", ikon: "📍" },
 };
 // Enkel nyckelordsmatchning mot växtnamnet för en passande emoji på kartan –
 // helt kosmetiskt, ingen växtdatabas, bara ett trevligt visuellt tillskott.
@@ -838,21 +945,93 @@ function uppdateraZonVal() {
 function entiteterFor(idLista) {
   return (idLista ?? []).map((id) => enheterStatus.find((e) => e.id === id)).filter(Boolean);
 }
-// En planta ritas som en liten prydlig punkt i zonens yta. Namn och detaljer
-// ligger i tooltip och i Zondetaljer-panelen – kartan hålls medvetet ren.
-function vaxtPunkt(o, i = 0) {
-  const nuManad = new Date().toISOString().slice(0, 7);
-  const skordSnart = o.skordManad === nuManad;
+// ---- Plantor på kartan ----
+// En odling är "en sort på en plats" och bär ett antal. Antalet ritas som
+// lika många ikoner, så en låda med sex gurkor faktiskt ser ut att innehålla
+// sex gurkor. Två utseenden:
+//   klunga – ikonerna står samlade på odlingens punkt i zonen, och hela
+//            klungan är ett enda objekt som går att dra i redigeringsläget
+//   fyll   – ikonerna sprids jämnt över hela ytan (en låda helt full med
+//            samma sort); flera fyllda sorter i samma yta delar den i band
+const MAX_RITADE_KLUNGA = 36;
+const MAX_RITADE_FYLL = 72;
+function antalFor(o) { return Math.max(1, Math.round(Number(o.antal) || 1)); }
+function layoutFor(o) { return o.layout === "fyll" ? "fyll" : "klunga"; }
+// Ju fler plantor, desto mindre ikoner – annars sprängs klungan ur sin låda.
+function ikonStorlek(antal, iSektion) {
+  const bas = antal <= 1 ? 34 : antal <= 4 ? 29 : antal <= 9 ? 25 : antal <= 16 ? 21 : 18;
+  return Math.round(bas * (iSektion ? 0.78 : 1));
+}
+function vaxtTooltip(o) {
+  const antal = antalFor(o);
   const enhetText = entiteterFor(o.enhetIds).filter((e) => !e.fel)
     .map((e) => `${ikonForEnhet(e.enhet)} ${e.state}${e.enhet || ""}`).join(" · ");
-  const detaljer = [
-    o.namn, o.planterad ? `planterad ${o.planterad}` : "",
+  return [
+    `${antal > 1 ? `${antal} st ` : ""}${o.namn}`, o.planterad ? `planterad ${o.planterad}` : "",
     o.skordManad ? `skörd ${manadNamn(o.skordManad)}` : "", o.skordFonster,
     o.jord ? `jord: ${o.jord}` : "", enhetText, o.anteckning,
   ].filter(Boolean).join(" · ");
-  const vald = valtMal?.typ === "odling" && valtMal.id === o.id;
+}
+function ikonerHtml(o, ritade, storlek) {
+  const ikon = ikonForVaxt(o.namn);
+  const stil = `width:${storlek}px; height:${storlek}px; font-size:${Math.round(storlek * 0.6)}px`;
+  return `<span class="vaxt-ikon" style="${stil}">${ikon}</span>`.repeat(ritade);
+}
+// Alla plantor i en yta (zon eller sektion). De fyllda ritas först, som
+// bakgrundslager, så samlade klungor kan ligga ovanpå dem. `ruta` är
+// plantlagrets storlek i pixlar och används för att krympa ikonerna så de
+// ryms – en låg bänk med många plantor skulle annars klippas av ytans kant.
+function plantorHtml(lista, iSektion = false, ruta = null) {
+  if (!lista.length) return "";
+  const fyllda = lista.filter((o) => layoutFor(o) === "fyll");
+  const samlade = lista.filter((o) => layoutFor(o) !== "fyll");
+  return fyllda.map((o, i) => fyllHtml(o, i, fyllda.length, iSektion, ruta)).join("") +
+    samlade.map((o, i) => klungaHtml(o, i, iSektion, ruta)).join("");
+}
+function klungaHtml(o, i, iSektion, ruta) {
+  const antal = antalFor(o);
+  const ritade = Math.min(antal, MAX_RITADE_KLUNGA);
+  const kolumner = Math.ceil(Math.sqrt(ritade));
+  let storlek = ikonStorlek(ritade, iSektion);
+  if (ruta) {
+    // Klungan får ta drygt halva ytan – resten är luft och plats för andra sorter
+    const rader = Math.ceil(ritade / kolumner);
+    storlek = Math.max(11, Math.min(storlek,
+      Math.floor((ruta.bredd * 0.78 - 6) / kolumner) - 2,
+      Math.floor((ruta.hojd * 0.88 - 6) / rader) - 2));
+  }
   const { x, y } = plantPosition(o, i);
-  return `<span class="vaxt-punkt${vald ? " vald" : ""}${skordSnart ? " skord" : ""}" style="left:${x * 100}%; top:${y * 100}%" data-id="${o.id}" title="${esc(detaljer)}">${ikonForVaxt(o.namn)}</span>`;
+  const vald = valtMal?.typ === "odling" && valtMal.id === o.id;
+  const skordSnart = o.skordManad === new Date().toISOString().slice(0, 7);
+  return `<div class="vaxt-grupp${vald ? " vald" : ""}${skordSnart ? " skord" : ""}" data-id="${esc(o.id)}"
+      title="${esc(vaxtTooltip(o))}"
+      style="left:${x * 100}%; top:${y * 100}%; width:${kolumner * (storlek + 2) + 6}px">
+      ${ikonerHtml(o, ritade, storlek)}
+      ${antal > 1 ? `<span class="vaxt-antal">${antal}</span>` : ""}
+    </div>`;
+}
+function fyllHtml(o, i, antalFyllda, iSektion, ruta) {
+  const antal = antalFor(o);
+  const ritade = Math.min(antal, MAX_RITADE_FYLL);
+  // Ytorna är oftast liggande, så rutnätet görs medvetet bredare än högt.
+  const kolumner = Math.max(1, Math.round(Math.sqrt(ritade * 1.8)));
+  const rader = Math.ceil(ritade / kolumner);
+  let storlek = ikonStorlek(ritade, iSektion);
+  if (ruta) {
+    storlek = Math.max(9, Math.min(storlek,
+      Math.floor((ruta.bredd - 14) / kolumner) - 1,
+      Math.floor((ruta.hojd / antalFyllda - 14) / rader) - 1));
+  }
+  const bandHojd = 100 / antalFyllda;
+  const vald = valtMal?.typ === "odling" && valtMal.id === o.id;
+  const skordSnart = o.skordManad === new Date().toISOString().slice(0, 7);
+  return `<div class="vaxt-fyll${vald ? " vald" : ""}${skordSnart ? " skord" : ""}" data-id="${esc(o.id)}"
+      title="${esc(vaxtTooltip(o))}"
+      style="left:0; width:100%; top:${i * bandHojd}%; height:${bandHojd}%;
+        grid-template-columns:repeat(${kolumner},1fr); grid-template-rows:repeat(${rader},1fr)">
+      ${ikonerHtml(o, ritade, storlek)}
+      ${antal > 1 ? `<span class="vaxt-antal">${antal}</span>` : ""}
+    </div>`;
 }
 // Plantor utan sparad plats läggs ut i ett prydligt rutmönster tills man
 // drar dem – positionen sparas först när användaren faktiskt flyttar dem.
@@ -884,8 +1063,8 @@ function sektionHtml(sektion, grupper, i) {
   const vald = valtMal?.typ === "zon" && valtMal.id === sektion.id;
   const { x, y } = sektionPosition(sektion, i);
   const b = sektion.bredd ?? 152, h = sektion.hojd ?? 84;
-  return `<div class="zon-sektion${vald ? " vald" : ""}" data-id="${esc(sektion.id)}"
-      style="background:${info.grad}; left:${x * 100}%; top:${y * 100}%; width:${b}px; height:${h}px">
+  return `<div class="zon-sektion yta ${esc(sektion.typ || "annat")}${vald ? " vald" : ""}" data-id="${esc(sektion.id)}"
+      style="left:${x * 100}%; top:${y * 100}%; width:${b}px; height:${h}px">
       <div class="sektion-topp">
         <span class="ikon">${info.ikon}</span>
         <span class="namn">${esc(sektion.namn)}</span>
@@ -893,7 +1072,9 @@ function sektionHtml(sektion, grupper, i) {
         ${redigerarLayout ? `<button class="sektion-ta-bort" data-id="${esc(sektion.id)}" title="Ta bort sektion">×</button>` : ""}
       </div>
       <div class="sektion-yta">
-        <div class="zon-plantor">${lista.length ? lista.map(vaxtPunkt).join("") : '<span class="sektion-tom">Tom</span>'}</div>
+        <div class="zon-plantor">${lista.length
+          ? plantorHtml(lista, true, { bredd: b - 10, hojd: h - 27 }) // minus padding och titelrad
+          : '<span class="sektion-tom">Tom</span>'}</div>
       </div>
       ${redigerarLayout ? `<div class="storlek-handtag" data-id="${esc(sektion.id)}" title="Dra för att ändra storlek"></div>` : ""}
     </div>`;
@@ -920,9 +1101,9 @@ function renderaKarta() {
   }
   const toppzoner = synligaZoner.filter((z) => !z.foralderId || !synligaIder.has(z.foralderId));
   if (!toppzoner.length) {
-    $("tradgardKarta").innerHTML = '<div class="karta-tom">Inga zoner på den här kartan ännu – klicka på + för att lägga till en (växthus, bädd, odlingslåda …).</div>';
+    $("kartaScen").innerHTML = '<div class="karta-tom">Inga zoner på den här kartan ännu – klicka på + för att lägga till en (växthus, bädd, odlingslåda …).</div>';
   } else {
-    $("tradgardKarta").innerHTML = toppzoner.map((z, i) => {
+    $("kartaScen").innerHTML = toppzoner.map((z, i) => {
       const info = ZON_TYPER[z.typ] ?? ZON_TYPER.annat;
       const lista = grupper.get(z.id) ?? [];
       const sektioner = sektionerPer.get(z.id) ?? [];
@@ -944,21 +1125,89 @@ function renderaKarta() {
           ${redigerarLayout ? `<button class="zon-vand vand-btn" data-id="${z.id}" title="Vänd (byt bredd/höjd)">⟳</button>` : ""}
           ${redigerarLayout ? `<button class="zon-ta-bort" data-id="${z.id}" title="Ta bort zon">×</button>` : ""}
         </div>
-        <div class="zon-yta ${esc(z.typ || "annat")}" style="height:${h}px">
+        <div class="zon-yta yta ${esc(z.typ || "annat")}" style="height:${h}px">
           ${sektioner.map((s, si) => sektionHtml(s, grupper, si)).join("")}
-          <div class="zon-plantor">${lista.length ? lista.map(vaxtPunkt).join("") : tomText}</div>
+          <div class="zon-plantor">${lista.length ? plantorHtml(lista, false, { bredd: b - 20, hojd: h }) : tomText}</div>
         </div>
         ${redigerarLayout ? `<div class="storlek-handtag" data-id="${z.id}" title="Dra för att ändra storlek"></div>` : ""}
       </div>`;
     }).join("");
   }
   // Plantlagret är absolut positionerat, så ytan behöver en höjd som rymmer
-  // alla rader (fyra plantor per rad i standardutlägget).
-  const okatHojd = 40 + Math.ceil(okategoriserade.length / 4) * 46;
+  // alla rader (fyra klungor per rad i standardutlägget).
+  const okatHojd = 40 + Math.ceil(okategoriserade.length / 4) * 52;
   $("tradgardOkat").innerHTML = okategoriserade.length ? `<div class="zon-kort okategoriserat">
       <div class="zon-topp"><span class="ikon">📍</span><span class="namn">Utan zon</span></div>
-      <div class="zon-yta annat" style="height:${okatHojd}px"><div class="zon-plantor">${okategoriserade.map(vaxtPunkt).join("")}</div></div>
+      <div class="zon-yta yta annat" style="height:${okatHojd}px"><div class="zon-plantor">${plantorHtml(okategoriserade)}</div></div>
     </div>` : "";
+  // Första gången en karta ritas (och efter flikbyte) zoomas den så hela
+  // trädgården syns – avgörande på mobil, där zonkortens fasta pixelbredder
+  // annars sticker långt utanför ramen.
+  if (!kartaPassad && toppzoner.length) {
+    kartaPassad = true;
+    requestAnimationFrame(passaKarta);
+  } else {
+    tillampaZoom();
+  }
+}
+
+// ---- Zoom och panorering av kartan ----
+// Zonernas positioner lagras som andelar (0–1) av scenen, och scenen mäts
+// med getBoundingClientRect() som redan räknar in transformen – därför
+// fungerar dragningen oförändrat oavsett zoomnivå.
+const ZOOM_MIN = 0.3, ZOOM_MAX = 2.5, ZOOM_STEG = 1.25;
+let kartaZoom = 1, kartaPanX = 0, kartaPanY = 0;
+let kartaPassad = false;
+
+function tillampaZoom() {
+  $("kartaScen").style.transform = `translate(${kartaPanX}px, ${kartaPanY}px) scale(${kartaZoom})`;
+  $("zoomPassaBtn").textContent = `${Math.round(kartaZoom * 100)}%`;
+  $("zoomUtBtn").disabled = kartaZoom <= ZOOM_MIN + 0.001;
+  $("zoomInBtn").disabled = kartaZoom >= ZOOM_MAX - 0.001;
+  // Fingret ska kunna skrolla sidan rakt över kartan när det inte finns
+  // något att panorera – annars låser kartan sig fast på mobilen.
+  const kanPanorera = kartaZoom !== 1 || kartaPanX !== 0 || kartaPanY !== 0;
+  $("tradgardKarta").classList.toggle("panorerbar", kanPanorera);
+}
+// Zoomar runt en punkt i ramens koordinater, så det man tittar på står still.
+function zoomaTill(ny, punktX, punktY) {
+  const z = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, ny));
+  const faktor = z / kartaZoom;
+  kartaPanX = punktX - (punktX - kartaPanX) * faktor;
+  kartaPanY = punktY - (punktY - kartaPanY) * faktor;
+  kartaZoom = z;
+  tillampaZoom();
+}
+function zoomaFranKnapp(faktor) {
+  const r = $("tradgardKarta").getBoundingClientRect();
+  zoomaTill(kartaZoom * faktor, r.width / 2, r.height / 2);
+}
+// Innehållets yttermått i scenens egna koordinater. offsetLeft/offsetTop är
+// layoutvärden och påverkas inte av scenens transform, men de innehåller
+// heller inte kortens egen translate(-50%,-50%) – därav halva måtten.
+function kartaInnehallsRam() {
+  const kort = [...$("kartaScen").querySelectorAll(".zon-kort-canvas")];
+  if (!kort.length) return null;
+  let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+  for (const el of kort) {
+    const v = el.offsetLeft - el.offsetWidth / 2, o = el.offsetTop - el.offsetHeight / 2;
+    x1 = Math.min(x1, v); y1 = Math.min(y1, o);
+    x2 = Math.max(x2, v + el.offsetWidth); y2 = Math.max(y2, o + el.offsetHeight);
+  }
+  return { x1, y1, x2, y2 };
+}
+function passaKarta() {
+  const ram = kartaInnehallsRam();
+  const frame = $("tradgardKarta");
+  const fw = frame.clientWidth, fh = frame.clientHeight;
+  if (!ram || !fw || !fh) { kartaZoom = 1; kartaPanX = 0; kartaPanY = 0; return tillampaZoom(); }
+  const marginal = 18;
+  const bredd = Math.max(1, ram.x2 - ram.x1), hojd = Math.max(1, ram.y2 - ram.y1);
+  kartaZoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN,
+    Math.min((fw - marginal * 2) / bredd, (fh - marginal * 2) / hojd, 1.4)));
+  kartaPanX = (fw - bredd * kartaZoom) / 2 - ram.x1 * kartaZoom;
+  kartaPanY = (fh - hojd * kartaZoom) / 2 - ram.y1 * kartaZoom;
+  tillampaZoom();
 }
 
 // ---- Dra zoner fritt på kartan (pointer events, ingen extern lib) ----
@@ -986,54 +1235,114 @@ function startaDrag(e, cfg, handle) {
   try { handle.setPointerCapture(e.pointerId); } catch { /* document-lyssnarna räcker */ }
 }
 
-document.addEventListener("pointerdown", (e) => {
-  if (!redigerarLayout) return;
-  if (e.target.closest(".zon-ta-bort, .sektion-ta-bort, .vand-btn")) return; // knappar ska gå att klicka
+// Två fingrar på kartan = nypzoom. Pekarna spåras separat från dragState så
+// ett påbörjat drag kan avbrytas när det andra fingret läggs på.
+const aktivaPekare = new Map();
+let nypState = null;
+function pekarAvstand() {
+  const [a, b] = [...aktivaPekare.values()];
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+function pekarMitt() {
+  const [a, b] = [...aktivaPekare.values()];
+  const r = $("tradgardKarta").getBoundingClientRect();
+  return { x: (a.x + b.x) / 2 - r.left, y: (a.y + b.y) / 2 - r.top };
+}
 
-  // Storleksändring: dra hörnhandtaget på en zon eller sektion
-  const storlek = e.target.closest(".storlek-handtag");
-  if (storlek) {
-    const el = storlek.closest(".zon-sektion") || storlek.closest(".zon-kort-canvas");
-    if (!el) return;
-    const arSektion = el.classList.contains("zon-sektion");
-    const ytaEl = arSektion ? el : el.querySelector(".zon-yta");
-    startaDrag(e, {
-      typ: "storlek", id: storlek.dataset.id, el, arSektion,
-      startB: el.getBoundingClientRect().width,
-      startH: ytaEl.getBoundingClientRect().height,
-    }, storlek);
+document.addEventListener("pointerdown", (e) => {
+  const canvas = e.target.closest(".karta-canvas");
+  if (!canvas) return;
+  if (e.target.closest(".karta-zoom")) return;
+
+  aktivaPekare.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (aktivaPekare.size === 2) {
+    if (dragState) { dragState.el.classList.remove("dragging", "panorerar"); dragState = null; }
+    nypState = {
+      startAvstand: pekarAvstand(), startZoom: kartaZoom, startMitt: pekarMitt(),
+      startPanX: kartaPanX, startPanY: kartaPanY,
+    };
     return;
   }
-  // Planta: dras inom sin zon eller sektion
-  const planta = e.target.closest(".vaxt-punkt");
-  if (planta && planta.closest(".karta-canvas")) {
-    startaDrag(e, { typ: "planta", id: planta.dataset.id, el: planta, container: planta.closest(".zon-plantor") }, planta);
-    return;
+  if (aktivaPekare.size > 2) return;
+
+  if (redigerarLayout && !e.target.closest(".zon-ta-bort, .sektion-ta-bort, .vand-btn")) {
+    // Storleksändring: dra hörnhandtaget på en zon eller sektion
+    const storlek = e.target.closest(".storlek-handtag");
+    if (storlek) {
+      const el = storlek.closest(".zon-sektion") || storlek.closest(".zon-kort-canvas");
+      if (el) {
+        const arSektion = el.classList.contains("zon-sektion");
+        const ytaEl = arSektion ? el : el.querySelector(".zon-yta");
+        // Måtten mäts i skärmpixlar men lagras i scenens egna – dela med zoomen
+        startaDrag(e, {
+          typ: "storlek", id: storlek.dataset.id, el, arSektion,
+          startB: el.getBoundingClientRect().width / kartaZoom,
+          startH: ytaEl.getBoundingClientRect().height / kartaZoom,
+        }, storlek);
+      }
+      return;
+    }
+    // Planta: hela klungan dras inom sin zon eller sektion
+    const planta = e.target.closest(".vaxt-grupp");
+    if (planta) {
+      startaDrag(e, { typ: "planta", id: planta.dataset.id, el: planta, container: planta.closest(".zon-plantor") }, planta);
+      return;
+    }
+    // Sektion: dras inom föräldrazonens yta
+    const sektion = e.target.closest(".zon-sektion");
+    if (sektion) {
+      startaDrag(e, { typ: "sektion", id: sektion.dataset.id, el: sektion, container: sektion.parentElement }, sektion);
+      return;
+    }
+    // Hela zonkortet går att dra, inte bara ✥ – ett litet handtag är lätt att
+    // missa, särskilt på pekskärm.
+    const kort = e.target.closest(".zon-kort-canvas");
+    if (kort) {
+      startaDrag(e, { typ: "zon", id: kort.dataset.id, el: kort, container: $("kartaScen") }, kort);
+      return;
+    }
   }
-  // Sektion: dras inom föräldrazonens yta
-  const sektion = e.target.closest(".zon-sektion");
-  if (sektion) {
-    startaDrag(e, { typ: "sektion", id: sektion.dataset.id, el: sektion, container: sektion.parentElement }, sektion);
-    return;
-  }
-  // Hela zonkortet går att dra, inte bara ✥ – ett litet handtag är lätt att
-  // missa, särskilt på pekskärm.
-  const kort = e.target.closest(".zon-kort-canvas");
-  if (kort) startaDrag(e, { typ: "zon", id: kort.dataset.id, el: kort, container: $("tradgardKarta") }, kort);
+  // Inget objekt träffades (eller vi är inte i redigeringsläge): dra kartan.
+  // Ett vanligt klick går fortfarande fram, eftersom panoreringen kräver att
+  // fingret rör sig förbi dragtröskeln först.
+  startaDrag(e, { typ: "panorera", el: canvas, startPanX: kartaPanX, startPanY: kartaPanY }, canvas);
 });
 
 function dragMove(e) {
+  if (aktivaPekare.has(e.pointerId)) aktivaPekare.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (nypState && aktivaPekare.size === 2) {
+    if (nypState.startAvstand > 0) {
+      // Punkten som låg under fingrarnas mittpunkt när greppet började ska
+      // ligga kvar under den – det ger zoom och panorering i samma gest.
+      const z = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN,
+        nypState.startZoom * (pekarAvstand() / nypState.startAvstand)));
+      const skala = z / nypState.startZoom;
+      const mitt = pekarMitt();
+      kartaPanX = mitt.x - (nypState.startMitt.x - nypState.startPanX) * skala;
+      kartaPanY = mitt.y - (nypState.startMitt.y - nypState.startPanY) * skala;
+      kartaZoom = z;
+      tillampaZoom();
+    }
+    return;
+  }
   if (!dragState || e.pointerId !== dragState.pointerId) return;
   if (!dragState.drogs) {
     if (Math.hypot(e.clientX - dragState.startX, e.clientY - dragState.startY) < DRAG_TROSKEL_PX) return;
     dragState.drogs = true;
-    dragState.el.classList.add("dragging");
+    dragState.el.classList.add(dragState.typ === "panorera" ? "panorerar" : "dragging");
+  }
+  if (dragState.typ === "panorera") {
+    kartaPanX = dragState.startPanX + (e.clientX - dragState.startX);
+    kartaPanY = dragState.startPanY + (e.clientY - dragState.startY);
+    tillampaZoom();
+    return;
   }
   if (dragState.typ === "storlek") {
     const minB = dragState.arSektion ? 74 : 150;
     const minH = dragState.arSektion ? 48 : 70;
-    const b = Math.max(minB, Math.round(dragState.startB + (e.clientX - dragState.startX)));
-    const h = Math.max(minH, Math.round(dragState.startH + (e.clientY - dragState.startY)));
+    // Fingret rör sig i skärmpixlar, måtten lagras i scenens – dela med zoomen
+    const b = Math.max(minB, Math.round(dragState.startB + (e.clientX - dragState.startX) / kartaZoom));
+    const h = Math.max(minH, Math.round(dragState.startH + (e.clientY - dragState.startY) / kartaZoom));
     dragState.b = b; dragState.h = h;
     dragState.el.style.width = `${b}px`;
     if (dragState.arSektion) dragState.el.style.height = `${h}px`;
@@ -1050,14 +1359,17 @@ function dragMove(e) {
 }
 
 async function dragEnd(e) {
+  aktivaPekare.delete(e.pointerId);
+  if (aktivaPekare.size < 2) nypState = null;
   if (!dragState || e.pointerId !== dragState.pointerId) return;
   const s = dragState;
-  s.el.classList.remove("dragging");
+  s.el.classList.remove("dragging", "panorerar");
   dragState = null;
   if (!s.drogs) return;
   // Hindra att den avslutade dragningen också tolkas som ett klick
   nyligenDragen = true;
   setTimeout(() => { nyligenDragen = false; }, 120);
+  if (s.typ === "panorera") return; // panorering är bara vy, inget att spara
   if (s.typ === "storlek") await sparaZon(s.id, { bredd: s.b, hojd: s.h });
   else if (s.typ === "planta") await sparaOdling(s.id, { x: s.x, y: s.y });
   else await sparaZon(s.id, { x: s.x, y: s.y });
@@ -1066,6 +1378,26 @@ async function dragEnd(e) {
 document.addEventListener("pointermove", dragMove);
 document.addEventListener("pointerup", dragEnd);
 document.addEventListener("pointercancel", dragEnd);
+
+// Zoomreglaget, plus ctrl/cmd + rulle (som också är styrplattans nyp-gest)
+$("zoomInBtn").addEventListener("click", () => zoomaFranKnapp(ZOOM_STEG));
+$("zoomUtBtn").addEventListener("click", () => zoomaFranKnapp(1 / ZOOM_STEG));
+$("zoomPassaBtn").addEventListener("click", passaKarta);
+$("tradgardKarta").addEventListener("wheel", (e) => {
+  if (!e.ctrlKey && !e.metaKey) return; // vanlig rulle ska skrolla sidan
+  e.preventDefault();
+  const r = $("tradgardKarta").getBoundingClientRect();
+  zoomaTill(kartaZoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1), e.clientX - r.left, e.clientY - r.top);
+}, { passive: false });
+
+// Anpassa om vid faktisk breddändring (rotation, fönsterstorlek) – men inte
+// när mobilens adressfält bara glider in och ut och ändrar höjden.
+let senasteKartaBredd = window.innerWidth;
+window.addEventListener("resize", () => {
+  if (window.innerWidth === senasteKartaBredd) return;
+  senasteKartaBredd = window.innerWidth;
+  passaKarta();
+});
 
 $("zLaggTillBtn").addEventListener("click", async () => {
   const st = $("zStatus");
@@ -1092,11 +1424,12 @@ $("oLaggTillBtn").addEventListener("click", async () => {
     await fetch(`${BAS}api/odlingar`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        namn, zonId: $("oZon").value, planterad: $("oPlanterad").value,
+        namn, zonId: $("oZon").value, planterad: $("oPlanterad").value, antal: $("oAntal").value, layout: $("oLayout").value,
         skordManad: $("oSkordManad").value, skordFonster: $("oSkord").value.trim(), anteckning: $("oAnteckning").value.trim(),
       }),
     });
-    $("oNamn").value = ""; $("oPlanterad").value = ""; $("oSkordManad").value = ""; $("oSkord").value = ""; $("oAnteckning").value = "";
+    $("oNamn").value = ""; $("oPlanterad").value = ""; $("oSkordManad").value = ""; $("oSkord").value = "";
+    $("oAnteckning").value = ""; $("oAntal").value = "1"; $("oLayout").value = "klunga";
     await laddaOdlingar();
   } catch (e) { st.textContent = "Kunde inte spara: " + e.message; st.className = "status err"; }
   finally { $("oLaggTillBtn").disabled = false; }
@@ -1418,21 +1751,29 @@ function zonSektionerHtml(z) {
 
 // Plantor i en zon, direkt i detaljpanelen – lägga till går alltid, men
 // borttagning kräver att Redigera är påslaget så man inte råkar radera.
+// Antalet anges alltid, och "Fyll hela ytan" sprider sorten över lådan i
+// stället för att samla den på en punkt – för lådor med bara en sort i.
 function zonPlantorHtml(z) {
   const lista = odlingar.filter((o) => o.zonId === z.id);
+  const totalt = lista.reduce((s, o) => s + antalFor(o), 0);
   return `<div class="modal-entiteter">
-    <label class="lbl">Plantor i zonen</label>
+    <label class="lbl">Plantor i zonen${totalt ? ` (${totalt} st)` : ""}</label>
     ${lista.length ? `<div class="plant-lista">${lista.map((o) => `
       <div class="plant-rad">
         <span class="plant-ikon">${ikonForVaxt(o.namn)}</span>
         <span class="namn">${esc(o.namn)}</span>
-        ${o.skordManad ? `<span class="varde">${esc(manadNamn(o.skordManad))}</span>` : ""}
+        <span class="varde">${antalFor(o)} st${layoutFor(o) === "fyll" ? " · fyller ytan" : ""}${o.skordManad ? ` · ${esc(manadNamn(o.skordManad))}` : ""}</span>
         ${redigerarLayout ? `<button class="ta-bort odling-ta-bort" data-id="${esc(o.id)}" title="Ta bort planta" style="position:static">×</button>` : ""}
       </div>`).join("")}</div>` : '<div class="tom">Inga plantor här än.</div>'}
     <div class="modal-lagg-entitet">
-      <input type="text" id="zNyPlanta" placeholder="Ny planta, t.ex. Tomater">
+      <input type="text" id="zNyPlanta" placeholder="Ny planta, t.ex. Gurkor">
+      <input type="number" id="zNyPlantaAntal" min="1" max="200" value="1" title="Antal (st)" style="max-width:82px">
       <button id="zNyPlantaBtn">Lägg till</button>
     </div>
+    <label class="lbl" style="display:flex; align-items:center; gap:8px; margin-top:10px; cursor:pointer">
+      <input type="checkbox" id="zNyPlantaFyll" style="width:auto; margin:0">
+      Fyll hela ytan med sorten (i stället för en samlad klunga)
+    </label>
     ${redigerarLayout ? "" : '<p class="lbl" style="margin-top:8px">Slå på <strong>Redigera</strong> ovanför kartan för att kunna ta bort plantor.</p>'}
   </div>`;
 }
@@ -1485,10 +1826,19 @@ function renderaDetaljPanel() {
     $("detaljPanel").innerHTML = `
       <div class="detalj-head">
         <span class="ikon">${ikonForVaxt(o.namn)}</span>
-        <div><h3>${esc(o.namn)}</h3><div class="modal-sub">${zon ? esc(zon.namn) : "Okategoriserat"}</div></div>
+        <div><h3>${esc(o.namn)}</h3><div class="modal-sub">${antalFor(o)} st${zon ? ` · ${esc(zon.namn)}` : " · okategoriserat"}</div></div>
         <button class="tillbaka-btn" id="dAvmarkeraBtn">Avmarkera</button>
       </div>
-      <div class="falt"><label class="lbl">Planterad</label><input type="date" id="mPlanterad" value="${esc(o.planterad ?? "")}"></div>
+      <div class="skapa-rad">
+        <div><label class="lbl">Antal (st)</label><input type="number" id="mAntal" min="1" max="200" value="${antalFor(o)}"></div>
+        <div><label class="lbl">På kartan</label>
+          <select id="mLayout">
+            <option value="klunga"${layoutFor(o) === "klunga" ? " selected" : ""}>Samlade på en plats</option>
+            <option value="fyll"${layoutFor(o) === "fyll" ? " selected" : ""}>Fyll hela ytan</option>
+          </select>
+        </div>
+      </div>
+      <div class="falt" style="margin-top:14px"><label class="lbl">Planterad</label><input type="date" id="mPlanterad" value="${esc(o.planterad ?? "")}"></div>
       <div class="falt"><label class="lbl">Skördemånad</label><input type="month" id="mSkordManad" value="${esc(o.skordManad ?? "")}"></div>
       <div class="falt"><label class="lbl">Skördefönster (fritext)</label><input type="text" id="mSkordFonster" value="${esc(o.skordFonster ?? "")}"></div>
       <div class="falt"><label class="lbl">Jord</label><input type="text" id="mJord" placeholder="t.ex. kruka med kaktusjord" value="${esc(o.jord ?? "")}"></div>
@@ -1579,6 +1929,7 @@ document.addEventListener("click", async (e) => {
         await sparaOdling(valtMal.id, {
           planterad: $("mPlanterad").value, skordManad: $("mSkordManad").value,
           skordFonster: $("mSkordFonster").value.trim(), jord: $("mJord").value.trim(), anteckning: $("mAnteckning").value.trim(),
+          antal: $("mAntal").value, layout: $("mLayout").value,
         });
       }
       $("mStatus").textContent = "Sparat."; $("mStatus").className = "status ok";
@@ -1639,7 +1990,10 @@ document.addEventListener("click", async (e) => {
     if (!namn) return;
     await fetch(`${BAS}api/odlingar`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ namn, zonId: valtMal.id }),
+      body: JSON.stringify({
+        namn, zonId: valtMal.id, antal: $("zNyPlantaAntal").value,
+        layout: $("zNyPlantaFyll").checked ? "fyll" : "klunga",
+      }),
     });
     await laddaOdlingar();
     renderaDetaljPanel();
@@ -1682,6 +2036,7 @@ document.addEventListener("click", async (e) => {
   const flik = e.target.closest(".karta-flik");
   if (flik) {
     aktivKartaId = flik.dataset.id;
+    kartaPassad = false; // varje karta anpassas till sitt eget innehåll
     avmarkeraMal();
     renderaKartaFlikar();
     renderaKarta();
@@ -1713,8 +2068,8 @@ document.addEventListener("click", async (e) => {
     return;
   }
 
-  // Välj mål: klick på en planta (chip) väger tyngre än klick på hela zon-kortet
-  const chipEl = e.target.closest(".vaxt-punkt");
+  // Välj mål: klick på en planta väger tyngre än klick på hela zon-kortet
+  const chipEl = e.target.closest(".vaxt-grupp, .vaxt-fyll");
   if (chipEl) { valjMal("odling", chipEl.dataset.id); return; }
   // Sektionen måste testas före zon-kortet – annars fångar föräldern klicket
   const sektionEl = e.target.closest(".zon-sektion");

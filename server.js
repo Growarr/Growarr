@@ -45,6 +45,21 @@ async function skrivData(data) {
   await mkdir(dirname(DATA_PATH), { recursive: true });
   await writeFile(DATA_PATH, JSON.stringify(data, null, 2) + "\n");
 }
+// En odlingspost är "en sort på en plats" och bär ett antal – t.ex. 6 gurkor
+// i en låda är én post med antal 6, inte sex poster. Taket på 200 finns bara
+// för att en felskrivning inte ska rita ut tiotusen ikoner på kartan.
+const MAX_ANTAL = 200;
+function rensaAntal(v) {
+  const n = Math.round(Number(v));
+  if (!Number.isFinite(n) || n < 1) return 1;
+  return Math.min(MAX_ANTAL, n);
+}
+// "klunga" = plantorna står samlade på sin punkt i zonen, "fyll" = de sprids
+// jämnt över hela ytan (en låda helt full med samma sort).
+function rensaLayout(v) {
+  return v === "fyll" ? "fyll" : "klunga";
+}
+
 let ko = Promise.resolve();
 function muteraData(fn) {
   const resultat = ko.then(async () => {
@@ -173,7 +188,8 @@ async function byggTradgardsSammanfattning(d, vader) {
   });
   const odlingRader = await Promise.all(d.odlingar.map(async (o) => {
     const zon = d.zoner.find((z) => z.id === o.zonId);
-    const delar = [`- ${o.namn}${zon ? ` i zonen "${zon.namn}"` : " (okategoriserad)"}`];
+    const antal = rensaAntal(o.antal);
+    const delar = [`- ${antal > 1 ? `${antal} st ` : ""}${o.namn}${zon ? ` i zonen "${zon.namn}"` : " (okategoriserad)"}`];
     if (o.jord) delar.push(`jord: ${o.jord}`);
     if (o.skordManad) delar.push(`skörd: ${o.skordManad}`);
     return delar.join(", ");
@@ -423,19 +439,20 @@ const server = createServer(async (req, res) => {
       return skickaJson(res, 200, await lasData());
     }
     if (req.method === "POST" && p.endsWith("/api/odlingar")) {
-      const { namn, planterad, skordFonster, skordManad, anteckning, zonId } = await lasBody(req);
+      const { namn, planterad, skordFonster, skordManad, anteckning, zonId, antal, layout } = await lasBody(req);
       if (!namn) return skickaJson(res, 400, { fel: "namn saknas" });
       const data = await muteraData((d) => {
         d.odlingar.push({
           id: randomUUID(), namn, planterad: planterad || "",
           skordFonster: skordFonster || "", skordManad: skordManad || "", anteckning: anteckning || "",
           zonId: zonId || "", jord: "", enhetIds: [],
+          antal: rensaAntal(antal), layout: rensaLayout(layout),
         });
       });
       return skickaJson(res, 200, data);
     }
     if (req.method === "POST" && p.endsWith("/api/odlingar/uppdatera")) {
-      const { id, planterad, skordFonster, skordManad, anteckning, jord, enhetIds, zonId, x, y } = await lasBody(req);
+      const { id, planterad, skordFonster, skordManad, anteckning, jord, enhetIds, zonId, x, y, antal, layout } = await lasBody(req);
       const data = await muteraData((d) => {
         const o = d.odlingar.find((o2) => o2.id === id);
         if (!o) return;
@@ -447,6 +464,8 @@ const server = createServer(async (req, res) => {
         if (zonId !== undefined) o.zonId = zonId || "";
         if (x !== undefined) o.x = x;
         if (y !== undefined) o.y = y;
+        if (antal !== undefined) o.antal = rensaAntal(antal);
+        if (layout !== undefined) o.layout = rensaLayout(layout);
       });
       return skickaJson(res, 200, data);
     }
