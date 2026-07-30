@@ -59,6 +59,17 @@ function rensaAntal(v) {
 function rensaLayout(v) {
   return v === "fyll" ? "fyll" : "klunga";
 }
+// Utetemperaturen (SMHI) sparas i historiken under ett reserverat id, så den
+// ligger sida vid sida med sensorserierna utan att vara en "enhet".
+const UTE_SERIE = "__ute";
+// Zonens höjd över marken i meter – styr hur lång skugga den kastar i
+// solkartan. Ett växthus skuggar, en utplanterad bädd i praktiken inte.
+const STANDARD_HOJD_M = { vaxthus: 2.2, odlingslada: 0.4, utomhus: 0.15, inomhus: 0, annat: 0 };
+function rensaHojdM(v, typ) {
+  const n = Number(v);
+  if (!Number.isFinite(n) || n < 0) return STANDARD_HOJD_M[typ] ?? 0;
+  return Math.min(20, Math.round(n * 100) / 100);
+}
 
 let ko = Promise.resolve();
 function muteraData(fn) {
@@ -110,7 +121,18 @@ async function hamtaVader() {
   const dagar = [...perDag.values()].slice(0, 5).map((d) => ({
     dag: d.dag, min: Math.round(d.min), max: Math.round(d.max), nederbord: Math.round(d.nederbord * 10) / 10, symbol: d.symbol ?? null,
   }));
-  const resultat = { dagar };
+  // Temperaturen närmast nu behövs som utereferens när panelen räknar ut hur
+  // mycket varmare eller kallare varje zon ligger än prognosen (se
+  // frostkalibreringen i index.html).
+  const nu = Date.now();
+  let narmast = null, narmastDiff = Infinity;
+  for (const t of data.timeSeries) {
+    if (t.data?.air_temperature == null) continue;
+    const diff = Math.abs(new Date(t.time).getTime() - nu);
+    if (diff < narmastDiff) { narmastDiff = diff; narmast = t.data.air_temperature; }
+  }
+  // Koordinaterna följer med så panelen kan räkna ut solens bana lokalt
+  const resultat = { dagar, nu: narmast, lat: Number(GEO_LAT), lon: Number(GEO_LON) };
   vaderCache = { tid: Date.now(), resultat };
   return resultat;
 }
@@ -389,6 +411,12 @@ async function loggaHistorik() {
     const varde = Number(status.state);
     if (Number.isFinite(varde)) punkter.push({ tid: nu, enhetId, varde });
   }
+  // Utetemperaturen från SMHI loggas som en egen serie. Den är referensen som
+  // gör det möjligt att räkna ut hur mycket varmare eller kallare varje zon
+  // faktiskt ligger än den regionala prognosen – en zonvis frostvarning går
+  // inte att bygga utan att ha sparat vad prognosen sa när mätningen gjordes.
+  const vader = await hamtaVader();
+  if (Number.isFinite(vader?.nu)) punkter.push({ tid: nu, enhetId: UTE_SERIE, varde: vader.nu });
   if (!punkter.length) return;
   const gransTid = Date.now() - HISTORIK_DAGAR * 24 * 3600 * 1000;
   await muteraData((data) => {
@@ -475,7 +503,7 @@ const server = createServer(async (req, res) => {
       return skickaJson(res, 200, data);
     }
     if (req.method === "POST" && p.endsWith("/api/zoner/uppdatera")) {
-      const { id, jord, anteckning, enhetIds, x, y, foralderId, bredd, hojd } = await lasBody(req);
+      const { id, jord, anteckning, enhetIds, x, y, foralderId, bredd, hojd, hojdM } = await lasBody(req);
       const data = await muteraData((d) => {
         const zon = d.zoner.find((z) => z.id === id);
         if (!zon) return;
@@ -485,6 +513,7 @@ const server = createServer(async (req, res) => {
         });
         if (bredd !== undefined) zon.bredd = bredd;
         if (hojd !== undefined) zon.hojd = hojd;
+        if (hojdM !== undefined) zon.hojdM = rensaHojdM(hojdM, zon.typ);
         if (foralderId !== undefined) {
           // Skydda mot att en zon blir sin egen förälder eller att två zoner
           // pekar på varandra – då skulle utritningen loopa i all oändlighet.
@@ -526,6 +555,7 @@ const server = createServer(async (req, res) => {
           // Storleken styr även orienteringen – en bred låda ligger längs med,
           // en hög står på tvären. Null = använd standardstorlek i panelen.
           bredd: null, hojd: null,
+          hojdM: rensaHojdM(undefined, typ || "annat"),
         });
       });
       return skickaJson(res, 200, data);
@@ -636,9 +666,17 @@ const server = createServer(async (req, res) => {
       return skickaJson(res, 200, installningar);
     }
     if (req.method === "POST" && p.endsWith("/api/installningar")) {
-      const { ntfyTopic, webhookUrl } = await lasBody(req);
+      const { ntfyTopic, webhookUrl, norrGrader, kartaBreddM } = await lasBody(req);
       const data = await muteraData((d) => {
-        d.installningar = { ntfyTopic: ntfyTopic || "", webhookUrl: webhookUrl || "" };
+        const grader = Number(norrGrader);
+        const bredd = Number(kartaBreddM);
+        d.installningar = {
+          ntfyTopic: ntfyTopic || "", webhookUrl: webhookUrl || "",
+          // Kompassriktningen som pekar uppåt på kartan, och hur många meter
+          // kartan är bred – tillsammans ger de skuggorna rätt håll och längd.
+          norrGrader: Number.isFinite(grader) ? ((grader % 360) + 360) % 360 : (d.installningar?.norrGrader ?? 0),
+          kartaBreddM: Number.isFinite(bredd) && bredd > 0 ? Math.min(500, bredd) : (d.installningar?.kartaBreddM ?? 20),
+        };
       });
       return skickaJson(res, 200, data.installningar);
     }

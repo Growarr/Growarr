@@ -107,6 +107,30 @@ Två delar i ett repo:
    - **Historik** — en samlad vy av alla kopplade entiteter över tid (loggas
      en gång i timmen). Byggs upp av sig själv från den dag ni kopplar en
      entitet — ingen bakåtgående data.
+   - **☀️ Solkarta** — klicka **Sol** ovanför kartan för att se skuggorna som
+     växthus och lådor kastar vid valfri tid på dygnet, uträknat rent
+     matematiskt från trädgårdens koordinater (ingen väder-API behövs för
+     själva solpositionen). Dra reglaget för att se hur skuggorna vandrar
+     över dagen. I Zondetaljer för en zon visas dessutom **≈ X timmar sol
+     idag**, uträknat genom att sampla dygnet var 15:e minut och kolla om
+     zonens mitt ligger i en annan zons skugga.
+
+     Kräver att **höjden** är satt per zon (Zondetaljer → "Höjd över
+     marken"; ett rimligt standardvärde sätts automatiskt per zontyp) och
+     att kartans **riktning och skala** är sparade under ⚙️ Inställningar →
+     "Kartans läge i verkligheten" — annars vet solkartan inte vilket håll
+     som är norr eller hur stor en meter är på skärmen.
+   - **🌡️ Zonens eget mikroklimat** — har en zon en temperatursensor kopplad
+     jämför panelen den automatiskt mot SMHI:s prognos för orten och lär sig
+     över tid hur mycket varmare eller kallare zonen faktiskt ligger
+     (medianen av minst 12 mätningar). Frostvarningen på översikten bryts
+     sedan ut per zon: *"Rabatten: ner mot 1,5° (ligger typiskt 1,5° under
+     prognosen)"* i stället för en enda regional siffra. Behöver ett dygns
+     mätningar innan den har nog data för att visa något.
+   - **📷 QR-etiketter** — i Zondetaljer, knappen **QR-etikett**, ger en
+     utskriftsfärdig kod att tejpa på lådan. Skanna den med telefonens
+     kamera och zonen öppnas direkt (`#zon=<id>`) — ingen kartnavigering.
+     Kodas och ritas helt lokalt (ingen extern tjänst, ingen nätverksbild).
 
    **Inställningar** (`/#installningar`) — allt ni fyller i eller lägger till:
    - **⚙️ Notiser** — ntfy-ämne och HA-webhook-URL för skördepåminnelser.
@@ -118,6 +142,8 @@ Två delar i ett repo:
      entity_id, autocomplete) istället för att behöva komma ihåg dem utantill,
      och se deras nuvarande värde. Koppla dem sen till en zon/odling via
      Zondetaljer-panelen på översikten.
+   - **Kartans läge i verkligheten** — vilket kompassväder som pekar uppåt på
+     kartan, och kartans bredd i meter. Behövs bara för solkartan.
 
 Ingen inloggning i panelen – samma modell som de andra apparna: skyddet
 ligger i att den bara är nåbar via ert eget nätverk/VPN eller bakom samma
@@ -232,7 +258,7 @@ på fel ställe.
 | Metod | Path | Body | Gör |
 |---|---|---|---|
 | GET | `/` | – | Panelen (HTML) |
-| GET | `/api/vader` | – | 5-dagars väderprognos från SMHI |
+| GET | `/api/vader` | – | 5-dagars väderprognos från SMHI, plus nu-temperatur och koordinater (används av solkartan) |
 | GET | `/api/odlingar` | – | Hämtar zoner + odlingsjournalen |
 | POST | `/api/odlingar` | `{ namn, zonId?, antal?, layout?, planterad?, skordFonster?, skordManad?, anteckning? }` | Lägger till en odling (`antal`: 1–200 st, `layout`: `klunga`/`fyll`) |
 | POST | `/api/odlingar/uppdatera` | `{ id, antal?, layout?, x?, y?, planterad?, skordFonster?, skordManad?, anteckning?, jord?, enhetIds? }` | Uppdaterar en odling, inkl. antal, utseende och plats i sin zon |
@@ -245,7 +271,7 @@ på fel ställe.
 | POST | `/api/widgets/ordna` | `{ ids: [...] }` | Sparar ny ordning på blocken (↑/↓ i panelen) |
 | POST | `/api/widgets/ta-bort` | `{ id }` | Tar bort ett eget block |
 | GET | `/api/kamera?entityId=` | – | Proxar en ögonblicksbild från en HA-kameraentitet (HA-token stannar på servern) |
-| POST | `/api/zoner/uppdatera` | `{ id, jord?, anteckning?, enhetIds?, x?, y?, bredd?, hojd?, foralderId? }` | Uppdaterar en zon, inkl. position och storlek på kartan (dragning) och vilken zon den ligger i |
+| POST | `/api/zoner/uppdatera` | `{ id, jord?, anteckning?, enhetIds?, x?, y?, bredd?, hojd?, hojdM?, foralderId? }` | Uppdaterar en zon, inkl. position/storlek på kartan, höjd (för solkartan) och vilken zon den ligger i |
 | POST | `/api/zoner/ta-bort` | `{ id }` | Tar bort en zon (plantor blir okategoriserade, sektioner flyttas upp en nivå) |
 | GET | `/api/enheter/status` | – | Hämtar nuvarande tillstånd för alla bevakade HA-entiteter |
 | POST | `/api/enheter` | `{ entityId, namn? }` | Lägger till en bevakad HA-entitet |
@@ -254,8 +280,8 @@ på fel ställe.
 | GET | `/api/historik` | – | Hämtar loggad historik för entiteter kopplade till zoner/odlingar |
 | GET | `/api/bevattning` | – | Hämtar den Claude-genererade bevattningsinsikten (cachad 4h) |
 | POST | `/api/chatt` | `{ meddelanden: [{ roll, text, bild? }] }` | AI-chatt med valfritt foto (`bild: { typ, data }`, base64) |
-| GET | `/api/installningar` | – | Hämtar sparat ntfy-ämne/webhook-URL |
-| POST | `/api/installningar` | `{ ntfyTopic?, webhookUrl? }` | Sparar ntfy-ämne/webhook-URL (via ⚙️ i panelen) |
+| GET | `/api/installningar` | – | Hämtar sparat ntfy-ämne/webhook-URL samt kartans riktning/skala |
+| POST | `/api/installningar` | `{ ntfyTopic?, webhookUrl?, norrGrader?, kartaBreddM? }` | Sparar inställningarna (via ⚙️ i panelen) |
 
 ## Framtida utbyggnad
 
