@@ -396,11 +396,22 @@
   .historik-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin-top:4px; }
   .historik-kort { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r-sm); padding:16px; }
   .historik-head { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
-  .historik-head .ikon { font-size:1.3rem; flex:0 0 auto; }
+  .historik-head .ikon { flex:0 0 auto; width:36px; height:36px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-size:1.1rem;
+    background:color-mix(in srgb, var(--accent) 15%, var(--surface)); }
   .historik-head .info { flex:1; min-width:0; }
   .historik-head .namn { font-weight:650; font-size:.92rem; }
   .historik-head .sub { font-size:.74rem; color:var(--muted); }
+  .nu-rad { display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex:0 0 auto; }
   .historik-head .nu { font-weight:700; font-variant-numeric:tabular-nums; font-size:.98rem; color:var(--accent); white-space:nowrap; }
+  /* Trendpil jämfört med för ett dygn sedan – "▲ 1.2°" à la referensens
+     "+3% this week". Neutral färg oavsett riktning: till skillnad från t.ex.
+     "vattenförbrukning" vet vi inte om upp eller ner är bra för just den här
+     sensorn (stigande jordfuktighet är bra, stigande temperatur mitt i
+     sommaren är det inte) – bara pilen och siffran, ingen bedömning. */
+  .historik-trend { font-size:.68rem; font-weight:700; white-space:nowrap;
+    font-variant-numeric:tabular-nums; color:var(--muted); }
+  .historik-trend.still { opacity:.7; }
   .sparkline { width:100%; height:60px; display:block; }
   .historik-minmax { display:flex; justify-content:space-between; font-size:.74rem; color:var(--muted); margin-top:6px; }
 
@@ -482,7 +493,13 @@
   .plant-rad { display:flex; align-items:center; gap:10px; padding:7px 0; font-size:.88rem;
     border-top:1px solid var(--border); }
   .plant-rad:first-child { border-top:0; }
-  .plant-rad .plant-ikon { font-size:1.1rem; flex:0 0 auto; }
+  /* Ikon-badge: en liten rund färgad platta bakom en emoji, i stället för
+     att ikonen bara flyter fritt bredvid texten – ger ett mer "designat"
+     ikonsystem-intryck (lånat från SaaS-dashboards som Tanee) utan att vi
+     behöver ett eget ikontypsnitt. */
+  .plant-rad .plant-ikon { flex:0 0 auto; width:26px; height:26px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-size:.86rem;
+    background:color-mix(in srgb, var(--accent) 15%, var(--surface)); }
   .plant-rad .namn { flex:1; min-width:0; }
   .plant-rad .varde { font-size:.76rem; color:var(--muted); }
 
@@ -491,20 +508,34 @@
     padding:14px; position:relative; }
   .metrik-tile.god { background:color-mix(in srgb, var(--ok) 14%, var(--surface2)); border-color:color-mix(in srgb, var(--ok) 35%, var(--border)); }
   .metrik-tile.varning { background:color-mix(in srgb, var(--warn) 14%, var(--surface2)); border-color:color-mix(in srgb, var(--warn) 35%, var(--border)); }
-  .metrik-tile .topp { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
-  .metrik-tile .ikon { font-size:1.15rem; }
+  .metrik-tile .topp { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .metrik-tile .ikon { width:32px; height:32px; border-radius:50%; display:flex; align-items:center;
+    justify-content:center; font-size:1.05rem; background:color-mix(in srgb, var(--text) 8%, transparent); }
+  .metrik-tile.god .ikon { background:color-mix(in srgb, var(--ok) 22%, transparent); }
+  .metrik-tile.varning .ikon { background:color-mix(in srgb, var(--warn) 22%, transparent); }
+  .metrik-tile.fel .ikon { background:color-mix(in srgb, var(--err) 22%, transparent); }
   .metrik-tile .ta-bort-liten { background:none; border:0; box-shadow:none; color:var(--muted); opacity:.6;
     cursor:pointer; font-size:.9rem; padding:0; line-height:1; }
   .metrik-tile .ta-bort-liten:hover { opacity:1; color:var(--err); transform:none; }
-  .metrik-tile .varde { font-size:1.5rem; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.1; }
+  .metrik-tile .varde { font-size:1.5rem; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.1;
+    display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
   .metrik-tile .enhet-namn { font-size:.76rem; color:var(--muted); margin-top:4px; }
-  .metrik-tile .not { font-size:.74rem; margin-top:6px; opacity:.85; }
+  /* Statustexten som en liten pill bredvid värdet, à la "94% Good" –
+     tydligare vid en snabb blick än en rad brödtext under. */
+  .metrik-tile .not { font-size:.68rem; font-weight:700; padding:2px 8px; border-radius:99px;
+    line-height:1.5; white-space:nowrap; background:color-mix(in srgb, var(--text) 10%, transparent);
+    color:var(--muted); }
+  .metrik-tile.god .not { background:color-mix(in srgb, var(--ok) 20%, transparent); color:var(--ok); }
+  .metrik-tile.varning .not { background:color-mix(in srgb, var(--warn) 22%, transparent); color:var(--warn); }
   .metrik-tile.fel .varde { font-size:.86rem; color:var(--err); font-weight:600; }
 
   .detalj-panel .tom { padding:8px 0; }
 
   .detalj-head { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
-  .detalj-head .ikon { font-size:1.6rem; flex:0 0 auto; }
+  .detalj-head .ikon { flex:0 0 auto; width:46px; height:46px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-size:1.35rem;
+    background:color-mix(in srgb, var(--accent) 16%, var(--surface2));
+    box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent); }
   .detalj-head h3 { font-size:1.05rem; margin-bottom:2px; }
   .detalj-head .tillbaka-btn { margin-left:auto; flex:0 0 auto; padding:6px 4px; }
   .zon-kort.vald { border-color:color-mix(in srgb, var(--accent) 60%, transparent);
@@ -540,6 +571,14 @@
   .enhet-rad .entity-id { font-size:.74rem; color:var(--muted); display:block; }
   .enhet-rad .varde { font-weight:700; font-variant-numeric:tabular-nums; }
   .enhet-rad .varde.fel { color:var(--err); font-weight:500; font-size:.82rem; }
+  /* Statusprick: ett snabbt, färgkodat "lever den här sensorn?" – samma
+     mönster som statuslistor i moderna driftpaneler (grön prick + text i
+     en rad, i stället för en textrad man måste läsa för att förstå läget). */
+  .status-prick { width:8px; height:8px; border-radius:50%; flex:0 0 auto;
+    background:var(--muted); box-shadow:0 0 0 3px color-mix(in srgb, var(--muted) 18%, transparent); }
+  .status-prick.ok { background:var(--ok); box-shadow:0 0 0 3px color-mix(in srgb, var(--ok) 22%, transparent); }
+  .status-prick.fel { background:var(--err); box-shadow:0 0 0 3px color-mix(in srgb, var(--err) 22%, transparent); }
+  .status-prick.varning { background:var(--warn); box-shadow:0 0 0 3px color-mix(in srgb, var(--warn) 22%, transparent); }
 
   /* ---- QR-etikett ---- */
   .qr-etikett { text-align:center; background:#fff; border-radius:12px; padding:14px 14px 10px; }
@@ -1973,6 +2012,7 @@ async function laddaEnheter() {
 function renderaEnheter(lista) {
   $("enheterLista").innerHTML = lista.length ? lista.map((e) => `
     <div class="enhet-rad" data-id="${e.id}">
+      <span class="status-prick ${e.fel ? "fel" : "ok"}" title="${e.fel ? "Ej nåbar" : "Ansluten"}"></span>
       <div class="namn">${esc(e.namn)}<span class="entity-id">${esc(e.entityId)}</span></div>
       ${e.fel ? `<span class="varde fel">${esc(e.fel)}</span>` : `<span class="varde">${esc(e.state)} ${esc(e.enhet)}</span>`}
       <button class="ta-bort enhet-ta-bort" data-id="${e.id}" title="Ta bort" style="position:static">×</button>
@@ -2027,9 +2067,9 @@ function widgetKortHtml(w, index, antal) {
             const s = metrikStatus(e.enhet, e.state);
             return `<div class="metrik-tile ${s.niva}">
               <div class="topp"><span class="ikon">${ikonForEnhet(e.enhet)}</span></div>
-              <div class="varde">${esc(e.state)}${e.enhet ? `<span style="font-size:.9rem;font-weight:600"> ${esc(e.enhet)}</span>` : ""}</div>
+              <div class="varde">${esc(e.state)}${e.enhet ? `<span style="font-size:.9rem;font-weight:600"> ${esc(e.enhet)}</span>` : ""}
+                ${s.text ? `<span class="not">${esc(s.text)}</span>` : ""}</div>
               <div class="enhet-namn">${esc(e.namn)}</div>
-              ${s.text ? `<div class="not">${esc(s.text)}</div>` : ""}
             </div>`;
           }).join("")}</div>`
         : '<div class="tom">Inga entiteter valda för det här blocket.</div>';
@@ -2104,6 +2144,24 @@ function sparkline(punkter) {
     <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`;
 }
+// En liten trendpil jämfört med för ungefär ett dygn sedan – ger samma
+// "+3% senaste veckan"-känsla som statistikkorten i referensdesignen.
+// Kräver minst några timmars historik, annars blir "dygnstrend" bara en
+// jämförelse mot nästan samma mätpunkt och säger inget.
+function historikTrend(punkter) {
+  if (punkter.length < 2) return null;
+  const senasteTid = new Date(punkter[punkter.length - 1].tid).getTime();
+  const forstaTid = new Date(punkter[0].tid).getTime();
+  if (senasteTid - forstaTid < 4 * 3600 * 1000) return null;
+  const malTid = senasteTid - 24 * 3600 * 1000;
+  let jamfor = punkter[0];
+  for (const p of punkter) {
+    if (new Date(p.tid).getTime() > malTid) break;
+    jamfor = p;
+  }
+  const delta = punkter[punkter.length - 1].varde - jamfor.varde;
+  return { delta, still: Math.abs(delta) < 0.05 };
+}
 function renderaHistorik() {
   const mal = historikMal();
   if (!mal.length) {
@@ -2116,6 +2174,10 @@ function renderaHistorik() {
     const senaste = punkter.length ? punkter[punkter.length - 1].varde : null;
     const min = punkter.length ? Math.min(...punkter.map((p) => p.varde)) : null;
     const max = punkter.length ? Math.max(...punkter.map((p) => p.varde)) : null;
+    const trend = historikTrend(punkter);
+    const trendHtml = trend ? (trend.still
+      ? `<span class="historik-trend still">• Stabilt</span>`
+      : `<span class="historik-trend ${trend.delta > 0 ? "upp" : "ner"}">${trend.delta > 0 ? "▲" : "▼"} ${Math.abs(trend.delta).toFixed(1)}${esc(enhetText)}</span>`) : "";
     return `<div class="historik-kort">
       <div class="historik-head">
         <span class="ikon">${m.ikon}</span>
@@ -2123,7 +2185,7 @@ function renderaHistorik() {
           <div class="namn">${esc(m.label)}</div>
           <div class="sub">${esc(m.enhet.namn)}</div>
         </div>
-        ${senaste != null ? `<div class="nu">${esc(senaste)}${esc(enhetText)}</div>` : ""}
+        ${senaste != null ? `<div class="nu-rad"><div class="nu">${esc(senaste)}${esc(enhetText)}</div>${trendHtml}</div>` : ""}
       </div>
       ${sparkline(punkter)}
       ${punkter.length >= 2 ? `<div class="historik-minmax"><span>Min ${esc(min)}${esc(enhetText)}</span><span>Max ${esc(max)}${esc(enhetText)}</span></div>` : ""}
@@ -2422,9 +2484,9 @@ function kopplaEntiteterHtml(idLista) {
     const status = metrikStatus(e.enhet, e.state);
     return `<div class="metrik-tile ${status.niva}">
       <div class="topp"><span class="ikon">${ikonForEnhet(e.enhet)}</span><button class="ta-bort-liten modal-enhet-ta-bort" data-id="${e.id}" title="Koppla bort">×</button></div>
-      <div class="varde">${esc(e.state)}${e.enhet ? `<span style="font-size:.9rem;font-weight:600"> ${esc(e.enhet)}</span>` : ""}</div>
+      <div class="varde">${esc(e.state)}${e.enhet ? `<span style="font-size:.9rem;font-weight:600"> ${esc(e.enhet)}</span>` : ""}
+        ${status.text ? `<span class="not">${esc(status.text)}</span>` : ""}</div>
       <div class="enhet-namn">${esc(e.namn)}</div>
-      ${status.text ? `<div class="not">${esc(status.text)}</div>` : ""}
     </div>`;
   }).join("");
   return `<div class="modal-entiteter">
