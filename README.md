@@ -48,10 +48,17 @@ Två delar i ett repo:
      **Zoomreglaget uppe till höger på kartan** har − / + och en knapp som
      visar zoomnivån – klicka den för att anpassa vyn så hela trädgården
      ryms. Kartan går också att dra för att panorera, nypa med två fingrar
-     på pekskärm, och ctrl/⌘ + rulle på dator. På mobilen anpassas zoomen
-     automatiskt vid första ritningen, vid flikbyte och vid skärmrotation,
-     så zonerna aldrig sticker utanför ramen. Lodräta svep skrollar sidan
+     på pekskärm, och ctrl/⌘ + rulle på dator. Lodräta svep skrollar sidan
      som vanligt.
+
+     **Kartan håller sig anpassad av sig själv.** Efter varje ändring –
+     ny zon, flyttad låda, flikbyte, skärmrotation – zoomas den om så hela
+     trädgården syns, vilket är avgörande på mobilen där zonernas fasta
+     pixelbredder annars sticker utanför ramen. Zoomar eller panorerar ni
+     själva respekteras det och automatiken stängs av; klicka på
+     procentknappen för att slå på den igen. I redigeringsläget ligger vyn
+     stilla så den inte hoppar mitt under att ni drar runt lådorna, och
+     anpassar sig när ni klickar **Klar**.
 
      Klicka **Redigera layout** för att slå på flytt-läge, och **Klar, lås
      positionerna** när ni är nöjda. I redigeringsläge går det att:

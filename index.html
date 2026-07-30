@@ -191,7 +191,9 @@
     .card { padding:16px; margin-top:14px; }
     .vy-header { padding-top:16px; }
     .karta-header { flex-wrap:wrap; }
-    .karta-canvas { aspect-ratio:1/1; min-height:0; }
+    /* Bredden är given av skärmen, så höjden är det enda sättet att ge kartan
+       mer plats – och därmed en högre automatisk zoomnivå på stående kartor. */
+    .karta-canvas { aspect-ratio:4/5; min-height:min(58vh, 440px); }
     .karta-zoom { top:8px; right:8px; }
     .karta-plus { width:42px; height:42px; font-size:1.4rem; right:10px; bottom:-14px; }
     .karta-flikar { gap:6px; margin-bottom:10px; }
@@ -1182,15 +1184,17 @@ function renderaKarta() {
       <div class="zon-topp"><span class="namn">Utan zon</span></div>
       <div class="zon-yta yta annat" style="height:${okatHojd}px"><div class="zon-plantor">${plantorHtml(okategoriserade)}</div></div>
     </div>` : "";
-  // Första gången en karta ritas (och efter flikbyte) zoomas den så hela
-  // trädgården syns – avgörande på mobil, där zonkortens fasta pixelbredder
-  // annars sticker långt utanför ramen.
-  if (!kartaPassad && toppzoner.length) {
-    kartaPassad = true;
-    requestAnimationFrame(passaKarta);
-  } else {
-    tillampaZoom();
-  }
+  // Kartan håller sig anpassad av sig själv: efter varje omritning zoomas den
+  // så hela trädgården syns. Avgörande på mobil, där zonkortens fasta
+  // pixelbredder annars sticker långt utanför ramen så fort man lägger till
+  // eller flyttar något. Två undantag: har man zoomat eller panorerat själv
+  // respekteras det, och i redigeringsläget ligger vyn stilla så den inte
+  // hoppar mitt under att man drar runt lådorna.
+  // Direkt, inte via requestAnimationFrame: måtten läses med offsetLeft/
+  // offsetWidth, som ändå framtvingar en layoutberäkning, och en rAF hinner
+  // inte alltid köras innan nästa omritning hunnit skriva över DOM:en.
+  if (toppzoner.length && !kartaAnvandarstyrd && !redigerarLayout) passaKarta();
+  else tillampaZoom();
 }
 
 // ---- Zoom och panorering av kartan ----
@@ -1199,7 +1203,9 @@ function renderaKarta() {
 // fungerar dragningen oförändrat oavsett zoomnivå.
 const ZOOM_MIN = 0.3, ZOOM_MAX = 2.5, ZOOM_STEG = 1.25;
 let kartaZoom = 1, kartaPanX = 0, kartaPanY = 0;
-let kartaPassad = false;
+// Så länge användaren inte själv rört zoomen håller kartan sig anpassad av
+// sig själv vid varje omritning. Procentknappen återgår till det läget.
+let kartaAnvandarstyrd = false;
 
 function tillampaZoom() {
   $("kartaScen").style.transform = `translate(${kartaPanX}px, ${kartaPanY}px) scale(${kartaZoom})`;
@@ -1213,6 +1219,7 @@ function tillampaZoom() {
 }
 // Zoomar runt en punkt i ramens koordinater, så det man tittar på står still.
 function zoomaTill(ny, punktX, punktY) {
+  kartaAnvandarstyrd = true;
   const z = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, ny));
   const faktor = z / kartaZoom;
   kartaPanX = punktX - (punktX - kartaPanX) * faktor;
@@ -1239,6 +1246,7 @@ function kartaInnehallsRam() {
   return { x1, y1, x2, y2 };
 }
 function passaKarta() {
+  kartaAnvandarstyrd = false; // tillbaka till automatisk anpassning
   const ram = kartaInnehallsRam();
   const frame = $("tradgardKarta");
   const fw = frame.clientWidth, fh = frame.clientHeight;
@@ -1358,6 +1366,7 @@ function dragMove(e) {
       // ligga kvar under den – det ger zoom och panorering i samma gest.
       const z = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN,
         nypState.startZoom * (pekarAvstand() / nypState.startAvstand)));
+      kartaAnvandarstyrd = true;
       const skala = z / nypState.startZoom;
       const mitt = pekarMitt();
       kartaPanX = mitt.x - (nypState.startMitt.x - nypState.startPanX) * skala;
@@ -1374,6 +1383,7 @@ function dragMove(e) {
     dragState.el.classList.add(dragState.typ === "panorera" ? "panorerar" : "dragging");
   }
   if (dragState.typ === "panorera") {
+    kartaAnvandarstyrd = true;
     kartaPanX = dragState.startPanX + (e.clientX - dragState.startX);
     kartaPanY = dragState.startPanY + (e.clientY - dragState.startY);
     tillampaZoom();
@@ -2131,7 +2141,7 @@ document.addEventListener("click", async (e) => {
   const flik = e.target.closest(".karta-flik");
   if (flik) {
     aktivKartaId = flik.dataset.id;
-    kartaPassad = false; // varje karta anpassas till sitt eget innehåll
+    kartaAnvandarstyrd = false; // varje karta anpassas till sitt eget innehåll
     avmarkeraMal();
     renderaKartaFlikar();
     renderaKarta();
@@ -2245,6 +2255,9 @@ function visaVy() {
   $("navDashboardBtn").classList.toggle("aktiv", !installningar);
   $("navInstallningarBtn").classList.toggle("aktiv", installningar);
   window.scrollTo(0, 0);
+  // Kartan är omätbar medan översikten är dold (0 px), så anpassningen måste
+  // göras om när man kommer tillbaka hit.
+  if (!installningar && !kartaAnvandarstyrd) passaKarta();
 }
 window.addEventListener("hashchange", visaVy);
 $("navDashboardBtn").addEventListener("click", () => { location.hash = ""; });
