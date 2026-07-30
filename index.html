@@ -1522,17 +1522,35 @@ function raknaSoltimmar() {
   solTimmarCache = { nyckel, karta };
   return karta;
 }
+// Skugglagret återanvänds i stället för att rivas och byggas om varje
+// gång – annars hann DOM-arbetet (ta bort, skapa nya polygon-element,
+// lägga till) inte hålla jämna steg med musen/fingret medan man drar
+// reglaget, vilket kändes som att själva slidern hackade och laggade.
+// renderaKarta() river ändå bort den ibland (innerHTML på #kartaScen), så
+// den skapas på nytt precis efter behov om den saknas.
+function hamtaSolSvg() {
+  let svg = $("kartaScen").querySelector(".sol-lager");
+  if (!svg) {
+    svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("class", "sol-lager");
+    svg.setAttribute("viewBox", `0 0 ${KARTA_BREDD} ${KARTA_HOJD}`);
+    $("kartaScen").appendChild(svg);
+  }
+  return svg;
+}
 function renderaSol() {
-  const gammal = $("kartaScen").querySelector(".sol-lager");
-  if (gammal) gammal.remove();
   $("solRad").style.display = solLage ? "" : "none";
   $("solBtn").classList.toggle("aktiv", solLage);
-  if (!solLage) return;
+  if (!solLage) {
+    $("kartaScen").querySelector(".sol-lager")?.remove();
+    return;
+  }
   const idag = new Date();
   const tid = new Date(idag.getFullYear(), idag.getMonth(), idag.getDate(), 0, solMinut);
   $("solTid").textContent = `${String(Math.floor(solMinut / 60)).padStart(2, "0")}:${String(solMinut % 60).padStart(2, "0")}`;
   if (geoLat == null || geoLon == null) {
     $("solInfo").textContent = "Koordinater saknas (GEO_LAT/GEO_LON)";
+    $("kartaScen").querySelector(".sol-lager")?.remove();
     return;
   }
   const { hojd, azimut } = solPosition(tid, geoLat, geoLon);
@@ -1541,18 +1559,31 @@ function renderaSol() {
     ? `Solen ${Math.round(hojd)}° över horisonten, i ${vader}`
     : "Solen är nere";
   const lista = skuggor(tid);
-  if (!lista.length) return;
+  const svg = hamtaSolSvg();
   const svgNs = "http://www.w3.org/2000/svg";
-  const svg = document.createElementNS(svgNs, "svg");
-  svg.setAttribute("class", "sol-lager");
-  svg.setAttribute("viewBox", `0 0 ${KARTA_BREDD} ${KARTA_HOJD}`);
-  for (const s of lista) {
-    const poly = document.createElementNS(svgNs, "polygon");
+  // Återanvänd befintliga <polygon>-element i stället för att skapa nya –
+  // bara innehållet (punkterna) uppdateras, resten av noden rörs inte.
+  const befintliga = svg.children;
+  lista.forEach((s, i) => {
+    let poly = befintliga[i];
+    if (!poly) {
+      poly = document.createElementNS(svgNs, "polygon");
+      poly.setAttribute("fill", "rgba(12,22,32,.42)");
+      svg.appendChild(poly);
+    }
     poly.setAttribute("points", s.polygon.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" "));
-    poly.setAttribute("fill", "rgba(12,22,32,.42)");
-    svg.appendChild(poly);
-  }
-  $("kartaScen").appendChild(svg);
+  });
+  while (svg.children.length > lista.length) svg.lastChild.remove();
+}
+
+// Strypt till högst en omritning per bildruta – reglagets "input"-event kan
+// annars avfyras oftare än skärmen hinner rita, vilket gjorde att både
+// skuggorna och själva slider-handtaget kändes hackiga under dragning.
+let solRenderVantar = false;
+function planeraSolRender() {
+  if (solRenderVantar) return;
+  solRenderVantar = true;
+  requestAnimationFrame(() => { solRenderVantar = false; renderaSol(); });
 }
 
 // ---- Zoom och panorering av kartan ----
@@ -3076,7 +3107,7 @@ $("solBtn").addEventListener("click", () => {
 });
 $("solReglage").addEventListener("input", () => {
   solMinut = Number($("solReglage").value) || 0;
-  renderaSol();
+  planeraSolRender();
 });
 
 // ---- Vyer: dashboard (översikt) vs. inställningar, styrt av URL-hash så
