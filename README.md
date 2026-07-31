@@ -1,282 +1,259 @@
-# 🌱 Growarr
+<p align="center">
+  <img src="logo.png" width="140" alt="Growarr logo">
+</p>
 
-Två delar i ett repo:
+<h1 align="center">Growarr</h1>
 
-1. **Frostvarning** — körs gratis på GitHub Actions en gång per kväll, kollar
-   [SMHI:s väderprognos](https://opendata.smhi.se) (gratis, ingen nyckel
-   behövs) och skickar push via [ntfy.sh](https://ntfy.sh) om frostrisk
-   väntas kommande dygn. Samma mönster som Bostadsvakt.
-2. **En panel** (Docker, körs på home-vm som `bostadsvakt-api`/
-   `hushallsekonomi`), uppdelad i två vyer (⚙️-knappen uppe till höger växlar
-   mellan dem, styrt av URL-hash så bakåtknappen i webbläsaren fungerar):
+<p align="center"><strong>A self-hosted garden map, planting journal and frost watch that talks to Home Assistant.</strong></p>
 
-   **Översikten** (`/`) — en ren visuell dashboard, inget att fylla i:
-   - **Dagens väder** visas som en smal rad högst upp i trädgårdskarte-kortet
-     (ikon, dagens max/min-temperatur, frost-chip vid frostrisk) — allt om
-     platsen på en gång, utan att klämma in kartan i en delad ruta.
-   - **Väder & bevattning** i sidokolumnen — den fulla 5-dagarsprognosen med
-     riktiga väderikoner och frostrisk markerad, följt av **Bevattning**: en
-     Claude-genererad rekommendation som väger in väderprognosen, era
-     zoner/odlingar och kopplade jordfuktighetssensorers senaste värden (se
-     "Smart bevattning" nedan). Faller tillbaka på en enkel regelbaserad
-     insikt (baserad på väntad nederbörd) om `ANTHROPIC_API_KEY` inte är satt.
-   - **Flera trädgårdskartor** — flikar ovanför kartan (t.ex. "Framsidan",
-     "Baksidan", "Växthuset"). Klicka en flik för att byta karta; zoner hör
-     till den karta de skapades på. Nya kartor läggs till via **Skapa nytt**
-     → **Karta**, samma väg som zoner och plantor.
-   - **Egna block** — lägg till egna kort på översikten: antingen en samling
-     HA-entiteter (visas som färgkodade mätvärdesrutor) eller en kamerabild
-     från en HA-kameraentitet. Skapas under Inställningar, där ni också
-     väljer om blocket ska ligga i den breda huvudkolumnen eller i
-     sidokolumnen (under Historik). På varje block finns ↑/↓ för att ändra
-     ordning och ⇄ för att flytta det till den andra kolumnen.
-   - **🌿 AI-chatt** — en bubbla nere till höger där ni kan fråga fritt och
-     **bifoga foton** ("varför ser den här plantan ut så här?"). Claude får med
-     sig era zoner, plantor, kopplade sensorers värden, sensorhistorik och
-     väderprognosen, och väger ihop bilden med mätdatan i svaret. Kräver
-     `ANTHROPIC_API_KEY` (se "Smart bevattning" nedan). Foton skalas ner i
-     webbläsaren innan de skickas och sparas aldrig på servern.
-   - **Sektioner i en zon** — en zon kan innehålla andra zoner, så ett växthus
-     kan rymma flera odlingslådor och bänkar som ritas inuti det. Samma sorts
-     odlingslåda kan lika gärna stå fristående på kartan. Skapas via
-     **+ Skapa nytt → Zon → Placering**, eller direkt från Zondetaljer.
-     Tas en zon bort raderas inte dess sektioner – de blir fristående.
-   - **Trädgårdskarta** — en fritt placerbar karta, ritad uppifrån: växthus
-     som glasparti med takås, odlingslådor som träramar runt mörk jord,
-     utomhusbäddar som organiska jordformer och inomhuszoner som ljusa hyllor
-     med terrakottakrukor. Samma utseende oavsett om lådan står fristående
-     eller är en sektion inuti ett växthus.
+<p align="center">
+  <a href="https://github.com/mathiasmholm/growarr/actions/workflows/docker-publish.yml"><img src="https://github.com/mathiasmholm/growarr/actions/workflows/docker-publish.yml/badge.svg" alt="Docker publish status"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/Node-%3E%3D22-339933?logo=node.js&logoColor=white" alt="Node >=22">
+</p>
 
-     **Zoomreglaget uppe till höger på kartan** har − / + och en knapp som
-     visar zoomnivån – klicka den för att anpassa vyn så hela trädgården
-     ryms. Kartan går också att dra för att panorera, nypa med två fingrar
-     på pekskärm, och ctrl/⌘ + rulle på dator. Lodräta svep skrollar sidan
-     som vanligt.
+## Links
 
-     **Kartan håller sig anpassad av sig själv.** Efter varje ändring –
-     ny zon, flyttad låda, flikbyte, skärmrotation – zoomas den om så hela
-     trädgården syns, vilket är avgörande på mobilen där zonernas fasta
-     pixelbredder annars sticker utanför ramen. Zoomar eller panorerar ni
-     själva respekteras det och automatiken stängs av; klicka på
-     procentknappen för att slå på den igen. I redigeringsläget ligger vyn
-     stilla så den inte hoppar mitt under att ni drar runt lådorna, och
-     anpassar sig när ni klickar **Klar**.
+- [What it is](#what-it-is)
+- [Features](#features)
+- [Smart insights (Claude)](#smart-insights-claude)
+- [Notifications](#notifications)
+- [Getting started — frost warning](#getting-started--frost-warning)
+- [Getting started — the panel](#getting-started--the-panel)
+- [Reverse proxy setup](#reverse-proxy-setup)
+- [API reference](#api-reference)
+- [Roadmap](#roadmap)
 
-     Klicka **Redigera layout** för att slå på flytt-läge, och **Klar, lås
-     positionerna** när ni är nöjda. I redigeringsläge går det att:
-     - **dra zoner** dit ni vill på kartan,
-     - **dra sektioner** (odlingslådor, bänkar) till rätt plats *inuti* en zon,
-     - **dra plantor** till rätt plats i sin låda eller bädd,
-     - **ändra storlek** genom att dra i hörnhandtaget, och
-     - **vända** en zon eller låda med ⟳ (byter bredd/höjd), så en låda kan
-       ligga längs med eller stå på tvären.
+## What it is
 
-     Allt sparas automatiskt. Odlingar utan zon hamnar i en egen
-     "Okategoriserat"-grupp under kartan.
-   - **Antal och fyllda ytor** — en odling är *en sort på en plats* och bär
-     ett antal (st), som anges både när den skapas och går att ändra efteråt.
-     Antalet ritas som lika många ikoner, så en låda med sex gurkor faktiskt
-     ser ut att innehålla sex gurkor, med en liten siffra som gör mängden
-     exakt. Två utseenden:
-     - **Samlade på en plats** – ikonerna står i en klunga som flyttas som
-       ett objekt. Bra när flera sorter delar på samma bädd.
-     - **Fyll hela ytan** – sorten sprids jämnt över hela lådan, i stället
-       för att man lägger till plantorna en och en. Perfekt för en låda med
-       bara gurkor. Ligger två fyllda sorter i samma yta delar de den
-       mellan sig, så "halva lådan morötter, halva rödbetor" också går.
+Growarr is two things in one repo, built for a single Home Assistant home-lab
+setup (no multi-tenant, no login — see [Security model](#security-model)):
 
-     Ikonerna krymper automatiskt efter hur många de är och hur stor ytan
-     är, så de aldrig svämmar över lådans kant.
-   - **Snabbtillägg** — klicka på en zon och lägg till plantor direkt: ett
-     textfält med förslag (era egna sorter, vanligast överst, påfyllda med
-     vanliga köksväxter) i stället för en vägg av tryckknappar – skriv fritt
-     eller välj ur listan, precis som HA-entitetssökningen i Inställningar.
-     Antalet har stora − / +-knappar, och knappen säger exakt vad som
-     händer ("Lägg till 6 × Gurkor"). Klicka på en planta i listan för att
-     se dess egen översikt (samma detaljpanel som klick på kartan) –
-     radera-knappen (×, syns bara i redigeringsläge) stör inte det.
-   - **Detaljer** — klicka på en zon eller planta i kartan för att den
-     markeras och visa/redigera antal, jordtyp, fria anteckningar, koppla
-     valfritt antal HA-entiteter (senaste värde visas som en badge direkt på
-     kartan, t.ex. 💧 42 % på ett växthus) samt en historik-graf per kopplad
-     entitet.
+1. **Frost warning** — a free GitHub Actions job that checks
+   [SMHI's forecast](https://opendata.smhi.se) (Swedish weather institute,
+   free, no API key) once a night and pushes a [ntfy.sh](https://ntfy.sh)
+   notification if frost is expected.
+2. **The panel** — a Docker container with a visual dashboard for your
+   garden: a drag-and-drop map, a planting journal, weather-aware watering
+   advice, and optional Claude-powered features, all backed by Home
+   Assistant entities you already have.
 
-     På en bred skärm är det en panel under kartan. **På telefonen glider den
-     i stället upp som ett bottom sheet** över kartan, med draglist,
-     bakgrundsdimning och svep nedåt för att stänga (eller ×, tryck utanför,
-     eller Esc) — samma gest som i appar på iOS och Android. Panelen låg
-     annars långt under vikningen på en telefon.
-   - **Historik** — en samlad vy av alla kopplade entiteter över tid (loggas
-     en gång i timmen). Byggs upp av sig själv från den dag ni kopplar en
-     entitet — ingen bakåtgående data.
-   - **☀️ Solkarta** — klicka **Sol** ovanför kartan för att se skuggorna som
-     växthus och lådor kastar vid valfri tid på dygnet, uträknat rent
-     matematiskt från trädgårdens koordinater (ingen väder-API behövs för
-     själva solpositionen). Dra reglaget för att se hur skuggorna vandrar
-     över dagen. I Zondetaljer för en zon visas dessutom **≈ X timmar sol
-     idag**, uträknat genom att sampla dygnet var 15:e minut och kolla om
-     zonens mitt ligger i en annan zons skugga.
+No login screen — the same security model as the rest of a typical
+Home Assistant home-lab: the panel is only reachable through your own
+network/VPN, or behind whatever Zero Trust layer already guards your other
+self-hosted apps.
 
-     Kräver att **höjden** är satt per zon (Zondetaljer → "Höjd över
-     marken"; ett rimligt standardvärde sätts automatiskt per zontyp) och
-     att kartans **riktning och skala** är sparade under ⚙️ Inställningar →
-     "Kartans läge i verkligheten" — annars vet solkartan inte vilket håll
-     som är norr eller hur stor en meter är på skärmen.
-   - **🌡️ Zonens eget mikroklimat** — har en zon en temperatursensor kopplad
-     jämför panelen den automatiskt mot SMHI:s prognos för orten och lär sig
-     över tid hur mycket varmare eller kallare zonen faktiskt ligger
-     (medianen av minst 12 mätningar). Frostvarningen på översikten bryts
-     sedan ut per zon: *"Rabatten: ner mot 1,5° (ligger typiskt 1,5° under
-     prognosen)"* i stället för en enda regional siffra. Behöver ett dygns
-     mätningar innan den har nog data för att visa något.
-   - **📷 QR-etiketter** — i Zondetaljer, knappen **QR-etikett**, ger en
-     utskriftsfärdig kod att tejpa på lådan. Skanna den med telefonens
-     kamera och zonen öppnas direkt (`#zon=<id>`) — ingen kartnavigering.
-     Kodas och ritas helt lokalt (ingen extern tjänst, ingen nätverksbild).
-   - **Kompakt kartläge (standard)** — en miniatyr-planritning i stället för
-     fulla zonkort: samma bredd, höjd och riktning som de riktiga zonerna,
-     bara flatfärgade efter zontyp med en liten prick i stället för
-     glas/trä-texturerna – som ett litet arkitektritat siteplan. **Klicka en
-     zon för att zooma in på den** – kameran panorerar och förstorar precis
-     som ett kartkluster i Apple/Google Maps, övriga zoner tonas ner, och
-     zonen visas i sitt fulla, plantfyllda läge. En liten "← zonnamn"-chip
-     högst upp i vänstra hörnet zoomar tillbaka ut. Knappen **Karta** växlar
-     till att alltid visa alla zoner fullt utritade sida vid sida i stället
-     (nödvändigt för att redigera layouten, vilket bara går i det läget).
-   - **Fyra sätt att se trädgården** — en flikrad ovanför kartan:
-     - **Översikt** — kartan, som vanligt.
-     - **Per zon** — ett sammanfattningskort per zon (typ, antal planterat,
-       kopplade sensorers värden); klick öppnar samma detaljpanel som från
-       kartan.
-     - **Per planta** — den enda vyn som går över zongränserna: alla
-       odlingsposter med samma namn slås ihop till en sort, oavsett vilken
-       zon eller karta de står på (t.ex. "Gurkor" i både växthuset och
-       pallkragen räknas ihop till en totalsumma). Klicka en sort för att
-       se var den finns och historik för alla kopplade sensorer.
-     - **Historik** — samma innehåll som historik-kortet i sidokolumnen,
-       fast i eget, större format.
-   - **Kamerakontroller** — en kamerawidget har nu mjuka, halvtransparenta
-     knappar ovanpå bilden: **uppdatera** hämtar en ny ögonblicksbild direkt
-     (med tidsstämpel), **fullskärm** öppnar den stort i en enkel lightbox
-     (stäng med ×, klick utanför eller Esc).
-   - **🔔 Notiscenter** — klockan högst upp till höger (bredvid "Skapa nytt")
-     samlar aktuella uppgifter räknade fram från er egen data: frostrisk
-     (zonvis kalibrerad där det går), torr/för blöt jord, ovanligt kallt
-     eller varmt, sensorer som inte går att nå, samt skördepåminnelser för
-     odlingar vars skördemånad är nu. Varje notis går att **markera som
-     klar (✓)** eller **avvisa (×)** — valet sparas på servern så det inte
-     kommer tillbaka vid nästa besök eller på en annan enhet. En hanterad
-     notis dyker upp igen automatiskt om samma läge fortfarande gäller
-     nästa dag (eller nästa månad för skördepåminnelser) — den är "klar för
-     nu", inte borta för gott.
+## Features
 
-     **AI-optimerad** (kräver `ANTHROPIC_API_KEY`) — de regelbaserade
-     kandidaterna ovan skickas till Claude tillsammans med samma
-     trädgårdssammanfattning som bevattningsinsikten använder. Claude
-     **prioriterar** dem efter faktisk angelägenhet för just er trädgård,
-     **slår ihop** närbesläktade notiser till en, och **skriver om** texten
-     till en kort, konkret mening. En liten **"✨ Prioriterat av AI"**-etikett
-     syns i panelen när det skett. Claude får aldrig hitta på nya notiser
-     eller fakta – varje id i svaret måste redan finnas bland kandidaterna,
-     annars kasseras det tyst. Cachas några timmar per uppsättning
-     kandidater (samma mönster som bevattningsinsikten); utan nyckel eller
-     om anropet misslyckas visas de vanliga, regelbaserade raderna precis
-     som vanligt.
+### Dashboard & garden map
 
-   **Mobilnavigering** — sidonavet (Översikt/Inställningar) ligger som en fast
-   flikrad längst ner på telefonen i stället för högst upp, samma plats som i
-   de flesta mobilappar och utom vägen för klockan/"Skapa nytt" som redan
-   svävar uppe till höger.
+- **Today's weather** as a slim strip at the top of the map card (icon,
+  today's high/low, a frost chip when relevant) — everything about the
+  place at a glance, without squeezing the richer map into a shared box.
+- **Weather & watering** in the side column — the full 5-day forecast with
+  real weather icons and frost highlighted, followed by a Claude-generated
+  watering recommendation that factors in the forecast, your zones/plantings
+  and the latest readings from connected soil-moisture sensors (see
+  [Smart insights](#smart-insights-claude)). Falls back to a simple
+  rule-based tip (based on expected rainfall) if `ANTHROPIC_API_KEY` isn't set.
+- **Multiple garden maps** — tabs above the map (e.g. "Front yard",
+  "Backyard", "Greenhouse"). Click a tab to switch; zones belong to whichever
+  map they were created on. New maps are added via **Create new** → **Map**.
+- **Freeform garden map**, drawn top-down: greenhouses as glass panels with
+  a ridge beam, raised beds as wooden frames around dark soil, outdoor beds
+  as organic soil shapes, and indoor zones as bright shelves with terracotta
+  pots. A bed looks the same whether it stands alone or is nested as a
+  section inside a greenhouse.
 
-   **Ikonspråk** — strukturella ikoner (zontyp, sensortyp, frost, "sensorn
-   svarar inte", kamerakontroller) är tunna, enfärgade linjeikoner i samma
-   stil som sidopanelens hem/kugghjul, i stället för emoji – det gav ett
-   mer sammanhållet, "designat" intryck än en blandning av olika plattformars
-   emoji-teckensnitt. Plantor och väder är medvetet kvar som emoji: 19
-   grönsaker eller SMHI:s redan polerade vädersymboler som linjeikoner hade
-   kostat igenkänningsbarhet utan att vinna särskilt mycket.
+  The map keeps itself framed — after any change (new zone, moved bed, tab
+  switch, screen rotation) it re-zooms so the whole garden fits, which
+  matters on mobile where zones' fixed pixel widths would otherwise spill
+  past the frame. Zoom or pan yourself and the auto-fit steps aside; click
+  the percentage button to hand control back. Pinch-to-zoom, ctrl/⌘ + scroll
+  on desktop, and vertical swipes still scroll the page as usual.
 
-   **Inställningar** (`/#installningar`) — allt ni fyller i eller lägger till:
-   - **Utseende** — Ljust/Mörkt/System. Följer enhetens läge som standard;
-     ett manuellt val sparas lokalt i webbläsaren (inte på servern, så det är
-     per enhet, inte per person).
-   - **⚙️ Notiser** — ntfy-ämne och HA-webhook-URL för skördepåminnelser.
-   - **Zoner** — lägg till nya bäddar, växthus, odlingslådor, inomhus/utomhus
-     (dra dem sen på plats i Trädgårdskartan på översikten).
-   - **Odlingsjournal** — lägg till vad som planterats, i vilken zon, när, och
-     när det ska skördas (med automatisk skördepåminnelse, se nedan).
-   - **HA-enheter** — sök fram entiteter direkt ur Home Assistant (namn eller
-     entity_id, autocomplete) istället för att behöva komma ihåg dem utantill,
-     och se deras nuvarande värde. Koppla dem sen till en zon/odling via
-     Zondetaljer-panelen på översikten.
-   - **Kartans läge i verkligheten** — vilket kompassväder som pekar uppåt på
-     kartan, och kartans bredd i meter. Behövs bara för solkartan.
+  Click **Edit layout** to enable move mode, and **Done, lock positions**
+  when finished. While editing you can drag zones, sections, and individual
+  plantings into place, resize via the corner handle, and flip a zone/bed
+  with ⟳ to swap its width/height. Everything saves automatically.
+- **Compact map mode (default)** — a scaled site-plan view instead of the
+  full illustrated cards: same width, height and orientation as the real
+  zones, just flat-colored by zone type with a small dot instead of the
+  glass/wood textures. **Click a zone to zoom in on it** — the camera pans
+  and enlarges exactly like tapping a cluster on Apple/Google Maps, other
+  zones dim, and the zone opens in its full, planting-filled form. A small
+  "← zone name" chip in the top-left zooms back out. The **Map** button
+  switches to always showing every zone fully illustrated side by side
+  (required for layout editing, which is only available in that mode).
+- **Four ways to view the garden** — a tab row above the map:
+  - **Overview** — the map, as above.
+  - **By zone** — a summary card per zone (type, quantity planted, linked
+    sensor readings); clicking opens the same detail panel as the map.
+  - **By plant** — the only view that crosses zone boundaries: every
+    planting with the same name is rolled up into one variety, regardless of
+    which zone or map it's on (e.g. "Cucumbers" in both the greenhouse and a
+    raised bed add up to one total). Click a variety to see where it grows
+    and the history of every linked sensor.
+  - **History** — the same content as the history card in the side column,
+    in its own, larger layout.
+- **Quantities and filled areas** — a planting is *one variety in one spot*
+  and carries a quantity, set on creation and editable later. The quantity
+  is drawn as that many icons, so a bed with six cucumbers actually looks
+  like it holds six cucumbers, with a small number pinned on for precision.
+  Two layouts: **clustered** (icons grouped and moved as one object — handy
+  when several varieties share a bed) and **fill the area** (spread evenly
+  across the whole bed — perfect for a bed that's just cucumbers; two filled
+  varieties in the same space split it between them, so "half carrots, half
+  beets" works too). Icons shrink automatically to fit, however many there
+  are.
+- **Quick-add** — click a zone and add plantings right there: a free-text
+  field with suggestions (your own varieties first, seeded with common
+  vegetables) instead of a wall of buttons — type freely or pick from the
+  list, the same pattern as the Home Assistant entity search in Settings.
+- **Zone & plant details** — click a zone or planting on the map to select
+  it and view/edit quantity, soil type, free-text notes, and link any number
+  of Home Assistant entities (the latest value shows as a badge right on the
+  map, e.g. 💧 42% on a greenhouse) plus a history graph per linked entity.
+  On a wide screen this is a panel below the map; **on phones it slides up
+  as a bottom sheet** instead, with a drag handle, background dimming, and
+  swipe-down to close — the same gesture as native iOS/Android apps.
+- **History** — a combined view of every linked entity over time (logged
+  hourly), building up from the day you connect an entity — no backfilled
+  data.
+- **☀️ Sun map** — click **Sun** above the map to see the shadows greenhouses
+  and beds cast at any time of day, computed purely from the garden's
+  coordinates (no weather API needed for the sun's position itself). Drag
+  the slider to watch the shadows move through the day. Zone details also
+  show **≈ X hours of sun today**, calculated by sampling the day every 15
+  minutes and checking whether the zone's center falls in another zone's
+  shadow. Requires a **height** set per zone (a sensible default is applied
+  per zone type) and the map's **orientation and scale** saved under
+  Settings → "Map's real-world layout" — otherwise the sun map doesn't know
+  which way is north or how big a meter is on screen.
+- **🌡️ Per-zone microclimate** — if a zone has a temperature sensor linked,
+  the panel compares it against SMHI's forecast for your location and learns
+  over time how much warmer or colder that zone actually runs (median of at
+  least 12 readings). The frost warning on the dashboard then breaks down
+  per zone instead of showing one regional number.
+- **📷 QR labels** — in zone details, the **QR label** button gives you a
+  print-ready code to tape on the bed. Scan it with your phone's camera and
+  the zone opens directly (`#zon=<id>`) — no map navigation needed. Generated
+  and rendered entirely client-side (no external service, no network image).
+- **Custom blocks** — add your own cards to the dashboard: either a set of
+  Home Assistant entities (shown as color-coded readout tiles) or a camera
+  snapshot from a Home Assistant camera entity, with soft, semi-transparent
+  controls to refresh or open it full-screen. Configured under Settings,
+  where you also choose the main or side column, and reorder/move blocks
+  with ↑/↓ and ⇄.
+- **🌿 AI chat** — a bubble in the bottom-right corner where you can ask
+  anything and **attach photos** ("why does this plant look like this?").
+  Claude gets your zones, plantings, linked sensor readings and history, and
+  the weather forecast, and weighs the photo against the sensor data in its
+  answer. Requires `ANTHROPIC_API_KEY` (see
+  [Smart insights](#smart-insights-claude)). Photos are downscaled in the
+  browser before sending and are never stored on the server.
+- **🔔 Notification center** — see [Notifications](#notifications) below.
+- **Mobile navigation** — the sidebar (Overview/Settings) sits as a fixed,
+  frosted-glass pill floating above the bottom edge on phones, rather than a
+  strip at the top — the natural spot for navigation in a mobile app, and
+  out of the way of the notification bell/"Create new" button that already
+  floats top-right.
+- **Light/Dark/System appearance** — under Settings; a manual choice is
+  saved locally in the browser (not on the server, so it's per device, not
+  per person).
 
-Ingen inloggning i panelen – samma modell som de andra apparna: skyddet
-ligger i att den bara är nåbar via ert eget nätverk/VPN eller bakom samma
-Zero Trust-lager som resten av er Home Assistant-domän.
+### Icon language
 
-## Smart bevattning (Claude)
+Structural icons (zone type, sensor type, frost, "sensor unreachable",
+camera controls) are thin, single-color line icons in the same style as the
+sidebar's home/gear icons, rather than emoji — a more coherent, "designed"
+feel than mixing different platforms' emoji fonts. Plants and weather stay
+as emoji on purpose: 19 vegetables or SMHI's already-polished weather
+symbols as line icons would cost recognizability without much upside.
 
-Bevattningskortet på översikten kan ge en AI-genererad rekommendation istället
-för bara en enkel regel om nederbörd. Servern skickar en sammanfattning av
-era zoner, odlingar, kopplade sensorers senaste värden och väderprognosen
-till Claudes API (`claude-sonnet-5`) och ber om en kort, konkret insikt.
+## Smart insights (Claude)
 
-- **`ANTHROPIC_API_KEY`** — skaffas på [console.anthropic.com](https://console.anthropic.com)
-  (separat från ett ev. Claude.ai-abonnemang, faktureras per anrop).
-- Resultatet cachas i **4 timmar** server-side, så kostnaden hålls försumbar
-  oavsett hur många gånger panelen laddas.
-- Helt valfritt — utan nyckeln visas istället den enkla regelbaserade
-  insikten (baserad på väntad nederbörd de kommande dagarna), ingen
-  funktion går sönder.
-- **Lägg aldrig nyckeln i `docker-compose.example.yml`** (den är committad och
-  publik) — bara i er egna, gitignorade `docker-compose.yml` på home-vm.
+Two features use [Anthropic's Claude API](https://console.anthropic.com) to
+turn your raw garden data into short, plain-language insights — both are
+entirely optional and degrade gracefully without a key.
 
-## Notiser (skördepåminnelser + frostvarning)
+- **Watering recommendation** — the server sends a summary of your zones,
+  plantings, latest sensor readings and the forecast to Claude
+  (`claude-sonnet-5`) and asks for a short, concrete recommendation. Cached
+  server-side for **4 hours**, so cost stays negligible no matter how often
+  the panel is loaded. Without a key, a simple rule-based tip (based on
+  expected rainfall) is shown instead — nothing breaks.
+- **AI-prioritized notifications** — the rule-based notification candidates
+  (see [Notifications](#notifications)) are sent to Claude along with the
+  same garden summary. Claude **prioritizes** them by actual urgency for
+  your specific garden, **merges** closely related notifications into one,
+  and **rewrites** the text into a short, concrete sentence. A small
+  **"✨ Prioritized by AI"** label appears when this happened. Claude can
+  never invent new notifications or facts — every id in its response must
+  already exist among the candidates, or it's silently discarded. Cached for
+  a few hours per candidate set; without a key or if the call fails, the
+  plain rule-based rows are shown as usual.
 
-Båda notiskällorna skickar till **ntfy** och/eller en **Home Assistant-
-webhook**, samma dubbla mönster som Bostadsvakt:
+**`ANTHROPIC_API_KEY`** — get one at
+[console.anthropic.com](https://console.anthropic.com) (separate from a
+Claude.ai subscription, billed per call). **Never put the key in
+`docker-compose.example.yml`** (it's committed and public) — only in your
+own, gitignored `docker-compose.yml`.
 
-- **ntfy-ämne** — push till mobilen via [ntfy.sh](https://ntfy.sh).
-- **HA-webhook-URL** — valfritt, POSTar `{ title, message }` till en HA-
-  webhook-URL (**Inställningar → Automationer → Webhook-utlösare** i Home
-  Assistant ger er URL:en). En HA-automation kan sen göra vad ni vill med
-  notisen (visa på en skärm, säga den högt, blinka en lampa) utöver
-  ntfy-pushen. Helt valfritt att sätta en av dem, båda, eller ingen.
+## Notifications
 
-**Den dagliga skördepåminnelse-kollen i panelen** ställs in direkt i
-gränssnittet — klicka på ⚙️-knappen uppe till höger i panelen och fyll i
-ntfy-ämne/webhook-URL, ingen SSH eller docker-compose behövs. Värdet sparas
-i panelens datafil. Miljövariablerna `NTFY_TOPIC`/`WEBHOOK_URL` i
-docker-compose fungerar fortfarande som förvalda värden om ni hellre vill
-sätta dem där (t.ex. innan ni hunnit öppna panelen första gången) — det som
-sparats via ⚙️ i panelen vinner om båda är satta.
+Both notification sources — the dashboard's notification center and the
+nightly frost job — can send to **ntfy** and/or a **Home Assistant webhook**:
 
-**Frostvarnings-jobbet på GitHub Actions** är en fristående, schemalagd
-process som körs på GitHubs servrar och saknar åtkomst till panelens
-datafil — den kan alltså *inte* styras via ⚙️-knappen, utan behöver egna
-repo-secrets enligt nedan.
+- **ntfy topic** — push to your phone via [ntfy.sh](https://ntfy.sh).
+- **HA webhook URL** — optional, POSTs `{ title, message }` to a Home
+  Assistant webhook URL (**Settings → Automations → Webhook trigger** in
+  Home Assistant gives you the URL). An HA automation can then do whatever
+  you like with it (show it on a screen, speak it aloud, flash a light) in
+  addition to the ntfy push. Set one, both, or neither — entirely optional.
 
-## Frostvarning – kom igång
+**🔔 Notification center** — the bell icon top-right (next to "Create new")
+collects current issues computed from your own data: frost risk (calibrated
+per zone where possible), soil too dry/too wet, unusually cold or warm,
+sensors that can't be reached, and harvest reminders for plantings whose
+harvest month is now. Each notification can be **marked done (✓)** or
+**dismissed (×)** — the choice is saved server-side so it won't reappear on
+your next visit or on another device. A handled notification resurfaces
+automatically if the same condition still applies the next day (or next
+month for harvest reminders) — it's "done for now," not gone for good.
 
-1. Skapa ett GitHub-repo-secret **`GEO_LAT`** och **`GEO_LON`** (era
-   trädgårds koordinater, t.ex. `59.85` och `17.63` — sök på
-   [OpenStreetMap](https://www.openstreetmap.org) och högerklicka på platsen
-   för att få koordinaterna).
-2. Sätt secret **`NTFY_TOPIC`** (samma eller ett nytt ämne som Bostadsvakt
-   använder) och/eller secret **`WEBHOOK_URL`** (se "Notiser" ovan).
-3. Valfritt: repo-variabel **`FROST_TROSKEL`** (grader C, standard `3` —
-   marginal mot markfrost eftersom SMHI:s prognos är lufttemperatur 2 m upp,
-   inte marktemperatur).
-4. Fliken **Actions** → **Frostvarning** → **Run workflow** för att testa
-   direkt, annars körs den automatiskt varje kväll kl 18 (sommartid).
+**The daily harvest-reminder check** is configured directly in the UI —
+click the gear icon top-right and fill in the ntfy topic/webhook URL, no
+SSH or docker-compose needed. The `NTFY_TOPIC`/`WEBHOOK_URL` environment
+variables in docker-compose still work as defaults if you'd rather set them
+there (e.g. before you've opened the panel for the first time) — whatever
+is saved via the gear icon in the panel wins if both are set.
 
-Utan `GEO_LAT`/`GEO_LON` hoppar jobbet över och loggar varför, i stället för
-att misslyckas — annars hade den schemalagda körningen larmat varje natt bara
-för att bevakningen inte var påslagen än.
+**The frost-warning job on GitHub Actions** is a separate, scheduled process
+that runs on GitHub's own servers and has no access to the panel's data file
+— it can *not* be configured via the gear icon, and needs its own repo
+secrets (see below).
 
-## Panelen – kom igång
+## Getting started — frost warning
+
+1. Create GitHub repo secrets **`GEO_LAT`** and **`GEO_LON`** (your garden's
+   coordinates, e.g. `59.85` and `17.63` — look it up on
+   [OpenStreetMap](https://www.openstreetmap.org) and right-click the spot
+   to get the coordinates).
+2. Set secret **`NTFY_TOPIC`** and/or secret **`WEBHOOK_URL`** (see
+   [Notifications](#notifications)).
+3. Optional: repo variable **`FROST_TROSKEL`** (degrees C, default `3` — a
+   margin against ground frost, since SMHI's forecast is air temperature 2m
+   up, not ground temperature).
+4. **Actions** tab → **Frostvarning** → **Run workflow** to test immediately,
+   otherwise it runs automatically every evening at 18:00 (Swedish summer
+   time).
+
+Without `GEO_LAT`/`GEO_LON` the job skips itself and logs why, instead of
+failing — otherwise the scheduled run would alert every night just because
+the watch hadn't been set up yet.
+
+## Getting started — the panel
 
 ```bash
 sudo mkdir -p /opt/docker/growarr
@@ -284,80 +261,100 @@ cd /opt/docker/growarr
 sudo git clone https://github.com/mathiasmholm/growarr.git .
 ```
 
-Fyll i `HA_TOKEN` (samma långlivade token som för `hushallsekonomi` funkar
-fint, eller skapa en ny) och `GEO_LAT`/`GEO_LON` i
-`docker-compose.example.yml` (ntfy-ämne/webhook-URL kan lämnas tomma här och
-istället sättas via ⚙️ i panelen efter start, se "Notiser" ovan), döp om och
-starta:
+Fill in `HA_TOKEN` (a long-lived Home Assistant access token) and
+`GEO_LAT`/`GEO_LON` in `docker-compose.example.yml` (the ntfy
+topic/webhook URL can be left blank here and set via the gear icon in the
+panel after start instead, see [Notifications](#notifications)), rename and
+start:
 
 ```bash
 sudo mv docker-compose.example.yml docker-compose.yml
 sudo docker compose up -d
 ```
 
-Bilden byggs och pushas automatiskt till GHCR av GitHub Actions vid varje
-push (se `.github/workflows/docker-publish.yml`), och Watchtower-labeln på
-containern gör att den nya versionen rullas ut automatiskt på home-vm — inga
-manuella `git pull`/`docker compose up --build` behövs efter första
-installationen.
+The image is built and pushed to GHCR automatically by GitHub Actions on
+every push (see `.github/workflows/docker-publish.yml`). If you run
+[Watchtower](https://containrrr.dev/watchtower/) with the label already set
+on the container, new versions roll out automatically — no manual
+`git pull`/`docker compose up --build` needed after the first install.
 
-Testa: `curl http://127.0.0.1:8097/api/vader` (obs: `127.0.0.1`, inte bara
-`localhost` – annars kan IPv6/IPv4 krångla, se Bostadsvakt/Hushållsekonomis
-felsökningshistorik).
+Test it: `curl http://127.0.0.1:8097/api/vader` (note: `127.0.0.1`, not just
+`localhost` — otherwise IPv6/IPv4 resolution can get in the way).
 
-### Koppla in bakom er reverse proxy
+### Environment variables
 
-Samma mönster som de andra apparna: en **Custom Location** i Nginx Proxy
-Manager på det befintliga Proxy Host som redan pekar mot Home Assistant:
+| Variable | Required | Description |
+|---|---|---|
+| `PORT` | No (default `8097`) | Port the panel listens on |
+| `HA_URL` | Yes, for HA features | Home Assistant base URL, e.g. `http://localhost:8123` |
+| `HA_TOKEN` | Yes, for HA features | Long-lived Home Assistant access token |
+| `GEO_LAT` / `GEO_LON` | Yes, for weather/sun map | Your garden's coordinates |
+| `NTFY_TOPIC` | No | Default ntfy topic for harvest reminders (overridable in-app) |
+| `WEBHOOK_URL` | No | Default Home Assistant webhook URL (overridable in-app) |
+| `ANTHROPIC_API_KEY` | No | Enables Claude-powered watering insight, AI chat and notification prioritization |
+
+## Reverse proxy setup
+
+A **Custom Location** on whatever reverse proxy already fronts your
+Home Assistant instance (e.g. Nginx Proxy Manager):
 
 - Location: `/growarr`
-- Forward Hostname/IP: samma som ni redan använder för HA
+- Forward Hostname/IP: same as you already use for Home Assistant
 - Forward Port: `8097`
 
-Lägg sen till en egen sida i HA:s sidomeny (**Inställningar →
-Kontrollpaneler → Lägg till kontrollpanel → Ny kontrollpanel från en URL**)
-som pekar på `https://<er-domän>/growarr/` — **glöm inte det
-avslutande snedstrecket**, annars letar panelen efter sina egna API-anrop
-på fel ställe.
+Then add a page to Home Assistant's sidebar (**Settings → Dashboards → Add
+Dashboard → New dashboard from a URL**) pointing at
+`https://<your-domain>/growarr/` — **don't forget the trailing slash**, or
+the panel will look for its own API calls in the wrong place.
 
-## Endpoints
+## API reference
 
-| Metod | Path | Body | Gör |
+| Method | Path | Body | Does |
 |---|---|---|---|
-| GET | `/` | – | Panelen (HTML) |
-| GET | `/api/vader` | – | 5-dagars väderprognos från SMHI, plus nu-temperatur och koordinater (används av solkartan) |
-| GET | `/api/odlingar` | – | Hämtar zoner + odlingsjournalen |
-| POST | `/api/odlingar` | `{ namn, zonId?, antal?, layout?, planterad?, skordFonster?, skordManad?, anteckning? }` | Lägger till en odling (`antal`: 1–200 st, `layout`: `klunga`/`fyll`) |
-| POST | `/api/odlingar/uppdatera` | `{ id, antal?, layout?, x?, y?, planterad?, skordFonster?, skordManad?, anteckning?, jord?, enhetIds? }` | Uppdaterar en odling, inkl. antal, utseende och plats i sin zon |
-| POST | `/api/odlingar/ta-bort` | `{ id }` | Tar bort en odling |
-| POST | `/api/zoner` | `{ namn, typ?, x?, y?, kartaId?, foralderId? }` | Lägger till en zon (`typ`: `vaxthus`/`utomhus`/`inomhus`/`odlingslada`/`annat`). Med `foralderId` blir den en sektion inuti den zonen |
-| POST | `/api/kartor` | `{ namn }` | Lägger till en trädgårdskarta (flik) |
-| POST | `/api/kartor/ta-bort` | `{ id }` | Tar bort en karta (zonerna flyttas till första kvarvarande) |
-| POST | `/api/widgets` | `{ titel, typ, enhetIds?, entityId?, kolumn? }` | Lägger till ett eget block (`typ`: `entiteter`/`kamera`, `kolumn`: `huvud`/`sido`) |
-| POST | `/api/widgets/uppdatera` | `{ id, titel?, enhetIds?, entityId?, kolumn? }` | Uppdaterar ett eget block |
-| POST | `/api/widgets/ordna` | `{ ids: [...] }` | Sparar ny ordning på blocken (↑/↓ i panelen) |
-| POST | `/api/widgets/ta-bort` | `{ id }` | Tar bort ett eget block |
-| GET | `/api/kamera?entityId=` | – | Proxar en ögonblicksbild från en HA-kameraentitet (HA-token stannar på servern) |
-| POST | `/api/zoner/uppdatera` | `{ id, jord?, anteckning?, enhetIds?, x?, y?, bredd?, hojd?, hojdM?, foralderId? }` | Uppdaterar en zon, inkl. position/storlek på kartan, höjd (för solkartan) och vilken zon den ligger i |
-| POST | `/api/zoner/ta-bort` | `{ id }` | Tar bort en zon (plantor blir okategoriserade, sektioner flyttas upp en nivå) |
-| GET | `/api/enheter/status` | – | Hämtar nuvarande tillstånd för alla bevakade HA-entiteter |
-| POST | `/api/enheter` | `{ entityId, namn? }` | Lägger till en bevakad HA-entitet |
-| POST | `/api/enheter/ta-bort` | `{ id }` | Tar bort en bevakad enhet |
-| GET | `/api/ha-entiteter` | – | Hela HA:s entitetslista, för sökbar autocomplete (kräver `HA_TOKEN`) |
-| GET | `/api/historik` | – | Hämtar loggad historik för entiteter kopplade till zoner/odlingar |
-| GET | `/api/bevattning` | – | Hämtar den Claude-genererade bevattningsinsikten (cachad 4h) |
-| POST | `/api/chatt` | `{ meddelanden: [{ roll, text, bild? }] }` | AI-chatt med valfritt foto (`bild: { typ, data }`, base64) |
-| GET | `/api/installningar` | – | Hämtar sparat ntfy-ämne/webhook-URL samt kartans riktning/skala |
-| POST | `/api/installningar` | `{ ntfyTopic?, webhookUrl?, norrGrader?, kartaBreddM? }` | Sparar inställningarna (via ⚙️ i panelen) |
-| POST | `/api/notiser` | `{ id, atgard: "klar"\|"avvisad" }` | Markerar en notis i notiscentret som hanterad, så den inte dyker upp igen |
-| POST | `/api/notiser/ai` | `{ kandidater: [{ id, titel, text, niva }] }` | Låter Claude prioritera/slå ihop/skriva om notiscentrets kandidater (kräver `ANTHROPIC_API_KEY`, annars returneras kandidaterna oförändrade) |
+| GET | `/` | – | The panel (HTML) |
+| GET | `/api/vader` | – | 5-day weather forecast from SMHI, plus current temperature and coordinates (used by the sun map) |
+| GET | `/api/odlingar` | – | Fetches zones + the planting journal |
+| POST | `/api/odlingar` | `{ namn, zonId?, antal?, layout?, planterad?, skordFonster?, skordManad?, anteckning? }` | Adds a planting (`antal`: 1–200, `layout`: `klunga`/`fyll`) |
+| POST | `/api/odlingar/uppdatera` | `{ id, antal?, layout?, x?, y?, planterad?, skordFonster?, skordManad?, anteckning?, jord?, enhetIds? }` | Updates a planting, incl. quantity, layout and position within its zone |
+| POST | `/api/odlingar/ta-bort` | `{ id }` | Removes a planting |
+| POST | `/api/zoner` | `{ namn, typ?, x?, y?, kartaId?, foralderId? }` | Adds a zone (`typ`: `vaxthus`/`utomhus`/`inomhus`/`odlingslada`/`annat`). With `foralderId` it becomes a section inside that zone |
+| POST | `/api/kartor` | `{ namn }` | Adds a garden map (tab) |
+| POST | `/api/kartor/ta-bort` | `{ id }` | Removes a map (its zones move to the first remaining one) |
+| POST | `/api/widgets` | `{ titel, typ, enhetIds?, entityId?, kolumn? }` | Adds a custom block (`typ`: `entiteter`/`kamera`, `kolumn`: `huvud`/`sido`) |
+| POST | `/api/widgets/uppdatera` | `{ id, titel?, enhetIds?, entityId?, kolumn? }` | Updates a custom block |
+| POST | `/api/widgets/ordna` | `{ ids: [...] }` | Saves new block order (↑/↓ in the panel) |
+| POST | `/api/widgets/ta-bort` | `{ id }` | Removes a custom block |
+| GET | `/api/kamera?entityId=` | – | Proxies a snapshot from a Home Assistant camera entity (the HA token stays server-side) |
+| POST | `/api/zoner/uppdatera` | `{ id, jord?, anteckning?, enhetIds?, x?, y?, bredd?, hojd?, hojdM?, foralderId? }` | Updates a zone, incl. map position/size, height (for the sun map), and which zone it's nested in |
+| POST | `/api/zoner/ta-bort` | `{ id }` | Removes a zone (plantings become uncategorized, sections move up one level) |
+| GET | `/api/enheter/status` | – | Fetches current state for every watched Home Assistant entity |
+| POST | `/api/enheter` | `{ entityId, namn? }` | Adds a watched Home Assistant entity |
+| POST | `/api/enheter/ta-bort` | `{ id }` | Removes a watched entity |
+| GET | `/api/ha-entiteter` | – | The full Home Assistant entity list, for searchable autocomplete (requires `HA_TOKEN`) |
+| GET | `/api/historik` | – | Fetches logged history for entities linked to zones/plantings |
+| GET | `/api/bevattning` | – | Fetches the Claude-generated watering insight (cached 4h) |
+| POST | `/api/chatt` | `{ meddelanden: [{ roll, text, bild? }] }` | AI chat with an optional photo (`bild: { typ, data }`, base64) |
+| GET | `/api/installningar` | – | Fetches the saved ntfy topic/webhook URL plus the map's orientation/scale |
+| POST | `/api/installningar` | `{ ntfyTopic?, webhookUrl?, norrGrader?, kartaBreddM? }` | Saves settings (via the gear icon in the panel) |
+| POST | `/api/notiser` | `{ id, atgard: "klar"\|"avvisad" }` | Marks a notification-center item as handled, so it won't reappear |
+| POST | `/api/notiser/ai` | `{ kandidater: [{ id, titel, text, niva }] }` | Lets Claude prioritize/merge/rewrite the notification center's candidates (requires `ANTHROPIC_API_KEY`, otherwise the candidates are returned unchanged) |
 
-## Framtida utbyggnad
+## Security model
 
-Automatisk vattenhantering är inte byggt än (kräver kända ventil-/pump-
-entiteter, som ni inte har förrän ni har eget hus) men "Enheter"-listan är
-redo att bli grunden för det: lägg till jordfuktighetssensorer där först,
-och när ni vet exakt vilken integration/entitet er bevattningsventil blir
-(t.ex. en `switch`- eller `valve`-entitet) hör av er, så bygger vi
-automatiseringslogik (t.ex. "vattna om jordfuktighet under X% och ingen
-nederbörd väntas") ovanpå samma data.
+There's no login. The panel is meant to sit on a private network — reachable
+only through your own LAN/VPN, or behind whatever Zero Trust layer (e.g.
+Cloudflare Access, Tailscale) already protects the rest of your home-lab.
+Don't expose it directly to the public internet without adding your own
+authentication layer in front of it.
+
+## Roadmap
+
+Automatic watering isn't built yet (it needs known valve/pump entities,
+which most people don't have until they own a house with irrigation
+hardware) — but the "Entities" list is already the foundation for it: add
+soil-moisture sensors there first, and once you know exactly which
+integration/entity your watering valve will be (e.g. a `switch`- or
+`valve`-entity), automation logic (e.g. "water if soil moisture is under
+X% and no rain is expected") can be built on top of the same data.
+
+Contributions and feature ideas are welcome — open an issue or a PR.
