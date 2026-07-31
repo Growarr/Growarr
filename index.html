@@ -151,7 +151,8 @@
   .vader-dag .temp .min { color:var(--muted); font-weight:500; }
   .vader-dag .nb { font-size:.72rem; color:var(--muted); margin-top:4px; }
   .frost-varning { font-size:.8rem; color:var(--warn); margin-top:12px; }
-  .insikt { display:flex; align-items:center; gap:12px; margin-top:4px; font-size:.92rem; }
+  .insikt { display:flex; align-items:center; gap:12px; margin-top:4px; font-size:.92rem;
+    padding-top:14px; border-top:1px solid var(--border); }
   .insikt .ikon { font-size:1.6rem; flex:0 0 auto; }
   .ai-tid { font-size:.74rem; color:var(--muted); margin-top:4px; }
 
@@ -239,6 +240,17 @@
     transition:background .18s ease, color .18s ease; }
   .vy-segment-btn:hover { transform:none; box-shadow:none; color:var(--text); }
   .vy-segment-btn.aktiv { background:var(--surface); color:var(--text); box-shadow:0 2px 6px rgba(0,0,0,.28); }
+  /* Dagens väder i kartkortets rubrikrad – "allt om platsen på en gång"
+     utan att klämma in den rikare kartan i en delad ruta. Den fulla
+     5-dagarsprognosen bor för sig i sidokolumnen, ihop med Bevattning. */
+  .dagens-vader { display:flex; align-items:center; gap:8px; font-weight:650; flex:0 0 auto; }
+  .dagens-vader .ikon { font-size:1.2rem; line-height:1; }
+  .dagens-vader .temp { font-size:.95rem; font-variant-numeric:tabular-nums; }
+  .dagens-vader .temp .min { color:var(--muted); font-weight:500; margin-left:2px; }
+  .dagens-vader .frost-chip { display:flex; align-items:center; gap:4px; font-size:.72rem; font-weight:700;
+    color:var(--warn); background:color-mix(in srgb, var(--warn) 16%, transparent);
+    border-radius:99px; padding:3px 9px 3px 7px; }
+  .dagens-vader .frost-chip svg { width:12px; height:12px; }
   .karta-redigera-btn { display:flex; align-items:center; gap:6px; padding:8px 14px 8px 12px; font-size:.8rem;
     background:var(--surface2); color:var(--muted); border:1px solid var(--border); box-shadow:none; }
   .karta-redigera-btn:hover { color:var(--text); border-color:var(--accent); transform:none; box-shadow:none; }
@@ -874,14 +886,9 @@
 
     <div class="dash-kol">
       <div class="card" style="margin-top:20px">
-        <h2>Väder, kommande dagar</h2>
-        <div class="vader-rader" id="vaderInnehall">Laddar …</div>
-        <div class="frost-varning" id="frostVarning"></div>
-      </div>
-
-      <div class="card">
         <div class="karta-header">
           <h2 style="margin-bottom:0" id="kartaKortTitel">Trädgårdskarta</h2>
+          <div class="dagens-vader" id="dagensVader"></div>
         </div>
         <div class="vy-segment" id="vySegment">
           <button class="vy-segment-btn aktiv" data-vy="oversikt">Översikt</button>
@@ -948,8 +955,10 @@
 
     <div class="dash-kol">
       <div class="card" style="margin-top:20px">
-        <h2>Bevattning</h2>
-        <div class="insikt" id="bevattningInnehall">Laddar …</div>
+        <h2>Väder & bevattning</h2>
+        <div class="vader-rader" id="vaderInnehall">Laddar …</div>
+        <div class="frost-varning" id="frostVarning"></div>
+        <div class="insikt" id="bevattningInnehall" style="margin-top:16px">Laddar …</div>
       </div>
 
       <div class="card">
@@ -1302,6 +1311,21 @@ function renderaVader(data) {
         `<div>${esc(r.namn)}: ner mot <strong>${r.min.toFixed(1).replace(".", ",")}°</strong> ` +
         `(ligger typiskt ${offsetText(r.offset)} prognosen)</div>`).join("")}</div>` : "")
     : "";
+  renderaDagensVader(data);
+}
+// En smal rad högst upp i trädgårdskarte-kortet: samma "allt om platsen på
+// en gång"-känsla som referensdesignens väder+karta-kort, utan att klämma
+// in vår mycket rikare karta i en fast liten ruta. Den fulla 5-dagars-
+// prognosen bor kvar för sig i sidokolumnen, ihop med Bevattning.
+function renderaDagensVader(data) {
+  const el = $("dagensVader");
+  if (!el) return;
+  if (!data || data.fel || !data.dagar?.length) { el.innerHTML = ""; return; }
+  const idag = data.dagar[0];
+  const frost = idag.min <= FROST_TROSKEL;
+  el.innerHTML = `<span class="ikon">${VADER_IKON[idag.symbol] ?? "🌡️"}</span>
+    <span class="temp">${idag.max}°<span class="min">/${idag.min}°</span></span>
+    ${frost ? `<span class="frost-chip">${IKON_FROST}Frost</span>` : ""}`;
 }
 
 // ---- Zonvis frostprognos ----

@@ -11,13 +11,15 @@ Två delar i ett repo:
    mellan dem, styrt av URL-hash så bakåtknappen i webbläsaren fungerar):
 
    **Översikten** (`/`) — en ren visuell dashboard, inget att fylla i:
-   - **Väderprognos**, 5 dagar framåt med riktiga väderikoner, frostrisk
-     markerad.
-   - **Bevattning** — en Claude-genererad rekommendation som väger in
-     väderprognosen, era zoner/odlingar och kopplade jordfuktighetssensorers
-     senaste värden (se "Smart bevattning" nedan). Faller tillbaka på en
-     enkel regelbaserad insikt (baserad på väntad nederbörd) om
-     `ANTHROPIC_API_KEY` inte är satt.
+   - **Dagens väder** visas som en smal rad högst upp i trädgårdskarte-kortet
+     (ikon, dagens max/min-temperatur, frost-chip vid frostrisk) — allt om
+     platsen på en gång, utan att klämma in kartan i en delad ruta.
+   - **Väder & bevattning** i sidokolumnen — den fulla 5-dagarsprognosen med
+     riktiga väderikoner och frostrisk markerad, följt av **Bevattning**: en
+     Claude-genererad rekommendation som väger in väderprognosen, era
+     zoner/odlingar och kopplade jordfuktighetssensorers senaste värden (se
+     "Smart bevattning" nedan). Faller tillbaka på en enkel regelbaserad
+     insikt (baserad på väntad nederbörd) om `ANTHROPIC_API_KEY` inte är satt.
    - **Flera trädgårdskartor** — flikar ovanför kartan (t.ex. "Framsidan",
      "Baksidan", "Växthuset"). Klicka en flik för att byta karta; zoner hör
      till den karta de skapades på. Nya kartor läggs till med **+ Ny karta**
