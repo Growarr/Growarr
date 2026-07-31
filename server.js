@@ -19,6 +19,7 @@ const WEBHOOK_URL = process.env.WEBHOOK_URL || "";
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || "";
 const ANTHROPIC_MODEL = "claude-sonnet-5";
 const PANEL_HTML = join(dirname(fileURLToPath(import.meta.url)), "index.html");
+const LOGO_PNG = join(dirname(fileURLToPath(import.meta.url)), "logo.png");
 
 function stockholmManad(d = new Date()) {
   const delar = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Stockholm", year: "numeric", month: "2-digit" }).formatToParts(d);
@@ -795,6 +796,11 @@ const server = createServer(async (req, res) => {
     }
     if (req.method === "GET" && p.endsWith("/api/vader")) {
       return skickaJson(res, 200, await hamtaVader());
+    }
+    if (req.method === "GET" && p.endsWith("/logo.png")) {
+      const png = await readFile(LOGO_PNG);
+      res.writeHead(200, { "Content-Type": "image/png", "Cache-Control": "public, max-age=86400" });
+      return res.end(png);
     }
     if (req.method === "GET" && !p.includes("/api/")) {
       const html = await readFile(PANEL_HTML, "utf8");
