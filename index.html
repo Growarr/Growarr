@@ -612,13 +612,10 @@
   .modal-entiteter { margin-top:22px; padding-top:18px; border-top:1px solid var(--border); }
   .modal-lagg-entitet { display:flex; gap:8px; margin-top:14px; }
   .modal-lagg-entitet select, .modal-lagg-entitet input { flex:1; }
-  /* Snabbtillägg av plantor – byggt för jordiga fingrar på en telefon:
-     stora tryckytor, inget tangentbord i det vanliga fallet. */
-  .sort-chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
-  .sort-chip { padding:10px 15px; border-radius:99px; font-size:.86rem; font-weight:600;
-    background:var(--surface2); color:var(--text); border:1px solid var(--border); box-shadow:none; }
-  .sort-chip:hover { border-color:var(--accent); transform:none; box-shadow:none; }
-  .sort-chip.aktiv { background:var(--grad); color:#04140e; border-color:transparent; }
+  /* Snabbtillägg av plantor – ett vanligt textfält med förslag (<datalist>,
+     samma mönster som HA-entitetssökningen) i stället för en vägg av
+     tryckknappar: fritext går alltid, men man ser ändå att det finns en
+     lista att välja ur. */
   .antal-rad { display:flex; align-items:center; gap:10px; margin-top:16px; }
   .antal-rad .lbl { flex:1; margin:0; }
   .antal-rad input { width:76px; text-align:center; font-size:1.1rem; font-weight:700;
@@ -633,9 +630,13 @@
   .lagg-till-stor { width:100%; margin-top:14px; padding:14px; font-size:.95rem; }
   .lagg-till-stor:disabled { opacity:.4; cursor:default; }
   .plant-lista { display:flex; flex-direction:column; gap:2px; }
-  .plant-rad { display:flex; align-items:center; gap:10px; padding:7px 0; font-size:.88rem;
-    border-top:1px solid var(--border); }
+  .plant-rad { display:flex; align-items:center; gap:10px; padding:7px 4px; font-size:.88rem;
+    border-top:1px solid var(--border); border-radius:8px; margin:0 -4px; }
   .plant-rad:first-child { border-top:0; }
+  /* Klickbar för att öppna plantans egen översikt (samma detaljpanel som
+     klick på kartan) – inte bara en radera-rad. */
+  .plant-rad-klickbar { cursor:pointer; transition:background .12s ease; }
+  .plant-rad-klickbar:hover { background:var(--surface2); }
   /* Ikon-badge: en liten rund färgad platta bakom en emoji, i stället för
      att ikonen bara flyter fritt bredvid texten – ger ett mer "designat"
      ikonsystem-intryck (lånat från SaaS-dashboards som Tanee) utan att vi
@@ -1009,6 +1010,7 @@
       <div><label class="lbl">Sök namn eller entity_id</label>
         <input type="text" id="eEntityId" list="haEntiteterList" autocomplete="off" placeholder="t.ex. jordfuktighet eller sensor.jord_vaxthus">
         <datalist id="haEntiteterList"></datalist>
+        <datalist id="sortForslagList"></datalist>
       </div>
       <div><label class="lbl">Namn</label><input type="text" id="eNamn" placeholder="fylls i automatiskt, går att ändra"></div>
       <button id="eLaggTillBtn">Lägg till</button>
@@ -1099,7 +1101,7 @@
 
     <div class="skapa-panel" id="skapaOdling" style="display:none">
       <div class="skapa-rad">
-        <div><label class="lbl">Namn</label><input type="text" id="oNamn" placeholder="t.ex. Tomater"></div>
+        <div><label class="lbl">Namn</label><input type="text" id="oNamn" list="sortForslagList" autocomplete="off" placeholder="t.ex. Tomater"></div>
         <div><label class="lbl">Zon</label><select id="oZon"><option value="">Ingen zon</option></select></div>
       </div>
       <div class="skapa-rad" style="margin-top:12px">
@@ -1386,6 +1388,7 @@ async function laddaOdlingar() {
   if (!kartor.some((k) => k.id === aktivKartaId)) aktivKartaId = kartor[0]?.id ?? null;
   renderaKartaFlikar();
   uppdateraZonVal();
+  uppdateraSortForslagList();
   renderaKarta();
   renderaHistorik();
   renderaWidgets();
@@ -3189,18 +3192,15 @@ function zonPlantorHtml(z) {
   return `<div class="modal-entiteter">
     <label class="lbl">Plantor i zonen${totalt ? ` (${totalt} st)` : ""}</label>
     ${lista.length ? `<div class="plant-lista">${lista.map((o) => `
-      <div class="plant-rad">
+      <div class="plant-rad plant-rad-klickbar" data-id="${esc(o.id)}">
         <span class="plant-ikon">${ikonForVaxt(o.namn)}</span>
         <span class="namn">${esc(o.namn)}</span>
         <span class="varde">${antalFor(o)} st${layoutFor(o) === "fyll" ? " · fyller ytan" : ""}${o.skordManad ? ` · ${esc(manadNamn(o.skordManad))}` : ""}</span>
         ${redigerarLayout ? `<button class="ta-bort odling-ta-bort" data-id="${esc(o.id)}" title="Ta bort planta" style="position:static">×</button>` : ""}
       </div>`).join("")}</div>` : '<div class="tom">Inga plantor här än.</div>'}
-    <label class="lbl" style="margin-top:18px">Lägg till – tryck på en sort</label>
-    <div class="sort-chips">
-      ${sortForslag().map((n) => `<button class="sort-chip" data-sort="${esc(n)}">${ikonForVaxt(n)} ${esc(n)}</button>`).join("")}
-      <button class="sort-chip sort-annat" data-sort="">✎ Annat</button>
-    </div>
-    <input type="text" id="zNyPlanta" placeholder="Skriv sortens namn" style="display:none; margin-top:10px">
+    <label class="lbl" style="margin-top:18px">Lägg till planta</label>
+    <input type="text" id="zNyPlanta" list="sortForslagList" autocomplete="off"
+      placeholder="Skriv eller välj en sort, t.ex. Gurkor">
     <div class="antal-rad">
       <span class="lbl">Antal (st)</span>
       <button class="antal-btn" id="antalNer" title="Färre">−</button>
@@ -3211,9 +3211,17 @@ function zonPlantorHtml(z) {
       <input type="checkbox" id="zNyPlantaFyll">
       Fyll hela ytan med sorten
     </label>
-    <button id="zNyPlantaBtn" class="lagg-till-stor" disabled>Välj en sort ovan</button>
+    <button id="zNyPlantaBtn" class="lagg-till-stor" disabled>Skriv ett namn ovan</button>
     ${redigerarLayout ? "" : '<p class="lbl" style="margin-top:8px">Slå på <strong>Redigera</strong> ovanför kartan för att kunna ta bort plantor.</p>'}
   </div>`;
+}
+// Fyller <datalist> med förslag (egna sorter, vanligast först + vanliga
+// köksväxter) – ett vanligt textfält med en föreslagen lista, i stället för
+// en vägg av tryckknappar. Måste anropas varje gång panelen ritas om, eftersom
+// <datalist>-elementet ligger en gång i sidan men innehållet beror på kontext.
+function uppdateraSortForslagList() {
+  const dl = $("sortForslagList");
+  if (dl) dl.innerHTML = sortForslag().map((n) => `<option value="${esc(n)}">`).join("");
 }
 // Förslagen är era egna sorter först, vanligast överst – det man planterar
 // mest av är det man planterar igen. Fylls på med vanliga köksväxter tills
@@ -3240,7 +3248,7 @@ function uppdateraSnabbknapp() {
   const namn = ($("zNyPlanta")?.value ?? "").trim();
   const antal = Number($("zNyPlantaAntal")?.value) || 1;
   btn.disabled = !namn;
-  btn.textContent = namn ? `Lägg till ${antal} × ${namn}` : "Välj en sort ovan";
+  btn.textContent = namn ? `Lägg till ${antal} × ${namn}` : "Skriv ett namn ovan";
 }
 function stegaAntal(steg) {
   const falt = $("zNyPlantaAntal");
@@ -3288,6 +3296,7 @@ function mikroklimatText(z) {
   return `<p class="sol-timmar">🌡️ Ligger typiskt ${offsetText(k.offset)} prognosen (${k.matningar} mätningar).${natt}</p>`;
 }
 function renderaDetaljPanel() {
+  uppdateraSortForslagList(); // förslagslistan kan ha ändrats sen sist (ny sort tillagd)
   if (!valtMal) {
     // Stäng arket också – annars blir det stående tomt om det man tittade på
     // just raderades.
@@ -3497,19 +3506,6 @@ document.addEventListener("click", async (e) => {
     return;
   }
 
-  // Snabbtillägg: välj sort med ett tryck. DOM:en uppdateras på plats i
-  // stället för att panelen ritas om – annars tappar arket sin scrollposition
-  // mitt i att man håller på.
-  const sortChip = e.target.closest(".sort-chip");
-  if (sortChip) {
-    const annat = sortChip.classList.contains("sort-annat");
-    document.querySelectorAll(".sort-chip").forEach((c) => c.classList.toggle("aktiv", c === sortChip));
-    const fritext = $("zNyPlanta");
-    fritext.style.display = annat ? "" : "none";
-    if (annat) { fritext.value = ""; fritext.focus(); } else fritext.value = sortChip.dataset.sort;
-    uppdateraSnabbknapp();
-    return;
-  }
   if (e.target.closest("#antalNer")) { stegaAntal(-1); return; }
   if (e.target.closest("#antalUpp")) { stegaAntal(1); return; }
 
@@ -3528,6 +3524,10 @@ document.addEventListener("click", async (e) => {
     renderaDetaljPanel();
     return;
   }
+  // Klicka på en planta i listan (inte × i redigeringsläge) för att se dess
+  // egen översikt – samma detaljpanel som klick på kartan.
+  const plantRadEl = e.target.closest(".plant-rad-klickbar");
+  if (plantRadEl) { valjMal("odling", plantRadEl.dataset.id); return; }
 
   // Skapa-popupen
   if (e.target.closest("#skapaBtn")) { $("skapaBakgrund").style.display = "flex"; return; }
