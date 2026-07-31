@@ -1,7 +1,7 @@
 services:
-  tradgardsbevakning:
-    image: ghcr.io/mathiasmholm/tradgardsbevakning:latest # byggs och pushas automatiskt av GitHub Actions, se .github/workflows/docker-publish.yml
-    container_name: tradgardsbevakning
+  growarr:
+    image: ghcr.io/mathiasmholm/growarr:latest # byggs och pushas automatiskt av GitHub Actions, se .github/workflows/docker-publish.yml
+    container_name: growarr
     restart: unless-stopped
     network_mode: host # samma som homeassistant/bostadsvakt-api/hushallsekonomi
     labels:

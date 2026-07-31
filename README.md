@@ -1,4 +1,4 @@
-# 🌱 Trädgårdsbevakning
+# 🌱 Growarr
 
 Två delar i ett repo:
 
@@ -279,9 +279,9 @@ för att bevakningen inte var påslagen än.
 ## Panelen – kom igång
 
 ```bash
-sudo mkdir -p /opt/docker/tradgardsbevakning
-cd /opt/docker/tradgardsbevakning
-sudo git clone https://github.com/mathiasmholm/tradgardsbevakning.git .
+sudo mkdir -p /opt/docker/growarr
+cd /opt/docker/growarr
+sudo git clone https://github.com/mathiasmholm/growarr.git .
 ```
 
 Fyll i `HA_TOKEN` (samma långlivade token som för `hushallsekonomi` funkar
@@ -310,13 +310,13 @@ felsökningshistorik).
 Samma mönster som de andra apparna: en **Custom Location** i Nginx Proxy
 Manager på det befintliga Proxy Host som redan pekar mot Home Assistant:
 
-- Location: `/tradgardsbevakning`
+- Location: `/growarr`
 - Forward Hostname/IP: samma som ni redan använder för HA
 - Forward Port: `8097`
 
 Lägg sen till en egen sida i HA:s sidomeny (**Inställningar →
 Kontrollpaneler → Lägg till kontrollpanel → Ny kontrollpanel från en URL**)
-som pekar på `https://<er-domän>/tradgardsbevakning/` — **glöm inte det
+som pekar på `https://<er-domän>/growarr/` — **glöm inte det
 avslutande snedstrecket**, annars letar panelen efter sina egna API-anrop
 på fel ställe.
 

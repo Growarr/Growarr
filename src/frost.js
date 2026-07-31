@@ -25,7 +25,7 @@ if (!LAT || !LON) {
 // ett annat svarsformat ("time" istället för "validTime", platt "data"-
 // objekt istället för en parameters-array).
 const url = `https://opendata-download-metfcst.smhi.se/api/category/snow1g/version/1/geotype/point/lon/${LON}/lat/${LAT}/data.json`;
-const res = await fetch(url, { headers: { "User-Agent": "tradgardsbevakning (github.com/mathiasmholm/tradgardsbevakning)" } });
+const res = await fetch(url, { headers: { "User-Agent": "growarr (github.com/mathiasmholm/growarr)" } });
 if (!res.ok) {
   console.error(`SMHI svarade ${res.status}`);
   process.exit(1);
@@ -77,7 +77,7 @@ if (WEBHOOK_URL) {
   try {
     const res3 = await fetch(WEBHOOK_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "User-Agent": "tradgardsbevakning-bot/1.0 (+github.com/mathiasmholm/tradgardsbevakning)" },
+      headers: { "Content-Type": "application/json", "User-Agent": "growarr-bot/1.0 (+github.com/mathiasmholm/growarr)" },
       body: JSON.stringify({ title: titel, message: meddelande }),
     });
     if (!res3.ok) console.warn(`HA-webhook svarade ${res3.status}`);

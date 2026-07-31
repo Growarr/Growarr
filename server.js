@@ -1,4 +1,4 @@
-// Trädgårdsbevakning – panel för odlingsjournal, väderprognos (SMHI) och en
+// Growarr – panel för odlingsjournal, väderprognos (SMHI) och en
 // utbyggbar lista med HA-enheter. Tänkt att växa: lägg till jordfuktighets-
 // sensorer, ventiler m.m. som HA-entiteter här den dagen ni har dem
 // installerade – ingen kodändring behövs, bara ange entity_id i panelen.
@@ -96,7 +96,7 @@ async function hamtaVader() {
   // ett annat svarsformat ("time" istället för "validTime", platt "data"-
   // objekt istället för en parameters-array).
   const url = `https://opendata-download-metfcst.smhi.se/api/category/snow1g/version/1/geotype/point/lon/${GEO_LON}/lat/${GEO_LAT}/data.json`;
-  const res = await fetch(url, { headers: { "User-Agent": "tradgardsbevakning (github.com/mathiasmholm/tradgardsbevakning)" } });
+  const res = await fetch(url, { headers: { "User-Agent": "growarr (github.com/mathiasmholm/growarr)" } });
   if (!res.ok) return { fel: `SMHI svarade ${res.status}` };
   const data = await res.json();
 
@@ -442,7 +442,7 @@ async function skickaNotis(titel, meddelande) {
     try {
       const res = await fetch(webhookUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "User-Agent": "tradgardsbevakning-bot/1.0 (+github.com/mathiasmholm/tradgardsbevakning)" },
+        headers: { "Content-Type": "application/json", "User-Agent": "growarr-bot/1.0 (+github.com/mathiasmholm/growarr)" },
         body: JSON.stringify({ title: titel, message: meddelande }),
       });
       if (!res.ok) console.warn(`HA-webhook svarade ${res.status}`);
@@ -807,7 +807,7 @@ const server = createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => console.log(`tradgardsbevakning lyssnar på :${PORT}, data i ${DATA_PATH}`));
+server.listen(PORT, () => console.log(`growarr lyssnar på :${PORT}, data i ${DATA_PATH}`));
 migreraData().catch((err) => console.warn("Migrering misslyckades:", err.message));
 kollaSkordepaminnelser().catch((err) => console.warn("Skördepåminnelse-koll misslyckades:", err.message));
 loggaHistorik().catch((err) => console.warn("Historik-loggning misslyckades:", err.message));
