@@ -1585,9 +1585,9 @@ function plantorHtml(lista, iSektion = false, ruta = null) {
   const fyllda = lista.filter((o) => layoutFor(o) === "fyll");
   const samlade = lista.filter((o) => layoutFor(o) !== "fyll");
   return fyllda.map((o, i) => fyllHtml(o, i, fyllda.length, iSektion, ruta)).join("") +
-    samlade.map((o, i) => klungaHtml(o, i, iSektion, ruta)).join("");
+    samlade.map((o, i) => klungaHtml(o, i, samlade.length, iSektion, ruta)).join("");
 }
-function klungaHtml(o, i, iSektion, ruta) {
+function klungaHtml(o, i, totalKlungor, iSektion, ruta) {
   const antal = antalFor(o);
   const ritade = Math.min(antal, MAX_RITADE_KLUNGA);
   const kolumner = Math.ceil(Math.sqrt(ritade));
@@ -1599,7 +1599,7 @@ function klungaHtml(o, i, iSektion, ruta) {
       Math.floor((ruta.bredd * 0.78 - 6) / kolumner) - 2,
       Math.floor((ruta.hojd * 0.88 - 6) / rader) - 2));
   }
-  const { x, y } = plantPosition(o, i);
+  const { x, y } = plantPosition(o, i, totalKlungor);
   const vald = valtMal?.typ === "odling" && valtMal.id === o.id;
   const skordSnart = o.skordManad === new Date().toISOString().slice(0, 7);
   return `<div class="vaxt-grupp${vald ? " vald" : ""}${skordSnart ? " skord" : ""}" data-id="${esc(o.id)}"
@@ -1615,11 +1615,15 @@ function fyllHtml(o, i, antalFyllda, iSektion, ruta) {
   // Ytorna är oftast liggande, så rutnätet görs medvetet bredare än högt.
   const kolumner = Math.max(1, Math.round(Math.sqrt(ritade * 1.8)));
   const rader = Math.ceil(ritade / kolumner);
+  // "Fyll hela ytan" ska kännas fullt oavsett antal – få plantor ska bli
+  // STÖRRE för att täcka ytan, inte små ikoner med massor av luft runt.
+  // Storleken styrs därför av hur mycket plats varje ruta i rutnätet
+  // faktiskt har, inte av samma klunga-tabell som krymper efter antal.
   let storlek = ikonStorlek(ritade, iSektion);
   if (ruta) {
-    storlek = Math.max(9, Math.min(storlek,
-      Math.floor((ruta.bredd - 14) / kolumner) - 1,
-      Math.floor((ruta.hojd / antalFyllda - 14) / rader) - 1));
+    const cellBredd = ruta.bredd / kolumner;
+    const cellHojd = (ruta.hojd / antalFyllda) / rader;
+    storlek = Math.max(9, Math.min(64, Math.floor(Math.min(cellBredd, cellHojd) - 8)));
   }
   const bandHojd = 100 / antalFyllda;
   const vald = valtMal?.typ === "odling" && valtMal.id === o.id;
@@ -1632,12 +1636,20 @@ function fyllHtml(o, i, antalFyllda, iSektion, ruta) {
       ${antal > 1 ? `<span class="vaxt-antal">${antal}</span>` : ""}
     </div>`;
 }
-// Plantor utan sparad plats läggs ut i ett prydligt rutmönster tills man
-// drar dem – positionen sparas först när användaren faktiskt flyttar dem.
-function plantPosition(o, i) {
+// Plantor utan sparad plats läggs ut i ett rutnät som breddas efter hur
+// många sorter som faktiskt delar lådan (i stället för ett fast antagande
+// om 4 kolumner) – annars klämdes flera klungor ihop på varandra i en
+// smal låda med bara två-tre sorter. Klämningen på sparade koordinater
+// (samma vida gräns som dragEnd tillåter) läker samtidigt äldre plantor
+// som råkat sparas långt utanför sin låda och sett ut att ha försvunnit.
+function plantPosition(o, i, totalKlungor = 4) {
+  if (o.x != null && o.y != null) {
+    return { x: Math.min(1.2, Math.max(-0.2, o.x)), y: Math.min(1.2, Math.max(-0.2, o.y)) };
+  }
+  const kolumner = Math.min(4, Math.max(1, totalKlungor));
   return {
-    x: o.x ?? (0.16 + (i % 4) * 0.23),
-    y: o.y ?? (0.26 + Math.floor(i / 4) * 0.30),
+    x: (i % kolumner + 0.5) / kolumner,
+    y: 0.22 + Math.floor(i / kolumner) * 0.32,
   };
 }
 // Samma sak för sektioner inuti en zon.
@@ -2322,17 +2334,21 @@ async function dragEnd(e) {
 
   if (s.typ === "planta") {
     // Släpps plantan i en annan låda flyttar den dit; utanför alla lådor
-    // stannar den kvar i sin egen. Byter man INTE behållare används exakt
-    // det x/y som redan syns på skärmen (från dragMove) – ingen omräkning,
-    // ingen klämning, så det aldrig kan bli en synlig skillnad vid släpp.
-    // Räknar man om ändå (med den klämda andelIBehallare) skulle en dragning
-    // långt mot kanten "hoppa tillbaka" i det ögonblick man släpper, eftersom
-    // den fria rörelsen under själva dragningen inte har någon sådan gräns.
+    // stannar den kvar i sin egen. Byter man INTE behållare används i
+    // princip exakt det x/y som redan syns på skärmen (från dragMove) –
+    // ingen omräkning mot den nya rutan, så det aldrig blir en synlig
+    // "hoppa tillbaka"-skillnad vid släpp. Men rakt av, oklämt, kunde en
+    // dragning långt utanför lådan (utan att träffa en annan) spara ett x/y
+    // längre bort än ±20 % utanför ytan – osynligt bakom .zon-ytas
+    // overflow:hidden för alltid, tills man råkade hitta den i redigeringsläge
+    // och drog tillbaka den för hand. Samma vida gränser som andelIBehallare
+    // redan tillåter (så vanliga dragningar nära kanten aldrig klämmer synligt).
     const nyBehallare = slappMal(e, s.el, ".zon-plantor");
     const agare = nyBehallare?.closest(".zon-sektion, .zon-kort-canvas");
     const o = odlingar.find((x) => x.id === s.id);
     const byterZon = Boolean(agare && agare.dataset.id !== (o?.zonId ?? ""));
-    const patch = byterZon ? andelIBehallare(e, nyBehallare) : { x: s.x, y: s.y };
+    const patch = byterZon ? andelIBehallare(e, nyBehallare)
+      : { x: Math.min(1.2, Math.max(-0.2, s.x)), y: Math.min(1.2, Math.max(-0.2, s.y)) };
     if (byterZon) patch.zonId = agare.dataset.id;
     return sparaOdling(s.id, patch);
   }
