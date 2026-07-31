@@ -22,8 +22,8 @@ Två delar i ett repo:
      insikt (baserad på väntad nederbörd) om `ANTHROPIC_API_KEY` inte är satt.
    - **Flera trädgårdskartor** — flikar ovanför kartan (t.ex. "Framsidan",
      "Baksidan", "Växthuset"). Klicka en flik för att byta karta; zoner hör
-     till den karta de skapades på. Nya kartor läggs till med **+ Ny karta**
-     eller från Inställningar.
+     till den karta de skapades på. Nya kartor läggs till via **Skapa nytt**
+     → **Karta**, samma väg som zoner och plantor.
    - **Egna block** — lägg till egna kort på översikten: antingen en samling
      HA-entiteter (visas som färgkodade mätvärdesrutor) eller en kamerabild
      från en HA-kameraentitet. Skapas under Inställningar, där ni också
@@ -133,13 +133,16 @@ Två delar i ett repo:
      utskriftsfärdig kod att tejpa på lådan. Skanna den med telefonens
      kamera och zonen öppnas direkt (`#zon=<id>`) — ingen kartnavigering.
      Kodas och ritas helt lokalt (ingen extern tjänst, ingen nätverksbild).
-   - **Kompakt kartläge** — knappen **Kompakt** ovanför kartan byter de
-     fulla zonkorten mot en miniatyr-planritning: samma bredd, höjd och
-     riktning som de riktiga zonerna, bara flatfärgade efter zontyp i
-     stället för glas/trä-texturerna – som ett litet arkitektritat
-     siteplan. Klicka en form för att öppna samma detaljvy som vanligt.
-     **Karta** växlar tillbaka. Redigering av layouten kräver de fulla
-     korten och stängs av automatiskt när kompakt läge slås på.
+   - **Kompakt kartläge (standard)** — en miniatyr-planritning i stället för
+     fulla zonkort: samma bredd, höjd och riktning som de riktiga zonerna,
+     bara flatfärgade efter zontyp med en liten prick i stället för
+     glas/trä-texturerna – som ett litet arkitektritat siteplan. **Klicka en
+     zon för att zooma in på den** – kameran panorerar och förstorar precis
+     som ett kartkluster i Apple/Google Maps, övriga zoner tonas ner, och
+     zonen visas i sitt fulla, plantfyllda läge. En liten "← zonnamn"-chip
+     högst upp i vänstra hörnet zoomar tillbaka ut. Knappen **Karta** växlar
+     till att alltid visa alla zoner fullt utritade sida vid sida i stället
+     (nödvändigt för att redigera layouten, vilket bara går i det läget).
    - **Fyra sätt att se trädgården** — en flikrad ovanför kartan:
      - **Översikt** — kartan, som vanligt.
      - **Per zon** — ett sammanfattningskort per zon (typ, antal planterat,
@@ -180,6 +183,11 @@ Två delar i ett repo:
      om anropet misslyckas visas de vanliga, regelbaserade raderna precis
      som vanligt.
 
+   **Mobilnavigering** — sidonavet (Översikt/Inställningar) ligger som en fast
+   flikrad längst ner på telefonen i stället för högst upp, samma plats som i
+   de flesta mobilappar och utom vägen för klockan/"Skapa nytt" som redan
+   svävar uppe till höger.
+
    **Ikonspråk** — strukturella ikoner (zontyp, sensortyp, frost, "sensorn
    svarar inte", kamerakontroller) är tunna, enfärgade linjeikoner i samma
    stil som sidopanelens hem/kugghjul, i stället för emoji – det gav ett
@@ -189,6 +197,9 @@ Två delar i ett repo:
    kostat igenkänningsbarhet utan att vinna särskilt mycket.
 
    **Inställningar** (`/#installningar`) — allt ni fyller i eller lägger till:
+   - **Utseende** — Ljust/Mörkt/System. Följer enhetens läge som standard;
+     ett manuellt val sparas lokalt i webbläsaren (inte på servern, så det är
+     per enhet, inte per person).
    - **⚙️ Notiser** — ntfy-ämne och HA-webhook-URL för skördepåminnelser.
    - **Zoner** — lägg till nya bäddar, växthus, odlingslådor, inomhus/utomhus
      (dra dem sen på plats i Trädgårdskartan på översikten).

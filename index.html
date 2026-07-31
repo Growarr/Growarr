@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Trädgårdsbevakning</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2334d399' stroke-width='2'%3E%3Cpath d='M12 22v-9M12 13c-4-1-7-4-7-8 4 0 7 3 8 7M12 13c4-1 7-4 7-8-4 0-7 3-8 7'/%3E%3C/svg%3E">
+<script>
+// Sätts innan CSS:en ens hunnit tolkas, annars flimrar sidan till fel tema
+// ett ögonblick vid varje laddning om man valt ett annat läge än systemets.
+try {
+  var tradgardTema = localStorage.getItem("tradgard-tema");
+  if (tradgardTema === "light" || tradgardTema === "dark") document.documentElement.setAttribute("data-tema", tradgardTema);
+} catch (e) { /* privat läge/blockerad localStorage – kör bara systemets tema */ }
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -21,6 +29,19 @@
       --text:#132018; --muted:#5c7267;
       --shadow:0 1px 2px rgba(20,50,40,.04), 0 16px 32px -16px rgba(20,50,40,.14); }
   }
+  /* Manuellt valt tema (se Inställningar) väger tyngre än systemets, oavsett
+     vilket systemet råkar vara satt till – därav attributselektorn i stället
+     för ännu en media query. */
+  :root[data-tema="dark"] {
+    --bg:#080b09; --surface:#121a16; --surface2:#1a2420; --border:#233129;
+    --text:#eef7f1; --muted:#8fa398;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 16px 32px -14px rgba(0,0,0,.55);
+  }
+  :root[data-tema="light"] {
+    --bg:#eef8f2; --surface:#ffffff; --surface2:#f2f9f4; --border:#dcece1;
+    --text:#132018; --muted:#5c7267;
+    --shadow:0 1px 2px rgba(20,50,40,.04), 0 16px 32px -16px rgba(20,50,40,.14);
+  }
   * { box-sizing:border-box; margin:0; }
   body { background:
       radial-gradient(1200px 500px at 15% -10%, color-mix(in srgb, var(--accent) 12%, transparent), transparent),
@@ -28,6 +49,9 @@
       var(--bg);
     color:var(--text); -webkit-font-smoothing:antialiased;
     font:15px/1.6 "Inter","Segoe UI",system-ui,-apple-system,sans-serif; min-height:100vh; padding-bottom:72px; }
+  /* Rymmer den fasta flikraden längst ner på mobil (se .sidebar) så sista
+     kortet på sidan inte hamnar bakom den. */
+  @media (max-width:720px) { body { padding-bottom:calc(84px + env(safe-area-inset-bottom)); } }
   h1, h2, .total, button, .avatar { font-family:"Outfit","Inter",sans-serif; }
   .wrap { max-width:1560px; margin:0 auto; padding:0 24px; }
   .dashboard-rad { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:20px; }
@@ -128,10 +152,17 @@
   .side-btn.aktiv { background:var(--grad); color:#04140e;
     box-shadow:0 6px 16px -4px color-mix(in srgb, var(--accent) 60%, transparent); }
   @media (max-width:720px) {
+    /* Sidonavet blir en fast flikrad längst ner i stället för en rad högst
+       upp – dels för att det är den naturliga platsen för navigering i en
+       mobilapp, dels för att en rad upptill annars ligger exakt där
+       .topp-verktyg-fast redan svävar (klockan/"Skapa nytt"), vilket dolde
+       kugghjulet bakom dem. */
     .app-shell { flex-direction:column; }
-    .sidebar { width:100%; height:auto; flex-direction:row; justify-content:center; position:sticky; top:0;
-      border-right:0; border-bottom:1px solid var(--border); padding:10px; gap:10px; }
-    .brand-mark { margin-bottom:0; }
+    .sidebar { width:100%; height:auto; flex-direction:row; justify-content:center;
+      position:fixed; top:auto; bottom:0; left:0; right:0;
+      border-right:0; border-top:1px solid var(--border); padding:10px 10px max(10px, env(safe-area-inset-bottom));
+      gap:10px; z-index:20; }
+    .brand-mark { display:none; }
   }
   .tillbaka-btn { background:none; border:0; box-shadow:none; color:var(--muted); padding:8px 0 4px;
     font-size:.88rem; font-weight:600; cursor:pointer; }
@@ -165,9 +196,6 @@
   .karta-flik.aktiv { background:var(--grad); color:#04140e; border-color:transparent; }
   .karta-flik .flik-x { opacity:.6; font-size:.9rem; line-height:1; }
   .karta-flik .flik-x:hover { opacity:1; }
-  .karta-flik-ny { padding:7px 12px; border-radius:99px; font-size:.82rem; font-weight:600;
-    background:none; border:1px dashed var(--border); color:var(--muted); box-shadow:none; cursor:pointer; }
-  .karta-flik-ny:hover { color:var(--accent); border-color:var(--accent); transform:none; box-shadow:none; }
 
   /* Egna block (widgets) på översikten */
   .widget-kamera { width:100%; border-radius:var(--r-sm); display:block; background:var(--surface2); }
@@ -256,6 +284,10 @@
   .karta-redigera-btn:hover { color:var(--text); border-color:var(--accent); transform:none; box-shadow:none; }
   .karta-redigera-btn.aktiv { background:color-mix(in srgb, var(--warn) 20%, var(--surface2)); color:var(--warn);
     border-color:color-mix(in srgb, var(--warn) 50%, var(--border)); }
+  @media (max-width:720px) {
+    .karta-header { gap:8px; }
+    .karta-redigera-btn { padding:7px 11px 7px 10px; font-size:.76rem; gap:5px; }
+  }
   .karta-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; margin-top:4px; }
   .karta-canvas-wrap { position:relative; }
   /* Ramen är fast; allt innehåll ligger i .karta-scen som zoomas och panoreras.
@@ -334,18 +366,40 @@
      markera återanvänds rakt av, men egen positionering – .zon-kort sätter
      medvetet ingen position. */
   .zon-pin { position:absolute; transform:translate(-50%,-50%); z-index:2;
-    display:flex; flex-direction:column; align-items:flex-start; justify-content:flex-start;
-    padding:5px 7px; border-radius:7px; cursor:pointer; overflow:hidden;
-    border:1.5px solid transparent; transition:box-shadow .15s ease; }
-  .zon-pin.vaxthus { background:color-mix(in srgb, #34d399 15%, var(--surface2)); border-color:color-mix(in srgb, #34d399 38%, transparent); }
-  .zon-pin.odlingslada { background:color-mix(in srgb, #b07c46 20%, var(--surface2)); border-color:color-mix(in srgb, #b07c46 42%, transparent); }
-  .zon-pin.utomhus { background:color-mix(in srgb, #8d6848 20%, var(--surface2)); border-color:color-mix(in srgb, #8d6848 42%, transparent); }
-  .zon-pin.inomhus { background:color-mix(in srgb, #a78bfa 16%, var(--surface2)); border-color:color-mix(in srgb, #a78bfa 40%, transparent); }
-  .zon-pin.annat { background:var(--surface2); border-color:var(--border); border-style:dashed; }
+    display:flex; flex-direction:column; align-items:flex-start; justify-content:flex-start; gap:2px;
+    padding:8px 10px; border-radius:16px; cursor:pointer; overflow:hidden;
+    background:var(--surface); border:1px solid var(--border); box-shadow:0 1px 4px rgba(0,0,0,.08);
+    transition:box-shadow .15s ease, opacity .3s ease, border-color .15s ease; }
+  .zon-pin .pin-dot { width:7px; height:7px; border-radius:50%; margin-bottom:2px; flex:0 0 auto; }
+  .zon-pin.vaxthus .pin-dot { background:#34d399; }
+  .zon-pin.odlingslada .pin-dot { background:#b07c46; }
+  .zon-pin.utomhus .pin-dot { background:#8d6848; }
+  .zon-pin.inomhus .pin-dot { background:#a78bfa; }
+  .zon-pin.annat .pin-dot { background:var(--muted); }
   .zon-pin .namn { font-size:.72rem; font-weight:700; color:var(--text); white-space:nowrap;
     overflow:hidden; text-overflow:ellipsis; max-width:100%; }
-  .zon-pin .antal { font-size:.64rem; font-weight:600; color:var(--muted); margin-top:1px; }
+  .zon-pin .antal { font-size:.64rem; font-weight:600; color:var(--muted); }
   .zon-pin.vald { box-shadow:0 0 0 2px var(--accent); border-color:transparent; }
+  .zon-pin.dimmad { opacity:.25; pointer-events:none; }
+  .zon-kort-canvas.fokus { box-shadow:0 0 0 2px var(--accent), 0 10px 28px rgba(0,0,0,.22); border-radius:14px; }
+  /* Kompakt läge får en avskalad, ljusgrå "siteplan"-yta i stället för den
+     rikare kartans färgade glöd + dubbla rutnät – närmare en arkitektritning. */
+  .karta-canvas.kompakt { background:
+      repeating-linear-gradient(90deg, color-mix(in srgb, var(--text) 5%, transparent) 0 1px, transparent 1px 64px),
+      repeating-linear-gradient(0deg, color-mix(in srgb, var(--text) 5%, transparent) 0 1px, transparent 1px 64px),
+      var(--surface2); }
+  /* Bara den programmatiska zoom-in/ut-animationen (drillInZon/stangDrillIn)
+     ska vara mjuk – under vanlig pinch/drag ska kartan följa fingret direkt
+     utan fördröjning, därför en tillfällig klass i stället för en permanent
+     transition på .karta-scen. */
+  .karta-scen.animerar { transition:transform .5s cubic-bezier(.4,0,.2,1); }
+  .karta-breadcrumb { position:absolute; top:10px; left:10px; z-index:8; display:flex; align-items:center; gap:7px;
+    padding:6px 12px 6px 7px; border-radius:99px; background:var(--surface); border:1px solid var(--border);
+    box-shadow:0 2px 8px rgba(0,0,0,.18); font-size:.8rem; font-weight:600; color:var(--text); }
+  .karta-breadcrumb button { display:flex; align-items:center; justify-content:center; width:22px; height:22px;
+    padding:0; border-radius:50%; background:var(--surface2); color:var(--muted); box-shadow:none; flex:0 0 auto; }
+  .karta-breadcrumb button:hover { color:var(--text); background:color-mix(in srgb, var(--accent) 16%, var(--surface2));
+    transform:none; box-shadow:none; }
   .karta-canvas:not(.redigerar) .zon-kort:not(.okategoriserat) { cursor:pointer; }
   .karta-canvas.redigerar .zon-kort { cursor:grab; }
   .karta-canvas.redigerar .zon-kort-canvas.dragging { cursor:grabbing; }
@@ -579,6 +633,12 @@
     background:var(--surface); border:1px solid var(--border); border-radius:var(--r);
     box-shadow:0 24px 60px -18px rgba(0,0,0,.5); overflow:hidden; }
   .chatt-panel.oppen { display:flex; }
+  /* Flikraden längst ner på mobil (se .sidebar) tar samma hörn som chattknappen
+     annars svävar i – lyft båda ovanför den i stället för att krocka. */
+  @media (max-width:720px) {
+    .chatt-knapp { bottom:calc(76px + env(safe-area-inset-bottom)); }
+    .chatt-panel { bottom:calc(144px + env(safe-area-inset-bottom)); }
+  }
   .chatt-topp { display:flex; align-items:center; gap:10px; padding:16px 18px; border-bottom:1px solid var(--border); }
   .chatt-topp .titel { font-weight:650; font-size:.95rem; flex:1; font-family:"Outfit","Inter",sans-serif; }
   .chatt-logg { flex:1; overflow-y:auto; padding:16px 18px; display:flex; flex-direction:column; gap:12px; }
@@ -898,7 +958,7 @@
         </div>
 
         <div id="vyOversikt">
-          <div class="karta-header" style="margin-top:16px">
+          <div class="karta-header" style="margin-top:8px">
             <span style="flex:1"></span>
             <button class="karta-redigera-btn" id="kompaktBtn" title="Växla till en enkel planritning med former och namn">
               <span id="kompaktBtnIkon"></span>
@@ -923,6 +983,7 @@
             <div id="tradgardKarta" class="karta-canvas">
               <div id="kartaScen" class="karta-scen"></div>
               <div class="karta-tom" id="kartaTom" style="display:none">Inga zoner på den här kartan ännu – klicka på + för att lägga till en (växthus, bädd, odlingslåda …).</div>
+              <div class="karta-breadcrumb" id="kartaBreadcrumb" style="display:none"></div>
               <div class="karta-zoom">
                 <button id="zoomUtBtn" title="Zooma ut">−</button>
                 <button class="zoom-niva" id="zoomPassaBtn" title="Anpassa så hela trädgården syns">100%</button>
@@ -974,6 +1035,16 @@
 </div>
 
 <div class="wrap" id="installningarVy" style="display:none">
+
+  <div class="card">
+    <h2>Utseende</h2>
+    <p class="lbl" style="margin-bottom:12px">Följer enhetens ljusa/mörka läge som standard – välj annars själv.</p>
+    <div class="vy-segment" id="temaSegment" style="max-width:320px">
+      <button class="vy-segment-btn" data-tema="system">System</button>
+      <button class="vy-segment-btn" data-tema="light">Ljust</button>
+      <button class="vy-segment-btn" data-tema="dark">Mörkt</button>
+    </div>
+  </div>
 
   <div class="card">
     <h2>Notiser (skördepåminnelser)</h2>
@@ -1203,6 +1274,7 @@ const IKON_FULLSKARM = IKON_SVG('<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 
 const IKON_LISTA = IKON_SVG('<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>', 15);
 const IKON_KARTA = IKON_SVG('<path d="M9 3 3 5v16l6-2 6 2 6-2V3l-6 2-6-2z"/><path d="M9 3v16M15 5v16"/>', 15);
 const IKON_FROST = IKON_SVG('<path d="M12 2v20M4.9 4.9l14.2 14.2M19.1 4.9 4.9 19.1M2 12h20"/>');
+const IKON_TILLBAKA = IKON_SVG('<path d="M15 18l-6-6 6-6"/>', 14);
 const IKON_SIGNAL_BORTA = IKON_SVG('<path d="M5 7a10 10 0 0 1 3-3M19 7a10 10 0 0 0-3-3M8 10.5a5.5 5.5 0 0 1 8 0M12 15v5"/><path d="M3 3l18 18"/>');
 
 // <option>-element kan bara visa vanlig text, inte SVG – en liten textikon-
@@ -1255,8 +1327,10 @@ let modalKontext = null; // bara för "ny-zon"-popupen (+ på kartan) – { typ:
 let redigerarLayout = false;
 // Kompakt läge: prickar + namn i stället för fulla zonkort, för en snabb
 // överblick i en stor trädgård. Ett rent vyval – ingen egen data, bara hur
-// renderaKarta() ritar samma zoner.
-let kompaktLage = false;
+// renderaKarta() ritar samma zoner. Standard påslaget – en ren planritning
+// känns rakare vid första besöket än fulla, texturerade kort; "Karta" växlar
+// till det rika läget för den som vill se växthusglas och jord i detalj.
+let kompaktLage = true;
 // Vilken av de fyra flikarna ovanför trädgårdskortet som är aktiv –
 // styr bara vad som visas, ingen egen data.
 let vyAktiv = "oversikt";
@@ -1420,12 +1494,13 @@ async function laddaOdlingar() {
   if (vyAktiv === "zon") renderaPerZon();
   else if (vyAktiv === "planta") renderaPerPlanta();
 }
+// Fler kartor skapas via Skapa nytt → Karta, inte en egen knapp här – en
+// väg in räcker och höll översikten renare.
 function renderaKartaFlikar() {
   $("kartaFlikar").innerHTML = kartor.map((k) => `
     <button class="karta-flik${k.id === aktivKartaId ? " aktiv" : ""}" data-id="${esc(k.id)}">
       ${esc(k.namn)}${kartor.length > 1 ? `<span class="flik-x karta-flik-ta-bort" data-id="${esc(k.id)}" title="Ta bort karta">×</span>` : ""}
-    </button>`).join("") +
-    '<button class="karta-flik-ny" id="kartaFlikNyBtn">+ Ny karta</button>';
+    </button>`).join("");
 }
 function manadNamn(m) {
   // "2026-09" -> "september 2026"
@@ -1600,6 +1675,9 @@ function renderaKarta() {
   // Bara zonerna på den aktiva kartfliken ritas ut.
   const synligaZoner = zoner.filter((z) => z.kartaId === aktivKartaId);
   const synligaIder = new Set(synligaZoner.map((z) => z.id));
+  // Om zonen man var inzoomad på försvann (bytt kartflik, borttagen) finns
+  // inget att zooma tillbaka från – släpp tillbaka till översikten tyst.
+  if (kompaktZoomZonId && !synligaIder.has(kompaktZoomZonId)) kompaktZoomZonId = null;
   const grupper = new Map(synligaZoner.map((z) => [z.id, []]));
   const okategoriserade = [];
   for (const o of odlingar) {
@@ -1632,15 +1710,20 @@ function renderaKarta() {
       // proportion mot den riktiga kartan.
       const b = z.bredd ?? (sektioner.length ? 340 : 230);
       const h = z.hojd ?? (sektioner.length ? 210 : 100);
-      if (kompaktLage) {
-        // Snabb överblick: en flatfärgad, korrekt proporsionerad form i
-        // stället för hela kortet – som ett litet arkitektritat siteplan.
+      // I kompakt läge visas zonen som en flatfärgad, korrekt proporsionerad
+      // form – som ett litet arkitektritat siteplan – UTOM den man just
+      // "drillat in på" (kompaktZoomZonId), som får den rikare, plantfyllda
+      // kortvyn precis som den vanliga kartan. Se drillInZon/stangDrillIn.
+      const visaRikt = !kompaktLage || z.id === kompaktZoomZonId;
+      if (!visaRikt) {
         // .zon-kort (utan -canvas) räcker för att återanvända den vanliga
         // klick-för-att-markera-logiken; ingen dragning i det här läget.
         const antal = [...lista, ...(sektioner.flatMap((s) => grupper.get(s.id) ?? []))]
           .reduce((s, o) => s + antalFor(o), 0);
-        return `<div class="zon-kort zon-pin ${esc(z.typ || "annat")}${vald ? " vald" : ""}" data-id="${z.id}"
+        const dimmad = kompaktZoomZonId ? " dimmad" : "";
+        return `<div class="zon-kort zon-pin ${esc(z.typ || "annat")}${vald ? " vald" : ""}${dimmad}" data-id="${z.id}"
             style="left:${x * 100}%; top:${y * 100}%; width:${b}px; height:${h}px">
+          <span class="pin-dot"></span>
           <span class="namn">${esc(z.namn)}</span>
           ${antal ? `<span class="antal">${antal} st</span>` : ""}
         </div>`;
@@ -1648,7 +1731,8 @@ function renderaKarta() {
       const enhetBadges = entiteterFor(z.enhetIds).filter((e) => !e.fel)
         .map((e) => `<span class="zon-enhet">${ikonForEnhet(e.enhet)} ${esc(e.state)}${e.enhet ? " " + esc(e.enhet) : ""}</span>`).join("");
       const tomText = sektioner.length ? "" : '<span class="zon-tom">Inget planterat än</span>';
-      return `<div class="zon-kort zon-kort-canvas${vald ? " vald" : ""}" data-id="${z.id}"
+      const fokus = kompaktLage && z.id === kompaktZoomZonId;
+      return `<div class="zon-kort zon-kort-canvas${vald ? " vald" : ""}${fokus ? " fokus" : ""}" data-id="${z.id}"
           style="left:${x * 100}%; top:${y * 100}%; width:${b}px">
         <div class="zon-topp">
           ${redigerarLayout ? `<span class="zon-drag" title="Dra kortet för att flytta">✥</span>` : ""}
@@ -1684,6 +1768,7 @@ function renderaKarta() {
   if (toppzoner.length && !kartaAnvandarstyrd && !redigerarLayout) passaKarta();
   else tillampaZoom();
   renderaSol(); // skugglagret ligger i scenen och försvann med innerHTML
+  renderaBreadcrumb();
 }
 
 // ---- Solkarta: var faller skuggorna, och hur mycket sol får varje låda? ----
@@ -1958,6 +2043,57 @@ function passaKarta() {
   kartaPanX = (fw - bredd * kartaZoom) / 2 - ram.x1 * kartaZoom;
   kartaPanY = (fh - hojd * kartaZoom) / 2 - ram.y1 * kartaZoom;
   tillampaZoom();
+}
+
+// ---- Kompakt läge: "zooma in" på en zon och se dess plantor ----
+// Samma idé som att klicka ett kluster på Apple/Google Maps: från plan-
+// ritningsöversikten zoomar kameran in på just den zonen och byter den till
+// den rikare, plantfyllda kortvyn – övriga zoner tonas ner men ligger kvar
+// för sammanhanget. Återanvänder både den vanliga zonkorts-renderingen och
+// pan/zoom-motorn ovan i stället för att bygga en egen miniatyrvy per zon.
+let kompaktZoomZonId = null;
+
+// Bara den programmatiska in/ut-zoomningen ska vara mjukt animerad – vanlig
+// pinch/drag ska följa fingret direkt, därför en tillfällig CSS-klass i
+// stället för en permanent transition på .karta-scen.
+function animeraKartaTransform(fn) {
+  const scen = $("kartaScen");
+  scen.classList.add("animerar");
+  fn();
+  clearTimeout(scen._animTimer);
+  scen._animTimer = setTimeout(() => scen.classList.remove("animerar"), 500);
+}
+function zoomaTillZon(zonId) {
+  const el = $("kartaScen").querySelector(`.zon-kort[data-id="${zonId}"]`);
+  const frame = $("tradgardKarta");
+  if (!el || !frame.clientWidth) return;
+  const bredd = el.offsetWidth, hojd = el.offsetHeight;
+  const x1 = el.offsetLeft - bredd / 2, y1 = el.offsetTop - hojd / 2;
+  const marginal = 40, fw = frame.clientWidth, fh = frame.clientHeight;
+  kartaAnvandarstyrd = true;
+  kartaZoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN,
+    Math.min((fw - marginal * 2) / bredd, (fh - marginal * 2) / hojd)));
+  kartaPanX = (fw - bredd * kartaZoom) / 2 - x1 * kartaZoom;
+  kartaPanY = (fh - hojd * kartaZoom) / 2 - y1 * kartaZoom;
+  tillampaZoom();
+}
+function drillInZon(zonId) {
+  if (redigerarLayout) return;
+  kompaktZoomZonId = zonId;
+  renderaKarta();
+  animeraKartaTransform(() => zoomaTillZon(zonId));
+}
+function stangDrillIn() {
+  kompaktZoomZonId = null;
+  renderaKarta();
+  animeraKartaTransform(() => passaKarta());
+}
+function renderaBreadcrumb() {
+  const el = $("kartaBreadcrumb");
+  if (!kompaktZoomZonId) { el.style.display = "none"; el.innerHTML = ""; return; }
+  const z = zoner.find((x) => x.id === kompaktZoomZonId);
+  el.style.display = "flex";
+  el.innerHTML = `<button id="breadcrumbBackBtn" title="Tillbaka till översikten">${IKON_TILLBAKA}</button><span>${esc(z?.namn ?? "")}</span>`;
 }
 
 // ---- Dra zoner fritt på kartan (pointer events, ingen extern lib) ----
@@ -3575,17 +3711,6 @@ document.addEventListener("click", async (e) => {
     await laddaOdlingar();
     return;
   }
-  if (e.target.closest("#kartaFlikNyBtn")) {
-    const namn = prompt("Namn på den nya kartan:");
-    if (namn && namn.trim()) {
-      await fetch(`${BAS}api/kartor`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ namn: namn.trim() }) });
-      await laddaOdlingar();
-      aktivKartaId = kartor[kartor.length - 1]?.id ?? aktivKartaId;
-      renderaKartaFlikar();
-      renderaKarta();
-    }
-    return;
-  }
   const flik = e.target.closest(".karta-flik");
   if (flik) {
     aktivKartaId = flik.dataset.id;
@@ -3646,12 +3771,19 @@ document.addEventListener("click", async (e) => {
     return;
   }
 
+  // Tillbaka-chippen som dyker upp när man "drillat in" på en zon i kompakt läge
+  const breadcrumbBackEl = e.target.closest("#breadcrumbBackBtn");
+  if (breadcrumbBackEl) { stangDrillIn(); return; }
   // Välj mål: klick på en planta väger tyngre än klick på hela zon-kortet
   const chipEl = e.target.closest(".vaxt-grupp, .vaxt-fyll");
   if (chipEl) { valjMal("odling", chipEl.dataset.id); return; }
   // Sektionen måste testas före zon-kortet – annars fångar föräldern klicket
   const sektionEl = e.target.closest(".zon-sektion");
   if (sektionEl) { valjMal("zon", sektionEl.dataset.id); return; }
+  // En flatfärgad zon-pin (kompakt läge): klick zoomar in på zonen och visar
+  // dess plantor i stället för att öppna detaljpanelen direkt.
+  const zonPinEl = e.target.closest(".zon-pin");
+  if (zonPinEl) { drillInZon(zonPinEl.dataset.id); return; }
   const zonKortEl = e.target.closest(".zon-kort");
   if (zonKortEl && !zonKortEl.classList.contains("okategoriserat")) { valjMal("zon", zonKortEl.dataset.id); return; }
 
@@ -3708,17 +3840,41 @@ $("wLaggTillBtn").addEventListener("click", async () => {
   finally { $("wLaggTillBtn").disabled = false; }
 });
 
+// ---- Tema: system/ljust/mörkt, sparat lokalt (samma enhet, inte per konto) ----
+// localStorage kan kasta i privat läge/med blockerad lagring i vissa
+// webbläsare – ett kastat fel här skulle annars stoppa resten av scriptet.
+const TEMA_NYCKEL = "tradgard-tema";
+function lasTema() { try { return localStorage.getItem(TEMA_NYCKEL); } catch { return null; } }
+function sparaTema(val) { try { localStorage.setItem(TEMA_NYCKEL, val); } catch { /* strunta i det, gäller bara den här sessionen då */ } }
+function tillampaTema(val) {
+  if (val === "light" || val === "dark") document.documentElement.setAttribute("data-tema", val);
+  else document.documentElement.removeAttribute("data-tema");
+  for (const b of $("temaSegment").children) b.classList.toggle("aktiv", b.dataset.tema === val);
+}
+tillampaTema(lasTema() ?? "system");
+$("temaSegment").addEventListener("click", (e) => {
+  const btn = e.target.closest(".vy-segment-btn");
+  if (!btn) return;
+  sparaTema(btn.dataset.tema);
+  tillampaTema(btn.dataset.tema);
+});
+
 // ---- Kompakt kartläge: prickar + namn i stället för fulla kort ----
-$("kompaktBtnIkon").innerHTML = IKON_LISTA;
-$("kompaktBtn").addEventListener("click", () => {
-  kompaktLage = !kompaktLage;
+function tillampaKompaktUI() {
   $("kompaktBtn").classList.toggle("aktiv", kompaktLage);
   $("kompaktBtnText").textContent = kompaktLage ? "Karta" : "Kompakt";
   $("kompaktBtnIkon").innerHTML = kompaktLage ? IKON_KARTA : IKON_LISTA;
-  // Redigering kräver handtag och drag som prickarna inte har – stäng av
-  // det snarare än att lämna appen i ett läge som ser trasigt ut.
-  if (kompaktLage && redigerarLayout) $("redigeraLayoutBtn").click();
+  $("tradgardKarta").classList.toggle("kompakt", kompaktLage);
+  // Redigering kräver handtag och drag som prickarna inte har – dölj knappen
+  // i stället för att lämna appen i ett läge som ser trasigt ut.
   $("redigeraLayoutBtn").style.display = kompaktLage ? "none" : "";
+}
+tillampaKompaktUI();
+$("kompaktBtn").addEventListener("click", () => {
+  kompaktLage = !kompaktLage;
+  kompaktZoomZonId = null; // börja alltid om i översikten, inte inzoomad
+  if (kompaktLage && redigerarLayout) $("redigeraLayoutBtn").click();
+  tillampaKompaktUI();
   kartaAnvandarstyrd = false; // anpassa om zoomen till det nya lägets mått
   renderaKarta();
 });
