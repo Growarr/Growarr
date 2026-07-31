@@ -160,11 +160,12 @@ try {
     .sidebar { width:auto; height:auto; flex-direction:row; justify-content:center;
       position:fixed; top:auto; left:50%; right:auto;
       bottom:calc(14px + env(safe-area-inset-bottom)); transform:translateX(-50%);
-      border:1px solid color-mix(in srgb, var(--text) 10%, transparent); border-radius:26px;
+      border:1px solid color-mix(in srgb, var(--text) 14%, transparent); border-radius:26px;
       padding:8px; gap:6px; z-index:20;
-      background:color-mix(in srgb, var(--surface) 68%, transparent);
-      backdrop-filter:blur(20px) saturate(180%); -webkit-backdrop-filter:blur(20px) saturate(180%);
-      box-shadow:0 16px 36px -10px rgba(0,0,0,.4), 0 2px 10px rgba(0,0,0,.14); }
+      background:color-mix(in srgb, var(--surface) 38%, transparent);
+      backdrop-filter:blur(28px) saturate(200%); -webkit-backdrop-filter:blur(28px) saturate(200%);
+      box-shadow:0 16px 36px -10px rgba(0,0,0,.4), 0 2px 10px rgba(0,0,0,.14),
+        inset 0 1px 0 color-mix(in srgb, var(--text) 12%, transparent); }
     .brand-mark { display:none; }
   }
   .tillbaka-btn { background:none; border:0; box-shadow:none; color:var(--muted); padding:8px 0 4px;
