@@ -1609,11 +1609,26 @@ function klungaHtml(o, i, totalKlungor, iSektion, ruta) {
       ${antal > 1 ? `<span class="vaxt-antal">${antal}</span>` : ""}
     </div>`;
 }
+// Väljer kolumnantal så rutnätet fylls så jämnt som möjligt – en ren
+// avrundad kvadratrot (t.ex. 6 kolumner på 20 st → 6×4=24 rutor, 4 tomma i
+// sista raden) lämnade ofta ett tomt hörn längst ner i lådan. Provar några
+// kolumnantal runt uppskattningen och väljer det som spiller minst.
+function bastaKolumner(ritade, breddbias) {
+  const uppskattning = Math.max(1, Math.round(Math.sqrt(ritade * breddbias)));
+  let bast = uppskattning, bastSpill = Infinity;
+  for (let k = Math.max(1, uppskattning - 2); k <= uppskattning + 2; k++) {
+    const spill = k * Math.ceil(ritade / k) - ritade;
+    if (spill < bastSpill || (spill === bastSpill && Math.abs(k - uppskattning) < Math.abs(bast - uppskattning))) {
+      bast = k; bastSpill = spill;
+    }
+  }
+  return bast;
+}
 function fyllHtml(o, i, antalFyllda, iSektion, ruta) {
   const antal = antalFor(o);
   const ritade = Math.min(antal, MAX_RITADE_FYLL);
   // Ytorna är oftast liggande, så rutnätet görs medvetet bredare än högt.
-  const kolumner = Math.max(1, Math.round(Math.sqrt(ritade * 1.8)));
+  const kolumner = bastaKolumner(ritade, 1.8);
   const rader = Math.ceil(ritade / kolumner);
   // "Fyll hela ytan" ska kännas fullt oavsett antal – få plantor ska bli
   // STÖRRE för att täcka ytan, inte små ikoner med massor av luft runt.
