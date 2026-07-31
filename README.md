@@ -132,11 +132,24 @@ Två delar i ett repo:
      kamera och zonen öppnas direkt (`#zon=<id>`) — ingen kartnavigering.
      Kodas och ritas helt lokalt (ingen extern tjänst, ingen nätverksbild).
    - **Kompakt kartläge** — knappen **Kompakt** ovanför kartan byter de
-     fulla zonkorten mot små, namngivna prickar (färgkodade, med antal
-     odlingar) för en snabb överblick i en stor trädgård. Samma zoner, bara
-     ett annat sätt att visa dem – klicka en prick för att öppna samma
-     detaljvy som vanligt. **Karta** växlar tillbaka. Redigering av layouten
-     kräver de fulla korten och stängs av automatiskt när kompakt läge slås på.
+     fulla zonkorten mot en miniatyr-planritning: samma bredd, höjd och
+     riktning som de riktiga zonerna, bara flatfärgade efter zontyp i
+     stället för glas/trä-texturerna – som ett litet arkitektritat
+     siteplan. Klicka en form för att öppna samma detaljvy som vanligt.
+     **Karta** växlar tillbaka. Redigering av layouten kräver de fulla
+     korten och stängs av automatiskt när kompakt läge slås på.
+   - **Fyra sätt att se trädgården** — en flikrad ovanför kartan:
+     - **Översikt** — kartan, som vanligt.
+     - **Per zon** — ett sammanfattningskort per zon (typ, antal planterat,
+       kopplade sensorers värden); klick öppnar samma detaljpanel som från
+       kartan.
+     - **Per planta** — den enda vyn som går över zongränserna: alla
+       odlingsposter med samma namn slås ihop till en sort, oavsett vilken
+       zon eller karta de står på (t.ex. "Gurkor" i både växthuset och
+       pallkragen räknas ihop till en totalsumma). Klicka en sort för att
+       se var den finns och historik för alla kopplade sensorer.
+     - **Historik** — samma innehåll som historik-kortet i sidokolumnen,
+       fast i eget, större format.
    - **Kamerakontroller** — en kamerawidget har nu mjuka, halvtransparenta
      knappar ovanpå bilden: **uppdatera** hämtar en ny ögonblicksbild direkt
      (med tidsstämpel), **fullskärm** öppnar den stort i en enkel lightbox

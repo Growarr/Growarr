@@ -229,6 +229,16 @@
 
   .karta-header { display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
   .karta-header h2 { flex:1; }
+  /* Segmentkontroll: samma mönster som Apples inställningsväxlare (t.ex.
+     "Ljust/Mörkt/Auto") – en grupp text-flikar i en pill, den aktiva
+     upphöjd med egen bakgrund i stället för en understrykning. */
+  .vy-segment { display:inline-flex; padding:3px; border-radius:12px; background:var(--surface2);
+    border:1px solid var(--border); gap:2px; max-width:100%; overflow-x:auto; }
+  .vy-segment-btn { background:none; border:0; box-shadow:none; color:var(--muted);
+    font-size:.82rem; font-weight:600; padding:7px 14px; border-radius:9px; white-space:nowrap;
+    transition:background .18s ease, color .18s ease; }
+  .vy-segment-btn:hover { transform:none; box-shadow:none; color:var(--text); }
+  .vy-segment-btn.aktiv { background:var(--surface); color:var(--text); box-shadow:0 2px 6px rgba(0,0,0,.28); }
   .karta-redigera-btn { display:flex; align-items:center; gap:6px; padding:8px 14px 8px 12px; font-size:.8rem;
     background:var(--surface2); color:var(--muted); border:1px solid var(--border); box-shadow:none; }
   .karta-redigera-btn:hover { color:var(--text); border-color:var(--accent); transform:none; box-shadow:none; }
@@ -305,19 +315,25 @@
   .zon-kort-canvas { position:absolute; transform:translate(-50%,-50%);
     touch-action:none; transition:box-shadow .12s ease; }
   .zon-kort-canvas.dragging { z-index:10; cursor:grabbing; box-shadow:0 22px 44px -12px rgba(0,0,0,.55); transition:none; }
-  /* Kompakt läge: en liten färgad prick + namn i stället för hela kortet,
-     för en snabb överblick i en stor trädgård. Har klassen .zon-kort (inte
-     .zon-kort-canvas) så det vanliga klick-för-att-markera återanvänds rakt
-     av, men egen positionering – .zon-kort sätter medvetet ingen position. */
+  /* Kompakt läge: en miniatyr-planritning i stället för hela kortet – samma
+     bredd/höjd/riktning som den riktiga zonen, bara flatt färgad i stället
+     för glas/trä-texturerna, ungefär som ett arkitektritat siteplan. Har
+     klassen .zon-kort (inte .zon-kort-canvas) så det vanliga klick-för-att-
+     markera återanvänds rakt av, men egen positionering – .zon-kort sätter
+     medvetet ingen position. */
   .zon-pin { position:absolute; transform:translate(-50%,-50%); z-index:2;
-    display:flex; align-items:center; gap:6px; padding:5px 10px 5px 7px; border-radius:99px;
-    background:color-mix(in srgb, var(--surface) 90%, transparent); backdrop-filter:blur(6px);
-    border:1px solid var(--border); box-shadow:0 6px 16px -8px rgba(0,0,0,.5); cursor:pointer;
-    white-space:nowrap; max-width:160px; }
-  .zon-pin .prick { width:10px; height:10px; border-radius:50%; flex:0 0 auto; box-shadow:0 0 0 3px color-mix(in srgb, var(--text) 6%, transparent); }
-  .zon-pin .namn { font-size:.78rem; font-weight:650; overflow:hidden; text-overflow:ellipsis; }
-  .zon-pin .antal { font-size:.68rem; font-weight:700; color:var(--muted); }
-  .zon-pin.vald { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent), 0 6px 16px -8px rgba(0,0,0,.5); }
+    display:flex; flex-direction:column; align-items:flex-start; justify-content:flex-start;
+    padding:5px 7px; border-radius:7px; cursor:pointer; overflow:hidden;
+    border:1.5px solid transparent; transition:box-shadow .15s ease; }
+  .zon-pin.vaxthus { background:color-mix(in srgb, #34d399 15%, var(--surface2)); border-color:color-mix(in srgb, #34d399 38%, transparent); }
+  .zon-pin.odlingslada { background:color-mix(in srgb, #b07c46 20%, var(--surface2)); border-color:color-mix(in srgb, #b07c46 42%, transparent); }
+  .zon-pin.utomhus { background:color-mix(in srgb, #8d6848 20%, var(--surface2)); border-color:color-mix(in srgb, #8d6848 42%, transparent); }
+  .zon-pin.inomhus { background:color-mix(in srgb, #a78bfa 16%, var(--surface2)); border-color:color-mix(in srgb, #a78bfa 40%, transparent); }
+  .zon-pin.annat { background:var(--surface2); border-color:var(--border); border-style:dashed; }
+  .zon-pin .namn { font-size:.72rem; font-weight:700; color:var(--text); white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+  .zon-pin .antal { font-size:.64rem; font-weight:600; color:var(--muted); margin-top:1px; }
+  .zon-pin.vald { box-shadow:0 0 0 2px var(--accent); border-color:transparent; }
   .karta-canvas:not(.redigerar) .zon-kort:not(.okategoriserat) { cursor:pointer; }
   .karta-canvas.redigerar .zon-kort { cursor:grab; }
   .karta-canvas.redigerar .zon-kort-canvas.dragging { cursor:grabbing; }
@@ -496,6 +512,29 @@
   .yta.annat { border:2px dashed var(--border); border-radius:12px; background:var(--surface2); }
   .yta.annat .vaxt-ikon { background:var(--surface);
     box-shadow:0 2px 5px rgba(0,0,0,.15), inset 0 0 0 1px var(--border); }
+
+  /* ---- Per zon / Per planta: enkla sammanfattningskort, samma familj som
+     historik-kort men klickbara – de öppnar den riktiga detaljpanelen (Per
+     zon) eller expanderar en detaljsektion under gridden (Per planta). ---- */
+  .zon-summary-grid, .sort-summary-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+    gap:14px; margin-top:16px; }
+  .zon-summary-kort, .sort-summary-kort { background:var(--surface2); border:1px solid var(--border);
+    border-radius:var(--r-sm); padding:14px; cursor:pointer; transition:border-color .15s ease, transform .12s ease; }
+  .zon-summary-kort:hover, .sort-summary-kort:hover { border-color:color-mix(in srgb, var(--accent) 45%, var(--border)); }
+  .zon-summary-kort.vald, .sort-summary-kort.vald { border-color:var(--accent);
+    box-shadow:0 0 0 1px var(--accent); }
+  .zon-summary-kort .ikon, .sort-summary-kort .ikon { font-size:1.3rem; display:block; margin-bottom:6px; }
+  .zon-summary-kort .namn, .sort-summary-kort .namn { font-weight:650; font-size:.92rem; display:block; }
+  .zon-summary-kort .sub { font-size:.76rem; color:var(--muted); margin-top:2px; }
+  .zon-summary-kort .antal { font-size:.8rem; font-weight:600; color:var(--accent); margin-top:8px; }
+  .zon-summary-kort .antal.tom-text { color:var(--muted); font-weight:500; }
+  .zon-summary-kort .entitet-rad { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .zon-summary-kort .entitet-rad span { font-size:.7rem; font-weight:600; background:var(--surface);
+    border:1px solid var(--border); border-radius:99px; padding:2px 8px; }
+  .sort-summary-kort .antal { font-size:1.15rem; font-weight:700; display:block; margin-top:6px;
+    font-variant-numeric:tabular-nums; }
+  .sort-summary-kort .platser { font-size:.72rem; color:var(--muted); display:block; margin-top:1px; }
+  .sort-detalj { margin-top:20px; padding-top:18px; border-top:1px solid var(--border); }
 
   .historik-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin-top:4px; }
   .historik-kort { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r-sm); padding:16px; }
@@ -841,39 +880,55 @@
 
       <div class="card">
         <div class="karta-header">
-          <h2 style="margin-bottom:0">Trädgårdskarta</h2>
-          <button class="karta-redigera-btn" id="kompaktBtn" title="Växla till en enkel lista med prickar och namn">
-            <span id="kompaktBtnIkon"></span>
-            <span id="kompaktBtnText">Kompakt</span>
-          </button>
-          <button class="karta-redigera-btn karta-sol-btn" id="solBtn" title="Visa sol och skuggor">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>
-            Sol
-          </button>
-          <button class="karta-redigera-btn" id="redigeraLayoutBtn">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-            Redigera layout
-          </button>
+          <h2 style="margin-bottom:0" id="kartaKortTitel">Trädgårdskarta</h2>
         </div>
-        <div class="karta-flikar" id="kartaFlikar"></div>
-        <div class="sol-rad" id="solRad" style="display:none">
-          <span class="sol-tid" id="solTid">12:00</span>
-          <input type="range" id="solReglage" min="0" max="1439" step="15" value="720">
-          <span class="sol-info" id="solInfo"></span>
+        <div class="vy-segment" id="vySegment">
+          <button class="vy-segment-btn aktiv" data-vy="oversikt">Översikt</button>
+          <button class="vy-segment-btn" data-vy="zon">Per zon</button>
+          <button class="vy-segment-btn" data-vy="planta">Per planta</button>
+          <button class="vy-segment-btn" data-vy="historik">Historik</button>
         </div>
-        <div class="karta-canvas-wrap">
-          <div id="tradgardKarta" class="karta-canvas">
-            <div id="kartaScen" class="karta-scen"></div>
-            <div class="karta-tom" id="kartaTom" style="display:none">Inga zoner på den här kartan ännu – klicka på + för att lägga till en (växthus, bädd, odlingslåda …).</div>
-            <div class="karta-zoom">
-              <button id="zoomUtBtn" title="Zooma ut">−</button>
-              <button class="zoom-niva" id="zoomPassaBtn" title="Anpassa så hela trädgården syns">100%</button>
-              <button id="zoomInBtn" title="Zooma in">+</button>
-            </div>
+
+        <div id="vyOversikt">
+          <div class="karta-header" style="margin-top:16px">
+            <span style="flex:1"></span>
+            <button class="karta-redigera-btn" id="kompaktBtn" title="Växla till en enkel planritning med former och namn">
+              <span id="kompaktBtnIkon"></span>
+              <span id="kompaktBtnText">Kompakt</span>
+            </button>
+            <button class="karta-redigera-btn karta-sol-btn" id="solBtn" title="Visa sol och skuggor">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>
+              Sol
+            </button>
+            <button class="karta-redigera-btn" id="redigeraLayoutBtn">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+              Redigera layout
+            </button>
           </div>
-          <button class="karta-plus" id="kartaPlusBtn" title="Lägg till zon på kartan">+</button>
+          <div class="karta-flikar" id="kartaFlikar"></div>
+          <div class="sol-rad" id="solRad" style="display:none">
+            <span class="sol-tid" id="solTid">12:00</span>
+            <input type="range" id="solReglage" min="0" max="1439" step="15" value="720">
+            <span class="sol-info" id="solInfo"></span>
+          </div>
+          <div class="karta-canvas-wrap">
+            <div id="tradgardKarta" class="karta-canvas">
+              <div id="kartaScen" class="karta-scen"></div>
+              <div class="karta-tom" id="kartaTom" style="display:none">Inga zoner på den här kartan ännu – klicka på + för att lägga till en (växthus, bädd, odlingslåda …).</div>
+              <div class="karta-zoom">
+                <button id="zoomUtBtn" title="Zooma ut">−</button>
+                <button class="zoom-niva" id="zoomPassaBtn" title="Anpassa så hela trädgården syns">100%</button>
+                <button id="zoomInBtn" title="Zooma in">+</button>
+              </div>
+            </div>
+            <button class="karta-plus" id="kartaPlusBtn" title="Lägg till zon på kartan">+</button>
+          </div>
+          <div id="tradgardOkat" class="karta-grid"></div>
         </div>
-        <div id="tradgardOkat" class="karta-grid"></div>
+
+        <div id="vyPerZon" style="display:none"></div>
+        <div id="vyPerPlanta" style="display:none"></div>
+        <div id="vyHistorikTab" style="display:none"></div>
       </div>
 
       <div class="card detalj-kort" id="detaljKort">
@@ -1191,6 +1246,10 @@ let redigerarLayout = false;
 // överblick i en stor trädgård. Ett rent vyval – ingen egen data, bara hur
 // renderaKarta() ritar samma zoner.
 let kompaktLage = false;
+// Vilken av de fyra flikarna ovanför trädgårdskortet som är aktiv –
+// styr bara vad som visas, ingen egen data.
+let vyAktiv = "oversikt";
+let valdSortNyckel = null; // "namn" i gemener, för expanderad rad i Per planta
 
 // Väljer en rimlig ikon för en HA-entitets enhet, rent kosmetiskt.
 function ikonForEnhet(enhet) {
@@ -1331,6 +1390,8 @@ async function laddaOdlingar() {
   renderaHistorik();
   renderaWidgets();
   renderaNotiser();
+  if (vyAktiv === "zon") renderaPerZon();
+  else if (vyAktiv === "planta") renderaPerPlanta();
 }
 function renderaKartaFlikar() {
   $("kartaFlikar").innerHTML = kartor.map((k) => `
@@ -1539,14 +1600,20 @@ function renderaKarta() {
       const sektioner = sektionerPer.get(z.id) ?? [];
       const { x, y } = zonPosition(z, i);
       const vald = valtMal?.typ === "zon" && valtMal.id === z.id;
+      // Bredd/höjd styr både storlek och orientering (liggande vs stående) –
+      // samma mått i båda lägena, så en miniatyr-planritning stämmer i
+      // proportion mot den riktiga kartan.
+      const b = z.bredd ?? (sektioner.length ? 340 : 230);
+      const h = z.hojd ?? (sektioner.length ? 210 : 100);
       if (kompaktLage) {
-        // Snabb överblick: bara en färgad prick och ett namn, ingen detalj.
+        // Snabb överblick: en flatfärgad, korrekt proporsionerad form i
+        // stället för hela kortet – som ett litet arkitektritat siteplan.
         // .zon-kort (utan -canvas) räcker för att återanvända den vanliga
         // klick-för-att-markera-logiken; ingen dragning i det här läget.
         const antal = [...lista, ...(sektioner.flatMap((s) => grupper.get(s.id) ?? []))]
           .reduce((s, o) => s + antalFor(o), 0);
-        return `<div class="zon-kort zon-pin${vald ? " vald" : ""}" data-id="${z.id}" style="left:${x * 100}%; top:${y * 100}%">
-          <span class="prick" style="background:${fargForNamn(z.namn)}"></span>
+        return `<div class="zon-kort zon-pin ${esc(z.typ || "annat")}${vald ? " vald" : ""}" data-id="${z.id}"
+            style="left:${x * 100}%; top:${y * 100}%; width:${b}px; height:${h}px">
           <span class="namn">${esc(z.namn)}</span>
           ${antal ? `<span class="antal">${antal} st</span>` : ""}
         </div>`;
@@ -1554,9 +1621,6 @@ function renderaKarta() {
       const enhetBadges = entiteterFor(z.enhetIds).filter((e) => !e.fel)
         .map((e) => `<span class="zon-enhet">${ikonForEnhet(e.enhet)} ${esc(e.state)}${e.enhet ? " " + esc(e.enhet) : ""}</span>`).join("");
       const tomText = sektioner.length ? "" : '<span class="zon-tom">Inget planterat än</span>';
-      // Bredd/höjd styr både storlek och orientering (liggande vs stående)
-      const b = z.bredd ?? (sektioner.length ? 340 : 230);
-      const h = z.hojd ?? (sektioner.length ? 210 : 100);
       return `<div class="zon-kort zon-kort-canvas${vald ? " vald" : ""}" data-id="${z.id}"
           style="left:${x * 100}%; top:${y * 100}%; width:${b}px">
         <div class="zon-topp">
@@ -2184,6 +2248,8 @@ async function laddaEnheter() {
     renderaHistorik();
     renderaWidgets();
     renderaNotiser();
+    if (vyAktiv === "zon") renderaPerZon();
+    else if (vyAktiv === "planta") renderaPerPlanta();
     if (valtMal) renderaDetaljPanel();
   } catch (e) {
     $("enheterLista").innerHTML = `<div class="status err">Kunde inte hämta enheter: ${e.message}</div>`;
@@ -2518,13 +2584,12 @@ function historikTrend(punkter) {
   const delta = punkter[punkter.length - 1].varde - jamfor.varde;
   return { delta, still: Math.abs(delta) < 0.05 };
 }
-function renderaHistorik() {
+// Byggs en gång, återanvänds i både sidokolumnens Historik-kort och
+// "Historik"-fliken i trädgårdskarte-kortet – samma data, bara olika plats.
+function historikGridHtml() {
   const mal = historikMal();
-  if (!mal.length) {
-    $("historikInnehall").innerHTML = '<div class="tom">Koppla en HA-entitet till en zon eller odling (klicka på den i Trädgårdskartan) för att se historik här.</div>';
-    return;
-  }
-  $("historikInnehall").innerHTML = mal.map((m) => {
+  if (!mal.length) return '<div class="tom">Koppla en HA-entitet till en zon eller odling (klicka på den i Trädgårdskartan) för att se historik här.</div>';
+  return mal.map((m) => {
     const punkter = historik.filter((p) => p.enhetId === m.enhetId).sort((a, b) => new Date(a.tid) - new Date(b.tid));
     const enhetText = m.enhet.enhet ? ` ${m.enhet.enhet}` : "";
     const senaste = punkter.length ? punkter[punkter.length - 1].varde : null;
@@ -2547,6 +2612,118 @@ function renderaHistorik() {
       ${punkter.length >= 2 ? `<div class="historik-minmax"><span>Min ${esc(min)}${esc(enhetText)}</span><span>Max ${esc(max)}${esc(enhetText)}</span></div>` : ""}
     </div>`;
   }).join("");
+}
+function renderaHistorik() {
+  $("historikInnehall").innerHTML = historikGridHtml();
+  if (vyAktiv === "historik") $("vyHistorikTab").innerHTML = `<div class="historik-grid">${historikGridHtml()}</div>`;
+}
+
+// ---- Segmentkontrollen ovanför trädgårdskartan: Översikt / Per zon /
+// Per planta / Historik. Rent vyval – ingen egen data, bara vad som visas. ----
+const VY_TITLAR = { oversikt: "Trädgårdskarta", zon: "Zoner", planta: "Plantor", historik: "Historik" };
+function bytVy(ny) {
+  vyAktiv = ny;
+  document.querySelectorAll(".vy-segment-btn").forEach((b) => b.classList.toggle("aktiv", b.dataset.vy === ny));
+  $("kartaKortTitel").textContent = VY_TITLAR[ny] ?? "Trädgårdskarta";
+  $("vyOversikt").style.display = ny === "oversikt" ? "" : "none";
+  $("vyPerZon").style.display = ny === "zon" ? "" : "none";
+  $("vyPerPlanta").style.display = ny === "planta" ? "" : "none";
+  $("vyHistorikTab").style.display = ny === "historik" ? "" : "none";
+  if (ny === "zon") renderaPerZon();
+  else if (ny === "planta") renderaPerPlanta();
+  else if (ny === "historik") renderaHistorik();
+}
+$("vySegment").addEventListener("click", (e) => {
+  const btn = e.target.closest(".vy-segment-btn");
+  if (btn) bytVy(btn.dataset.vy);
+});
+
+// ---- Per zon: en enkel kortöversikt av alla zoner på aktiv karta. Klick på
+// ett kort öppnar samma detaljpanel som klick på kartan – ingen anledning
+// att bygga en andra, separat redigeringsyta för samma data. ----
+function renderaPerZon() {
+  const zonerPaKarta = zoner.filter((z) => z.kartaId === aktivKartaId);
+  if (!zonerPaKarta.length) {
+    $("vyPerZon").innerHTML = '<div class="tom">Inga zoner på den här kartan ännu.</div>';
+    return;
+  }
+  $("vyPerZon").innerHTML = `<div class="zon-summary-grid">${zonerPaKarta.map((z) => {
+    const info = ZON_TYPER[z.typ] ?? ZON_TYPER.annat;
+    const foralder = z.foralderId ? zoner.find((p) => p.id === z.foralderId) : null;
+    const antal = odlingar.filter((o) => o.zonId === z.id).reduce((s, o) => s + antalFor(o), 0);
+    const entiteter = entiteterFor(z.enhetIds).filter((e) => !e.fel);
+    const vald = valtMal?.typ === "zon" && valtMal.id === z.id;
+    return `<div class="zon-summary-kort${vald ? " vald" : ""}" data-id="${esc(z.id)}">
+      <div class="ikon">${info.ikon}</div>
+      <div class="namn">${esc(z.namn)}</div>
+      <div class="sub">${foralder ? `Sektion i ${esc(foralder.namn)}` : esc(info.namn)}</div>
+      ${antal ? `<div class="antal">${antal} st planterat</div>` : '<div class="antal tom-text">Inget planterat än</div>'}
+      ${entiteter.length ? `<div class="entitet-rad">${entiteter.map((e) =>
+        `<span>${ikonForEnhet(e.enhet)} ${esc(e.state)}${e.enhet ? esc(e.enhet) : ""}</span>`).join("")}</div>` : ""}
+    </div>`;
+  }).join("")}</div>`;
+}
+
+// ---- Per planta: aggregerar alla odlingsposter med samma namn över hela
+// trädgården (och alla kartor – en sort bryr sig inte om vilken flik den
+// råkar stå på), oavsett vilken zon de faktiskt står i. Det är den enda
+// vyn som går över zongränserna. ----
+function odlingarPerSort() {
+  const grupper = new Map();
+  for (const o of odlingar) {
+    const key = o.namn.trim().toLowerCase();
+    if (!grupper.has(key)) grupper.set(key, { namn: o.namn, poster: [] });
+    grupper.get(key).poster.push(o);
+  }
+  return [...grupper.values()]
+    .map((g) => ({ namn: g.namn, totalt: g.poster.reduce((s, o) => s + antalFor(o), 0), poster: g.poster }))
+    .sort((a, b) => b.totalt - a.totalt);
+}
+function perPlantaDetaljHtml(sort) {
+  const rader = sort.poster.map((o) => {
+    const zon = zoner.find((z) => z.id === o.zonId);
+    return `<div class="plant-rad">
+      <span class="plant-ikon">${ikonForVaxt(o.namn)}</span>
+      <span class="namn">${zon ? esc(zon.namn) : "Okategoriserat"}</span>
+      <span class="varde">${antalFor(o)} st${layoutFor(o) === "fyll" ? " · fyller ytan" : ""}</span>
+    </div>`;
+  }).join("");
+  // Kombinerad historik: varje kopplad entitet över alla instanser av
+  // sorten, var för sig – att slå ihop olika sensorers värden till en enda
+  // graf vore missvisande, så de listas separat i stället.
+  const entiteter = sort.poster.flatMap((o) => entiteterFor(o.enhetIds).filter((e) => !e.fel));
+  const historikHtml = entiteter.map((e) => {
+    const punkter = historik.filter((p) => p.enhetId === e.id).sort((a, b) => new Date(a.tid) - new Date(b.tid));
+    return `<div style="margin-top:12px">
+      <div class="historik-head" style="margin-bottom:2px; background:none; padding:0">
+        <span class="namn" style="font-size:.86rem">${esc(e.namn)}</span>
+      </div>
+      ${sparkline(punkter)}
+    </div>`;
+  }).join("");
+  return `<div class="sort-detalj">
+    <label class="lbl">Var ${esc(sort.namn)} finns (${sort.totalt} st totalt)</label>
+    <div class="plant-lista">${rader}</div>
+    ${historikHtml ? `<label class="lbl" style="margin-top:18px">Historik</label>${historikHtml}` : ""}
+  </div>`;
+}
+function renderaPerPlanta() {
+  const sorter = odlingarPerSort();
+  if (!sorter.length) {
+    $("vyPerPlanta").innerHTML = '<div class="tom">Inga odlingar ännu – lägg till en planta i en zon på kartan.</div>';
+    return;
+  }
+  if (!sorter.some((s) => s.namn.toLowerCase() === valdSortNyckel)) valdSortNyckel = sorter[0].namn.toLowerCase();
+  const vald = sorter.find((s) => s.namn.toLowerCase() === valdSortNyckel);
+  $("vyPerPlanta").innerHTML = `
+    <div class="sort-summary-grid">${sorter.map((s) => `
+      <div class="sort-summary-kort${vald.namn === s.namn ? " vald" : ""}" data-namn="${esc(s.namn.toLowerCase())}">
+        <span class="ikon">${ikonForVaxt(s.namn)}</span>
+        <span class="namn">${esc(s.namn)}</span>
+        <span class="antal">${s.totalt} st</span>
+        <span class="platser">${s.poster.length} ${s.poster.length === 1 ? "plats" : "platser"}</span>
+      </div>`).join("")}</div>
+    ${perPlantaDetaljHtml(vald)}`;
 }
 
 // ---- QR-etiketter för zonerna ----
@@ -3453,6 +3630,14 @@ document.addEventListener("click", async (e) => {
   if (sektionEl) { valjMal("zon", sektionEl.dataset.id); return; }
   const zonKortEl = e.target.closest(".zon-kort");
   if (zonKortEl && !zonKortEl.classList.contains("okategoriserat")) { valjMal("zon", zonKortEl.dataset.id); return; }
+
+  // Per zon-fliken: klick på ett sammanfattningskort öppnar samma
+  // detaljpanel som klick på kartan – samma data, en genväg dit.
+  const zonSummaryEl = e.target.closest(".zon-summary-kort");
+  if (zonSummaryEl) { valjMal("zon", zonSummaryEl.dataset.id); return; }
+  // Per planta-fliken: klick på en sort expanderar dess detaljer nedanför.
+  const sortSummaryEl = e.target.closest(".sort-summary-kort");
+  if (sortSummaryEl) { valdSortNyckel = sortSummaryEl.dataset.namn; renderaPerPlanta(); return; }
 });
 
 $("kLaggTillBtn").addEventListener("click", async () => {
