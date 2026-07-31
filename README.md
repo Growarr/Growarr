@@ -131,6 +131,16 @@ Två delar i ett repo:
      utskriftsfärdig kod att tejpa på lådan. Skanna den med telefonens
      kamera och zonen öppnas direkt (`#zon=<id>`) — ingen kartnavigering.
      Kodas och ritas helt lokalt (ingen extern tjänst, ingen nätverksbild).
+   - **Kompakt kartläge** — knappen **Kompakt** ovanför kartan byter de
+     fulla zonkorten mot små, namngivna prickar (färgkodade, med antal
+     odlingar) för en snabb överblick i en stor trädgård. Samma zoner, bara
+     ett annat sätt att visa dem – klicka en prick för att öppna samma
+     detaljvy som vanligt. **Karta** växlar tillbaka. Redigering av layouten
+     kräver de fulla korten och stängs av automatiskt när kompakt läge slås på.
+   - **Kamerakontroller** — en kamerawidget har nu mjuka, halvtransparenta
+     knappar ovanpå bilden: **uppdatera** hämtar en ny ögonblicksbild direkt
+     (med tidsstämpel), **fullskärm** öppnar den stort i en enkel lightbox
+     (stäng med ×, klick utanför eller Esc).
    - **🔔 Notiscenter** — klockan högst upp till höger (bredvid "Skapa nytt")
      samlar aktuella uppgifter räknade fram från er egen data: frostrisk
      (zonvis kalibrerad där det går), torr/för blöt jord, ovanligt kallt
@@ -154,6 +164,14 @@ Två delar i ett repo:
      kandidater (samma mönster som bevattningsinsikten); utan nyckel eller
      om anropet misslyckas visas de vanliga, regelbaserade raderna precis
      som vanligt.
+
+   **Ikonspråk** — strukturella ikoner (zontyp, sensortyp, frost, "sensorn
+   svarar inte", kamerakontroller) är tunna, enfärgade linjeikoner i samma
+   stil som sidopanelens hem/kugghjul, i stället för emoji – det gav ett
+   mer sammanhållet, "designat" intryck än en blandning av olika plattformars
+   emoji-teckensnitt. Plantor och väder är medvetet kvar som emoji: 19
+   grönsaker eller SMHI:s redan polerade vädersymboler som linjeikoner hade
+   kostat igenkänningsbarhet utan att vinna särskilt mycket.
 
    **Inställningar** (`/#installningar`) — allt ni fyller i eller lägger till:
    - **⚙️ Notiser** — ntfy-ämne och HA-webhook-URL för skördepåminnelser.

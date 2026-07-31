@@ -170,6 +170,39 @@
 
   /* Egna block (widgets) på översikten */
   .widget-kamera { width:100%; border-radius:var(--r-sm); display:block; background:var(--surface2); }
+  /* Kamerawidgeten: mjuka, halvtransparenta glaskontroller ovanpå bilden
+     (uppdatera, fullskärm) i stället för att bara visa en stillbild. */
+  .kamera-wrap { position:relative; border-radius:var(--r-sm); overflow:hidden; }
+  .kamera-fel-text { display:none; padding:16px; color:var(--muted); font-size:.86rem; }
+  .kamera-wrap.kamera-fel .widget-kamera, .kamera-wrap.kamera-fel .kamera-kontroller { display:none; }
+  .kamera-wrap.kamera-fel .kamera-fel-text { display:block; }
+  .kamera-kontroller { position:absolute; left:0; right:0; bottom:0; display:flex; align-items:center;
+    justify-content:space-between; gap:8px; padding:8px 10px;
+    background:linear-gradient(0deg, rgba(4,10,7,.72), rgba(4,10,7,0));
+    backdrop-filter:blur(2px); }
+  .kamera-tid { font-size:.7rem; font-weight:600; color:rgba(255,255,255,.92);
+    text-shadow:0 1px 2px rgba(0,0,0,.4); }
+  .kamera-knappar { display:flex; gap:6px; }
+  .kamera-knapp { width:30px; height:30px; padding:0; border-radius:50%; flex:0 0 auto;
+    background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.28); color:#fff;
+    box-shadow:none; backdrop-filter:blur(6px);
+    display:flex; align-items:center; justify-content:center; }
+  .kamera-knapp:hover { background:rgba(255,255,255,.28); transform:none; box-shadow:none; }
+  .kamera-knapp.laddar svg { animation:kamera-snurr .7s linear infinite; }
+  @keyframes kamera-snurr { to { transform:rotate(360deg); } }
+
+  /* Fullskärmsvy: samma bild, stor, med mörk bakgrundsdimning – enklast
+     möjliga "lightbox" utan något externt bibliotek. */
+  .kamera-lightbox { position:fixed; inset:0; z-index:60; display:none;
+    align-items:center; justify-content:center; padding:24px;
+    background:rgba(4,10,7,.86); backdrop-filter:blur(4px); }
+  .kamera-lightbox.oppen { display:flex; }
+  .kamera-lightbox img { max-width:100%; max-height:100%; border-radius:12px;
+    box-shadow:0 30px 70px -20px rgba(0,0,0,.7); }
+  .kamera-lightbox-stang { position:absolute; top:20px; right:20px; width:40px; height:40px;
+    padding:0; border-radius:50%; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.3);
+    color:#fff; box-shadow:none; font-size:1.3rem; display:flex; align-items:center; justify-content:center; }
+  .kamera-lightbox-stang:hover { background:rgba(255,255,255,.26); transform:none; box-shadow:none; }
   .widget-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
   .widget-head h2 { margin-bottom:0; }
   .widget-verktyg { display:flex; align-items:center; gap:2px; flex:0 0 auto; }
@@ -272,6 +305,19 @@
   .zon-kort-canvas { position:absolute; transform:translate(-50%,-50%);
     touch-action:none; transition:box-shadow .12s ease; }
   .zon-kort-canvas.dragging { z-index:10; cursor:grabbing; box-shadow:0 22px 44px -12px rgba(0,0,0,.55); transition:none; }
+  /* Kompakt läge: en liten färgad prick + namn i stället för hela kortet,
+     för en snabb överblick i en stor trädgård. Har klassen .zon-kort (inte
+     .zon-kort-canvas) så det vanliga klick-för-att-markera återanvänds rakt
+     av, men egen positionering – .zon-kort sätter medvetet ingen position. */
+  .zon-pin { position:absolute; transform:translate(-50%,-50%); z-index:2;
+    display:flex; align-items:center; gap:6px; padding:5px 10px 5px 7px; border-radius:99px;
+    background:color-mix(in srgb, var(--surface) 90%, transparent); backdrop-filter:blur(6px);
+    border:1px solid var(--border); box-shadow:0 6px 16px -8px rgba(0,0,0,.5); cursor:pointer;
+    white-space:nowrap; max-width:160px; }
+  .zon-pin .prick { width:10px; height:10px; border-radius:50%; flex:0 0 auto; box-shadow:0 0 0 3px color-mix(in srgb, var(--text) 6%, transparent); }
+  .zon-pin .namn { font-size:.78rem; font-weight:650; overflow:hidden; text-overflow:ellipsis; }
+  .zon-pin .antal { font-size:.68rem; font-weight:700; color:var(--muted); }
+  .zon-pin.vald { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent), 0 6px 16px -8px rgba(0,0,0,.5); }
   .karta-canvas:not(.redigerar) .zon-kort:not(.okategoriserat) { cursor:pointer; }
   .karta-canvas.redigerar .zon-kort { cursor:grab; }
   .karta-canvas.redigerar .zon-kort-canvas.dragging { cursor:grabbing; }
@@ -301,7 +347,9 @@
   .zon-topp .namn { font-weight:650; font-size:.9rem; flex:1; min-width:0; overflow:hidden;
     text-overflow:ellipsis; white-space:nowrap; }
   .zon-enhet { background:var(--surface2); border:1px solid var(--border); border-radius:99px;
-    padding:3px 9px; font-size:.72rem; font-weight:600; white-space:nowrap; flex:0 0 auto; }
+    padding:3px 9px 3px 7px; font-size:.72rem; font-weight:600; white-space:nowrap; flex:0 0 auto;
+    display:inline-flex; align-items:center; gap:3px; }
+  .zon-enhet svg { flex:0 0 auto; }
   .zon-ta-bort { background:var(--surface2); border:1px solid var(--border); box-shadow:none;
     color:var(--muted); cursor:pointer; font-size:.85rem; width:22px; height:22px; border-radius:50%; padding:0;
     display:flex; align-items:center; justify-content:center; line-height:1; flex:0 0 auto; }
@@ -794,6 +842,10 @@
       <div class="card">
         <div class="karta-header">
           <h2 style="margin-bottom:0">Trädgårdskarta</h2>
+          <button class="karta-redigera-btn" id="kompaktBtn" title="Växla till en enkel lista med prickar och namn">
+            <span id="kompaktBtnIkon"></span>
+            <span id="kompaktBtnText">Kompakt</span>
+          </button>
           <button class="karta-redigera-btn karta-sol-btn" id="solBtn" title="Visa sol och skuggor">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>
             Sol
@@ -950,6 +1002,11 @@
 
 <div class="sheet-bakgrund" id="sheetBakgrund"></div>
 
+<div class="kamera-lightbox" id="kameraLightbox">
+  <button class="kamera-lightbox-stang" id="kameraLightboxStang" title="Stäng">×</button>
+  <img id="kameraLightboxBild" alt="Kamerabild i fullskärm">
+</div>
+
 <div class="modal-bakgrund" id="modalBakgrund" style="display:none">
   <div class="modal" id="modalInnehall"></div>
 </div>
@@ -1066,13 +1123,40 @@ function fargForNamn(namn) {
   for (const c of namn) h = (h * 31 + c.charCodeAt(0)) >>> 0;
   return FARGPALETT[h % FARGPALETT.length];
 }
+// ---- Ikonbibliotek: tunna, enfärgade linjeikoner (samma stil som sidopanelens
+// hem/kugghjul) i stället för emoji, för strukturella/UI-ikoner – frostvarning,
+// sensortyp, zontyp, kamerakontroller. Emoji behålls medvetet för PLANTOR och
+// VÄDER: att rita 19 olika grönsaker eller Apples egna, redan polerade
+// vädersymboler som linjeikoner skulle kosta igenkänningsbarhet utan att vinna
+// särskilt mycket – men en zonrubrik eller ett sensorvärde blir tydligare
+// och mer "designat" av en konsekvent, tunn ikon än av en lös emoji. ----
+const IKON_SVG = (inre, storlek = 16) =>
+  `<svg width="${storlek}" height="${storlek}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inre}</svg>`;
+const IKON_UPPDATERA = IKON_SVG('<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/>', 15);
+const IKON_FULLSKARM = IKON_SVG('<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/>', 15);
+const IKON_LISTA = IKON_SVG('<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>', 15);
+const IKON_KARTA = IKON_SVG('<path d="M9 3 3 5v16l6-2 6 2 6-2V3l-6 2-6-2z"/><path d="M9 3v16M15 5v16"/>', 15);
+const IKON_FROST = IKON_SVG('<path d="M12 2v20M4.9 4.9l14.2 14.2M19.1 4.9 4.9 19.1M2 12h20"/>');
+const IKON_SIGNAL_BORTA = IKON_SVG('<path d="M5 7a10 10 0 0 1 3-3M19 7a10 10 0 0 0-3-3M8 10.5a5.5 5.5 0 0 1 8 0M12 15v5"/><path d="M3 3l18 18"/>');
+
+// <option>-element kan bara visa vanlig text, inte SVG – en liten textikon-
+// karta enbart för rullgardiner, sida vid sida med linjeikonerna i ZON_TYPER.
+const ZON_TYPER_TEXTIKON = { vaxthus: "🏡", utomhus: "🌤️", inomhus: "🪴", odlingslada: "📦", annat: "📍" };
 const ZON_TYPER = {
   // Utseendet på ytan ligger i CSS (.yta.<typ>) – här bara namn och ikon.
-  vaxthus: { namn: "Växthus", ikon: "🏡" },
-  utomhus: { namn: "Utomhusbädd", ikon: "🌤️" },
-  inomhus: { namn: "Inomhus", ikon: "🪴" },
-  odlingslada: { namn: "Odlingslåda", ikon: "📦" },
-  annat: { namn: "Annat", ikon: "📍" },
+  vaxthus: { namn: "Växthus", ikon: IKON_SVG('<path d="M4 21V10l8-6 8 6v11"/><path d="M4 21h16"/><path d="M9 21v-6h6v6"/><path d="M4 10h16M8 10v11M16 10v11"/>') },
+  utomhus: { namn: "Utomhusbädd", ikon: IKON_SVG('<path d="M2 19c2-3 4-3 6 0s4 3 6 0 4-3 6 0M2 13c2-3 4-3 6 0s4 3 6 0 4-3 6 0"/>') },
+  inomhus: { namn: "Inomhus", ikon: IKON_SVG('<path d="M8.5 3h7l-1 4h-5l-1-4Z"/><path d="M7 7h10l-1.4 11.2A2 2 0 0 1 13.6 20h-3.2a2 2 0 0 1-2-1.8L7 7Z"/>') },
+  odlingslada: { namn: "Odlingslåda", ikon: IKON_SVG('<path d="M3 7 12 3l9 4-9 4-9-4Z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/>') },
+  annat: { namn: "Annat", ikon: IKON_SVG('<path d="M12 21s7-6.7 7-11.5A7 7 0 1 0 5 9.5C5 14.3 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.3"/>') },
+};
+// Sensorernas enhet (%, °, lux, ppm) till en passande, konsekvent linjeikon.
+const IKON_ENHET = {
+  fukt: IKON_SVG('<path d="M12 3s6 6.8 6 10.8a6 6 0 0 1-12 0C6 9.8 12 3 12 3Z"/>'),
+  temp: IKON_SVG('<path d="M10 14.7V5.5a2 2 0 1 1 4 0v9.2a4 4 0 1 1-4 0Z"/><path d="M12 8.5v5"/>'),
+  ljus: IKON_SVG('<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/>'),
+  luft: IKON_SVG('<path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 16h15a3 3 0 1 1-3 3"/><path d="M3 12h8"/>'),
+  ovrig: IKON_SVG('<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/>'),
 };
 // Enkel nyckelordsmatchning mot växtnamnet för en passande emoji på kartan –
 // helt kosmetiskt, ingen växtdatabas, bara ett trevligt visuellt tillskott.
@@ -1103,15 +1187,19 @@ let modalKontext = null; // bara för "ny-zon"-popupen (+ på kartan) – { typ:
 // layout" – annars kan ett vanligt klick för att markera en zon råka tolkas
 // som ett drag-försök (och vice versa).
 let redigerarLayout = false;
+// Kompakt läge: prickar + namn i stället för fulla zonkort, för en snabb
+// överblick i en stor trädgård. Ett rent vyval – ingen egen data, bara hur
+// renderaKarta() ritar samma zoner.
+let kompaktLage = false;
 
 // Väljer en rimlig ikon för en HA-entitets enhet, rent kosmetiskt.
 function ikonForEnhet(enhet) {
   const e = (enhet || "").toLowerCase();
-  if (e.includes("%")) return "💧";
-  if (e.includes("°")) return "🌡️";
-  if (e.includes("lx") || e.includes("lux")) return "☀️";
-  if (e.includes("ppm")) return "🌬️";
-  return "📟";
+  if (e.includes("%")) return IKON_ENHET.fukt;
+  if (e.includes("°")) return IKON_ENHET.temp;
+  if (e.includes("lx") || e.includes("lux")) return IKON_ENHET.ljus;
+  if (e.includes("ppm")) return IKON_ENHET.luft;
+  return IKON_ENHET.ovrig;
 }
 
 function esc(s) { return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
@@ -1271,7 +1359,7 @@ function zonerITrad() {
 }
 function zonAlternativ() {
   return zonerITrad().map(({ zon, djup }) =>
-    `<option value="${esc(zon.id)}">${"  ".repeat(djup)}${djup ? "└ " : ""}${ZON_TYPER[zon.typ]?.ikon ?? "📍"} ${esc(zon.namn)}</option>`).join("");
+    `<option value="${esc(zon.id)}">${"  ".repeat(djup)}${djup ? "└ " : ""}${ZON_TYPER_TEXTIKON[zon.typ] ?? "📍"} ${esc(zon.namn)}</option>`).join("");
 }
 function uppdateraZonVal() {
   const val = $("oZon").value;
@@ -1304,8 +1392,10 @@ function ikonStorlek(antal, iSektion) {
 }
 function vaxtTooltip(o) {
   const antal = antalFor(o);
+  // Vanlig text i en title-attribut, inte HTML – ikonForEnhet() ger nu SVG-
+  // markup som skulle synas som rå text här, så bara värdet visas.
   const enhetText = entiteterFor(o.enhetIds).filter((e) => !e.fel)
-    .map((e) => `${ikonForEnhet(e.enhet)} ${e.state}${e.enhet || ""}`).join(" · ");
+    .map((e) => `${e.state}${e.enhet || ""}`).join(" · ");
   return [
     `${antal > 1 ? `${antal} st ` : ""}${o.namn}`, o.planterad ? `planterad ${o.planterad}` : "",
     o.skordManad ? `skörd ${manadNamn(o.skordManad)}` : "", o.skordFonster,
@@ -1448,9 +1538,21 @@ function renderaKarta() {
       const lista = grupper.get(z.id) ?? [];
       const sektioner = sektionerPer.get(z.id) ?? [];
       const { x, y } = zonPosition(z, i);
+      const vald = valtMal?.typ === "zon" && valtMal.id === z.id;
+      if (kompaktLage) {
+        // Snabb överblick: bara en färgad prick och ett namn, ingen detalj.
+        // .zon-kort (utan -canvas) räcker för att återanvända den vanliga
+        // klick-för-att-markera-logiken; ingen dragning i det här läget.
+        const antal = [...lista, ...(sektioner.flatMap((s) => grupper.get(s.id) ?? []))]
+          .reduce((s, o) => s + antalFor(o), 0);
+        return `<div class="zon-kort zon-pin${vald ? " vald" : ""}" data-id="${z.id}" style="left:${x * 100}%; top:${y * 100}%">
+          <span class="prick" style="background:${fargForNamn(z.namn)}"></span>
+          <span class="namn">${esc(z.namn)}</span>
+          ${antal ? `<span class="antal">${antal} st</span>` : ""}
+        </div>`;
+      }
       const enhetBadges = entiteterFor(z.enhetIds).filter((e) => !e.fel)
         .map((e) => `<span class="zon-enhet">${ikonForEnhet(e.enhet)} ${esc(e.state)}${e.enhet ? " " + esc(e.enhet) : ""}</span>`).join("");
-      const vald = valtMal?.typ === "zon" && valtMal.id === z.id;
       const tomText = sektioner.length ? "" : '<span class="zon-tom">Inget planterat än</span>';
       // Bredd/höjd styr både storlek och orientering (liggande vs stående)
       const b = z.bredd ?? (sektioner.length ? 340 : 230);
@@ -1740,7 +1842,9 @@ function zoomaFranKnapp(faktor) {
 // layoutvärden och påverkas inte av scenens transform, men de innehåller
 // heller inte kortens egen translate(-50%,-50%) – därav halva måtten.
 function kartaInnehallsRam() {
-  const kort = [...$("kartaScen").querySelectorAll(".zon-kort-canvas")];
+  // .zon-pin också – kompakt läge ritar inga .zon-kort-canvas alls, och utan
+  // dem skulle passaKarta() tro att kartan är tom och inte zooma till innehållet.
+  const kort = [...$("kartaScen").querySelectorAll(".zon-kort-canvas, .zon-pin")];
   if (!kort.length) return null;
   let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
   for (const el of kort) {
@@ -2130,9 +2234,20 @@ function widgetKortHtml(w, index, antal) {
     let innehall;
     if (w.typ === "kamera") {
       // cachebuster i URL:en så bilden faktiskt uppdateras vid omritning
+      const nu = new Date();
       innehall = w.entityId
-        ? `<img class="widget-kamera" alt="${esc(w.titel)}" src="${BAS}api/kamera?entityId=${encodeURIComponent(w.entityId)}&t=${Date.now()}"
-             onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'tom',textContent:'Kunde inte hämta bild från ${esc(w.entityId)} – kontrollera entity_id och HA_TOKEN.'}))">`
+        ? `<div class="kamera-wrap" data-entity="${esc(w.entityId)}">
+            <img class="widget-kamera" alt="${esc(w.titel)}" src="${BAS}api/kamera?entityId=${encodeURIComponent(w.entityId)}&t=${Date.now()}"
+                 onerror="this.closest('.kamera-wrap').classList.add('kamera-fel')">
+            <div class="kamera-fel-text">Kunde inte hämta bild – kontrollera entity_id och HA_TOKEN.</div>
+            <div class="kamera-kontroller">
+              <span class="kamera-tid">Uppdaterad ${nu.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}</span>
+              <div class="kamera-knappar">
+                <button class="kamera-knapp kamera-uppdatera" title="Uppdatera bild">${IKON_UPPDATERA}</button>
+                <button class="kamera-knapp kamera-fullskarm" title="Visa i fullskärm">${IKON_FULLSKARM}</button>
+              </div>
+            </div>
+          </div>`
         : '<div class="tom">Ingen kameraentitet vald.</div>';
     } else {
       const kopplade = entiteterFor(w.enhetIds);
@@ -2224,14 +2339,14 @@ function berakningNotiser() {
   if (zonFrost.length) {
     for (const z of zonFrost) {
       notiser.push({
-        id: `frost-zon-${z.namn}-${idag}`, ikon: "❄️", niva: "varning",
+        id: `frost-zon-${z.namn}-${idag}`, ikon: IKON_FROST, niva: "varning",
         titel: `Frostrisk i ${z.namn}`,
         text: `Ner mot ${z.min.toFixed(1).replace(".", ",")}° i natt, kalibrerat mot era egna mätningar.`,
       });
     }
   } else if (senasteVader?.dagar?.some((d) => d.min <= FROST_TROSKEL)) {
     notiser.push({
-      id: `frost-allman-${idag}`, ikon: "❄️", niva: "varning", titel: "Frostrisk",
+      id: `frost-allman-${idag}`, ikon: IKON_FROST, niva: "varning", titel: "Frostrisk",
       text: `SMHI väntar ${FROST_TROSKEL}° eller kallare någon av de kommande dagarna – täck ömtåliga plantor.`,
     });
   }
@@ -2252,7 +2367,7 @@ function berakningNotiser() {
   for (const m of historikMal()) {
     if (m.enhet.fel) {
       notiser.push({
-        id: `fel-${m.enhetId}-${idag}`, ikon: "📡", niva: "fel",
+        id: `fel-${m.enhetId}-${idag}`, ikon: IKON_SIGNAL_BORTA, niva: "fel",
         titel: `${m.label}: enheten svarar inte`, text: `${m.enhet.namn} · ${m.enhet.fel}`,
       });
       continue;
@@ -2856,7 +2971,9 @@ document.addEventListener("pointerup", () => {
 $("sheetStangBtn").addEventListener("click", stangSheet);
 $("sheetBakgrund").addEventListener("click", stangSheet);
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && $("detaljKort").classList.contains("oppen")) stangSheet();
+  if (e.key !== "Escape") return;
+  if ($("detaljKort").classList.contains("oppen")) stangSheet();
+  if ($("kameraLightbox").classList.contains("oppen")) $("kameraLightbox").classList.remove("oppen");
 });
 // Sektioner (t.ex. odlingslådor inne i ett växthus) hanteras direkt i
 // detaljpanelen, precis som plantorna.
@@ -3284,6 +3401,31 @@ document.addEventListener("click", async (e) => {
     await laddaOdlingar();
     return;
   }
+  // Kamerawidgetens kontroller: uppdatera bilden på begäran, eller visa den
+  // i fullskärm. Bilden hämtas alltid på nytt (cachebuster i URL:en) – ingen
+  // anledning att invänta nästa hela sidomritning bara för en ny bild.
+  const kameraUppdatera = e.target.closest(".kamera-uppdatera");
+  if (kameraUppdatera) {
+    const wrap = kameraUppdatera.closest(".kamera-wrap");
+    const img = wrap.querySelector(".widget-kamera");
+    const knapp = wrap.querySelector(".kamera-uppdatera");
+    knapp.classList.add("laddar");
+    img.src = `${BAS}api/kamera?entityId=${encodeURIComponent(wrap.dataset.entity)}&t=${Date.now()}`;
+    img.onload = img.onerror = () => knapp.classList.remove("laddar");
+    wrap.querySelector(".kamera-tid").textContent = `Uppdaterad ${new Date().toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}`;
+    return;
+  }
+  const kameraFullskarm = e.target.closest(".kamera-fullskarm");
+  if (kameraFullskarm) {
+    const img = kameraFullskarm.closest(".kamera-wrap").querySelector(".widget-kamera");
+    $("kameraLightboxBild").src = img.src;
+    $("kameraLightbox").classList.add("oppen");
+    return;
+  }
+  if (e.target.closest("#kameraLightboxStang") || e.target.id === "kameraLightbox") {
+    $("kameraLightbox").classList.remove("oppen");
+    return;
+  }
   // Flytta block upp/ner inom sin kolumn
   const widgetUpp = e.target.closest(".widget-upp");
   if (widgetUpp) { await flyttaWidget(widgetUpp.dataset.id, -1); return; }
@@ -3355,6 +3497,21 @@ $("wLaggTillBtn").addEventListener("click", async () => {
     st.textContent = "Block tillagt – syns på översikten."; st.className = "status ok";
   } catch (e) { st.textContent = "Kunde inte spara: " + e.message; st.className = "status err"; }
   finally { $("wLaggTillBtn").disabled = false; }
+});
+
+// ---- Kompakt kartläge: prickar + namn i stället för fulla kort ----
+$("kompaktBtnIkon").innerHTML = IKON_LISTA;
+$("kompaktBtn").addEventListener("click", () => {
+  kompaktLage = !kompaktLage;
+  $("kompaktBtn").classList.toggle("aktiv", kompaktLage);
+  $("kompaktBtnText").textContent = kompaktLage ? "Karta" : "Kompakt";
+  $("kompaktBtnIkon").innerHTML = kompaktLage ? IKON_KARTA : IKON_LISTA;
+  // Redigering kräver handtag och drag som prickarna inte har – stäng av
+  // det snarare än att lämna appen i ett läge som ser trasigt ut.
+  if (kompaktLage && redigerarLayout) $("redigeraLayoutBtn").click();
+  $("redigeraLayoutBtn").style.display = kompaktLage ? "none" : "";
+  kartaAnvandarstyrd = false; // anpassa om zoomen till det nya lägets mått
+  renderaKarta();
 });
 
 $("redigeraLayoutBtn").addEventListener("click", () => {
