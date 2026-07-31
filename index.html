@@ -369,11 +369,12 @@ try {
      klassen .zon-kort (inte .zon-kort-canvas) så det vanliga klick-för-att-
      markera återanvänds rakt av, men egen positionering – .zon-kort sätter
      medvetet ingen position. */
-  .zon-pin { position:absolute; transform:translate(-50%,-50%); z-index:2;
+  .zon-pin { position:absolute; transform:translate(-50%,-50%); z-index:2; touch-action:none;
     display:flex; flex-direction:column; align-items:flex-start; justify-content:flex-start; gap:2px;
     padding:8px 10px; border-radius:16px; cursor:pointer; overflow:hidden;
     background:var(--surface); border:1px solid var(--border); box-shadow:0 1px 4px rgba(0,0,0,.08);
     transition:box-shadow .15s ease, opacity .3s ease, border-color .15s ease; }
+  .zon-pin.dragging { z-index:10; cursor:grabbing; box-shadow:0 22px 44px -12px rgba(0,0,0,.55); transition:none; }
   .zon-pin .pin-dot { width:7px; height:7px; border-radius:50%; margin-bottom:2px; flex:0 0 auto; }
   .zon-pin.vaxthus .pin-dot { background:#34d399; }
   .zon-pin.odlingslada .pin-dot { background:#b07c46; }
@@ -1972,14 +1973,18 @@ function renderaSol() {
   while (svg.children.length > lista.length) svg.lastChild.remove();
 }
 
-// Strypt till högst en omritning per bildruta – reglagets "input"-event kan
-// annars avfyras oftare än skärmen hinner rita, vilket gjorde att både
-// skuggorna och själva slider-handtaget kändes hackiga under dragning.
+// Strypt till högst en omritning var 60:e ms – reglagets "input"-event kan
+// annars avfyras oftare än skuggberäkningen hinner med. requestAnimationFrame
+// användes tidigare, men den kör precis före varje målning – tung JS där
+// konkurrerar direkt med webbläsarens egen målning av själva slider-
+// handtaget, vilket gjorde att HANDTAGET kändes hackigt (inte bara
+// skuggorna). setTimeout kör som en vanlig makrotask i stället, utan att
+// tävla med målningen av reglaget.
 let solRenderVantar = false;
 function planeraSolRender() {
   if (solRenderVantar) return;
   solRenderVantar = true;
-  requestAnimationFrame(() => { solRenderVantar = false; renderaSol(); });
+  setTimeout(() => { solRenderVantar = false; renderaSol(); }, 60);
 }
 
 // ---- Zoom och panorering av kartan ----
@@ -2200,8 +2205,9 @@ document.addEventListener("pointerdown", (e) => {
       return;
     }
     // Hela zonkortet går att dra, inte bara ✥ – ett litet handtag är lätt att
-    // missa, särskilt på pekskärm.
-    const kort = e.target.closest(".zon-kort-canvas");
+    // missa, särskilt på pekskärm. .zon-pin (kompakt läge) har varken handtag
+    // eller storlekshandtag, men hela den lilla rutan går att dra rakt av.
+    const kort = e.target.closest(".zon-kort-canvas, .zon-pin");
     if (kort) {
       startaDrag(e, { typ: "zon", id: kort.dataset.id, el: kort, container: $("kartaScen") }, kort);
       return;
@@ -3869,15 +3875,11 @@ function tillampaKompaktUI() {
   $("kompaktBtnText").textContent = kompaktLage ? "Karta" : "Kompakt";
   $("kompaktBtnIkon").innerHTML = kompaktLage ? IKON_KARTA : IKON_LISTA;
   $("tradgardKarta").classList.toggle("kompakt", kompaktLage);
-  // Redigering kräver handtag och drag som prickarna inte har – dölj knappen
-  // i stället för att lämna appen i ett läge som ser trasigt ut.
-  $("redigeraLayoutBtn").style.display = kompaktLage ? "none" : "";
 }
 tillampaKompaktUI();
 $("kompaktBtn").addEventListener("click", () => {
   kompaktLage = !kompaktLage;
   kompaktZoomZonId = null; // börja alltid om i översikten, inte inzoomad
-  if (kompaktLage && redigerarLayout) $("redigeraLayoutBtn").click();
   tillampaKompaktUI();
   kartaAnvandarstyrd = false; // anpassa om zoomen till det nya lägets mått
   renderaKarta();
@@ -3937,6 +3939,12 @@ $("solBtn").addEventListener("click", () => {
 $("solReglage").addEventListener("input", () => {
   solMinut = Number($("solReglage").value) || 0;
   planeraSolRender();
+});
+// Släpper man reglaget mitt i en strypt väntan hade sista positionen kunnat
+// dröja upp till 60 ms – rita om direkt när dragningen är klar.
+$("solReglage").addEventListener("change", () => {
+  solMinut = Number($("solReglage").value) || 0;
+  renderaSol();
 });
 
 // ---- Vyer: dashboard (översikt) vs. inställningar, styrt av URL-hash så
