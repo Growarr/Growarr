@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Growarr</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2334d399' stroke-width='2'%3E%3Cpath d='M12 22v-9M12 13c-4-1-7-4-7-8 4 0 7 3 8 7M12 13c4-1 7-4 7-8-4 0-7 3-8 7'/%3E%3C/svg%3E">
+<link rel="icon" href="logo.png">
 <script>
 // Sätts innan CSS:en ens hunnit tolkas, annars flimrar sidan till fel tema
 // ett ögonblick vid varje laddning om man valt ett annat läge än systemets.
@@ -143,9 +143,9 @@ try {
     display:flex; flex-direction:column; align-items:center; gap:14px; padding:22px 0;
     position:sticky; top:0; height:100vh; z-index:5; }
   .app-content { flex:1; min-width:0; }
-  .brand-mark { width:34px; height:34px; border-radius:10px; background:var(--grad);
-    display:flex; align-items:center; justify-content:center; color:#fff; flex:0 0 auto; margin-bottom:8px;
-    box-shadow:0 6px 16px -4px color-mix(in srgb, var(--accent) 60%, transparent); }
+  .brand-mark { width:34px; height:34px; border-radius:10px;
+    display:flex; align-items:center; justify-content:center; flex:0 0 auto; margin-bottom:8px; }
+  .brand-mark img { width:100%; height:100%; object-fit:contain; }
   .side-btn { width:44px; height:44px; padding:0; border-radius:12px; flex:0 0 auto;
     background:none; border:1px solid transparent; color:var(--muted);
     display:flex; align-items:center; justify-content:center; cursor:pointer;
@@ -907,13 +907,9 @@ try {
 </head>
 <body>
 
-<svg width="0" height="0" style="position:absolute"><defs>
-  <g id="i-blad"><path d="M12 22v-9M12 13c-4-1-7-4-7-8 4 0 7 3 8 7M12 13c4-1 7-4 7-8-4 0-7 3-8 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></g>
-</defs></svg>
-
 <div class="app-shell">
 <nav class="sidebar">
-  <div class="brand-mark" title="Growarr"><svg width="18" height="18" viewBox="0 0 24 24"><use href="#i-blad"/></svg></div>
+  <div class="brand-mark" title="Growarr"><img src="logo.png" alt="Growarr"></div>
   <button class="side-btn" id="navDashboardBtn" title="Översikt">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/></svg>
   </button>
@@ -947,7 +943,7 @@ try {
 
   <div class="vy-header">
     <div>
-      <p class="app-brand">🌱 Growarr</p>
+      <p class="app-brand">Growarr</p>
       <h1 class="vy-titel">Översikt</h1>
     </div>
   </div>
