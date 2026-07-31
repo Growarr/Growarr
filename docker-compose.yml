@@ -1,0 +1,12 @@
+services:
+  growarr:
+    image: ghcr.io/mathiasmholm/growarr:latest # built and pushed automatically by GitHub Actions, see .github/workflows/docker-publish.yml
+    container_name: growarr
+    restart: unless-stopped
+    network_mode: host # same network mode as most other home-lab containers (Home Assistant, etc.)
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/data

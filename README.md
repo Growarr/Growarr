@@ -197,8 +197,8 @@ entirely optional and degrade gracefully without a key.
 **`ANTHROPIC_API_KEY`** — get one at
 [console.anthropic.com](https://console.anthropic.com) (separate from a
 Claude.ai subscription, billed per call). **Never put the key in
-`docker-compose.example.yml`** (it's committed and public) — only in your
-own, gitignored `docker-compose.yml`.
+`docker-compose.yml`** (it's committed and public) — only in your own,
+gitignored `.env` file.
 
 ## Notifications
 
@@ -261,14 +261,14 @@ cd /opt/docker/growarr
 sudo git clone https://github.com/mathiasmholm/growarr.git .
 ```
 
-Fill in `HA_TOKEN` (a long-lived Home Assistant access token) and
-`GEO_LAT`/`GEO_LON` in `docker-compose.example.yml` (the ntfy
-topic/webhook URL can be left blank here and set via the gear icon in the
-panel after start instead, see [Notifications](#notifications)), rename and
-start:
+Copy the environment template and fill in `HA_TOKEN` and `GEO_LAT`/`GEO_LON`
+(the ntfy topic/webhook URL can be left blank here and set via the gear icon
+in the panel after start instead, see [Notifications](#notifications)),
+then start:
 
 ```bash
-sudo mv docker-compose.example.yml docker-compose.yml
+sudo cp .env.example .env
+sudo nano .env   # fill in HA_TOKEN, GEO_LAT, GEO_LON, etc.
 sudo docker compose up -d
 ```
 
