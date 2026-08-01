@@ -721,6 +721,13 @@ try {
     max-width:480px; width:100%; max-height:86vh; overflow-y:auto; box-shadow:var(--shadow); position:relative; }
   .modal h3 { font-size:1.1rem; margin-bottom:2px; }
   .modal .modal-sub { font-size:.8rem; color:var(--muted); margin-bottom:18px; }
+  /* Fukt/temp direkt i rubriken, se snabblasningHtml() - en liten pill per
+     kopplad entitet så man ser läget utan att ens scrolla ner till
+     "Kopplade entiteter" strax under. */
+  .snabblasning { display:inline-flex; align-items:center; gap:3px; margin-left:8px; padding:2px 8px 2px 6px;
+    border-radius:99px; background:var(--surface2); border:1px solid var(--border); font-weight:650;
+    font-variant-numeric:tabular-nums; color:var(--text); font-size:.76rem; }
+  .snabblasning svg { width:12px; height:12px; flex:0 0 auto; opacity:.75; }
   .modal .falt { margin-bottom:14px; }
   /* Detaljpanelen har samma fält som popupen, så den måste med här – annars
      blir anteckningsrutan webbläsarens vita standardruta i mörkt läge. */
@@ -3326,6 +3333,16 @@ function metrikStatus(enhet, varde) {
   }
   return { niva: "", text: "" };
 }
+// En kompakt "på en blick"-rad i själva rubriken - fukt/temperatur direkt
+// bredvid namnet, så man slipper ens den korta scrollen ner till "Kopplade
+// entiteter" för att se det man oftast öppnar panelen för att kolla.
+// Kameror har inget värde att visa här, de har sin egen bild-tile.
+function snabblasningHtml(enhetIds) {
+  const kopplade = entiteterFor(enhetIds).filter((e) => !e.fel && !(e.entityId ?? "").startsWith("camera."));
+  if (!kopplade.length) return "";
+  return kopplade.map((e) =>
+    `<span class="snabblasning">${ikonForEnhet(e.enhet)}${esc(e.state)}${e.enhet ? esc(e.enhet) : ""}</span>`).join("");
+}
 // Bara en kameras förhandsvisning öppen åt gången - klick igen (eller på en
 // annan kamera-tile) stänger den. Aldrig något som stänger sig själv (t.ex.
 // en timeout eller ett klick utanför) - annars känns det som att bilden
@@ -3825,8 +3842,13 @@ function renderaDetaljPanel() {
         <div><h3>${esc(z.namn)}</h3><div class="modal-sub">${esc(info.namn)}${(() => {
           const f = z.foralderId ? zoner.find((x) => x.id === z.foralderId) : null;
           return f ? ` · sektion i ${esc(f.namn)}` : "";
-        })()}</div></div>
-        <button class="tillbaka-btn" id="dAvmarkeraBtn">Avmarkera</button>
+        })()}${snabblasningHtml(z.enhetIds)}</div></div>
+        <button class="tillbaka-zon-btn" id="mQrBtn" data-id="${esc(z.id)}" title="Skriv ut en QR-etikett för lådan">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20v.01"/>
+          </svg><span>QR-etikett</span>
+        </button>
       </div>
       ${kopplaEntiteterHtml(z.enhetIds)}
       ${mikroklimatText(z)}
@@ -3841,7 +3863,6 @@ function renderaDetaljPanel() {
       <div class="falt"><label class="lbl">Jord</label><input type="text" id="mJord" placeholder="t.ex. näringsrik potatisjord + kompost" value="${esc(z.jord ?? "")}"></div>
       <div class="falt"><label class="lbl">Anteckning</label><textarea id="mAnteckning" placeholder="fritt att skriva">${esc(z.anteckning ?? "")}</textarea></div>
       <button id="mSparaBtn">Spara</button>
-      <button class="karta-redigera-btn" id="mQrBtn" data-id="${esc(z.id)}" style="margin-left:8px">QR-etikett</button>
       <div class="status" id="mStatus"></div>`;
   } else {
     const o = odlingar.find((x) => x.id === id);
@@ -3850,7 +3871,7 @@ function renderaDetaljPanel() {
     $("detaljPanel").innerHTML = `
       <div class="detalj-head">
         <span class="ikon">${ikonForVaxt(o.namn)}</span>
-        <div><h3>${esc(o.namn)}</h3><div class="modal-sub">${antalFor(o)} st${zon ? ` · ${esc(zon.namn)}` : " · okategoriserat"}</div></div>
+        <div><h3>${esc(o.namn)}</h3><div class="modal-sub">${antalFor(o)} st${zon ? ` · ${esc(zon.namn)}` : " · okategoriserat"}${snabblasningHtml(o.enhetIds)}</div></div>
         ${zon
           ? `<button class="tillbaka-zon-btn" id="dTillbakaZonBtn" data-zon-id="${esc(zon.id)}" title="Tillbaka till ${esc(zon.namn)}">${IKON_TILLBAKA}<span>${esc(zon.namn)}</span></button>`
           : `<button class="tillbaka-btn" id="dAvmarkeraBtn">Avmarkera</button>`}
