@@ -1050,6 +1050,12 @@ try {
       <button class="vy-segment-btn" data-tema="light">Ljust</button>
       <button class="vy-segment-btn" data-tema="dark">Mörkt</button>
     </div>
+    <p class="lbl" style="margin:16px 0 12px">Språk – nya funktioner byggs på båda, äldre delar av appen
+      är tills vidare bara på svenska.</p>
+    <div class="vy-segment" id="sprakSegment" style="max-width:320px">
+      <button class="vy-segment-btn" data-sprak="sv">Svenska</button>
+      <button class="vy-segment-btn" data-sprak="en">English</button>
+    </div>
   </div>
 
   <div class="card">
@@ -1326,6 +1332,17 @@ let enheterStatus = [];
 let historik = [];
 let installningar = {};
 let notiserHanterade = []; // { id, atgard, tid } – hämtade från servern
+let sprak = "sv"; // sätts riktigt av tillampaSprak() vid start, se längre ner
+// Lexikon för nya funktioner, se kommentaren vid tillampaSprak(). Lägg en
+// rad här per ny sträng och skriv t("nyckel") i HTML-byggaren istället för
+// den svenska texten direkt - äldre, oöversatt text rörs inte.
+const SPRAK_TEXT = {
+  sv: {},
+  en: {},
+};
+function t(nyckel) {
+  return SPRAK_TEXT[sprak]?.[nyckel] ?? SPRAK_TEXT.sv[nyckel] ?? nyckel;
+}
 let modalKontext = null; // bara för "ny-zon"-popupen (+ på kartan) – { typ: "ny-zon" }
 // Dragning av zoner är avstängd som standard och slås bara på via "Redigera
 // layout" – annars kan ett vanligt klick för att markera en zon råka tolkas
@@ -3899,6 +3916,30 @@ $("temaSegment").addEventListener("click", (e) => {
   if (!btn) return;
   sparaTema(btn.dataset.tema);
   tillampaTema(btn.dataset.tema);
+});
+
+// ---- Språk ----
+// Äldre delar av appen är tills vidare bara hårdkodad svenska - att
+// översätta allt på en gång är ett stort jobb som delvis skrivs över igen
+// medan appen fortfarande ändras. I stället: nya funktioner används t()
+// och får en rad i SPRAK_TEXT från start, så täckningen växer av sig
+// själv istället för i en stor engångsmigrering. Se t() nedan.
+const SPRAK_NYCKEL = "growarr-sprak";
+function lasSprak() { try { return localStorage.getItem(SPRAK_NYCKEL); } catch { return null; } }
+function sparaSprak(val) { try { localStorage.setItem(SPRAK_NYCKEL, val); } catch { /* strunta i det, gäller bara den här sessionen då */ } }
+function tillampaSprak(val) {
+  sprak = val === "en" ? "en" : "sv";
+  for (const b of $("sprakSegment").children) b.classList.toggle("aktiv", b.dataset.sprak === sprak);
+  // Inget använder t() ännu, så inget att rita om än - lägg till en
+  // omritning här (t.ex. renderaKarta()/renderaNotiser()) den dagen en
+  // vy faktiskt har text som växlar med språket.
+}
+tillampaSprak(lasSprak() ?? "sv");
+$("sprakSegment").addEventListener("click", (e) => {
+  const btn = e.target.closest(".vy-segment-btn");
+  if (!btn) return;
+  sparaSprak(btn.dataset.sprak);
+  tillampaSprak(btn.dataset.sprak);
 });
 
 // ---- Kompakt kartläge: prickar + namn i stället för fulla kort ----
