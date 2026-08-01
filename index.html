@@ -642,6 +642,7 @@ try {
      fuktprocent och en temperatur i grader kan dela samma yta), hovrabar
      med en gemensam tooltip, och en timme/dag-växlare för grovare trend
      över längre tid. Se historikGraf()/historikHover() i JS. ---- */
+  @keyframes falaIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
   .historik-rubrikrad { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
   .historik-granularitet { display:flex; gap:4px; background:var(--surface2); border-radius:99px; padding:3px; }
   .historik-granularitet button { padding:5px 12px; border-radius:99px; font-size:.72rem; font-weight:650;
@@ -653,9 +654,14 @@ try {
     background:var(--surface2); border:1px solid var(--border); }
   .historik-legend-post i { width:8px; height:8px; border-radius:50%; flex:0 0 auto; }
   .historik-legend-post .varde { font-weight:700; color:var(--text); font-variant-numeric:tabular-nums; }
-  .historik-graf-wrap { position:relative; background:var(--surface2); border-radius:14px; padding:14px 0 4px; }
+  .historik-legend-post { animation:falaIn .3s ease both; }
+  .historik-graf-wrap { position:relative; background:var(--surface2); border-radius:14px; padding:14px 0 4px;
+    animation:falaIn .4s ease both; }
   .historik-graf { width:100%; height:180px; display:block; cursor:crosshair; }
   .historik-rutlinje { stroke:var(--border); stroke-width:1; stroke-dasharray:3 4; opacity:.6; }
+  /* Linjen/ytan animeras in via JS (historikGrafAnimera, stroke-dashoffset
+     + opacity) - transition sätts där, inte här, så den bara körs vid en
+     riktig omritning och inte råkar trigga på t.ex. hover. */
   .historik-punkt { pointer-events:none; stroke:var(--surface2); stroke-width:2; }
   .historik-crosshair { pointer-events:none; stroke:var(--muted); stroke-width:1; stroke-dasharray:3 3; opacity:.6; }
   .historik-tooltip { position:absolute; top:6px; pointer-events:none; background:var(--surface);
@@ -778,6 +784,13 @@ try {
   .metrik-tile .varde { font-size:1.5rem; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.1;
     display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
   .metrik-tile .enhet-namn { font-size:.76rem; color:var(--muted); margin-top:4px; }
+  /* Kamera-tile: hela kortet är en av/på-knapp för förhandsvisningen i
+     stället för ett mätvärde - explicit toggle, stängs aldrig av sig
+     själv (inte av en timeout, inte av att klicka utanför). */
+  .kamera-tile { cursor:pointer; transition:border-color .12s ease, background .12s ease; }
+  .kamera-tile:hover { border-color:var(--accent); }
+  .kamera-tile.oppen { background:color-mix(in srgb, var(--accent) 14%, var(--surface2)); border-color:color-mix(in srgb, var(--accent) 40%, var(--border)); }
+  .kamera-forhandsvisning { margin-top:12px; animation:falaIn .3s ease both; }
   /* Statustexten som en liten pill bredvid värdet, à la "94% Good" –
      tydligare vid en snabb blick än en rad brödtext under. */
   .metrik-tile .not { font-size:.68rem; font-weight:700; padding:2px 8px; border-radius:99px;
@@ -3313,6 +3326,11 @@ function metrikStatus(enhet, varde) {
   }
   return { niva: "", text: "" };
 }
+// Bara en kameras förhandsvisning öppen åt gången - klick igen (eller på en
+// annan kamera-tile) stänger den. Aldrig något som stänger sig själv (t.ex.
+// en timeout eller ett klick utanför) - annars känns det som att bilden
+// "försvinner" oväntat mitt i att man tittar på den.
+let oppenKameraTile = null;
 function kopplaEntiteterHtml(idLista) {
   const kopplade = entiteterFor(idLista);
   const lediga = enheterStatus.filter((e) => !(idLista ?? []).includes(e.id));
@@ -3322,6 +3340,18 @@ function kopplaEntiteterHtml(idLista) {
       <div class="varde">${esc(e.fel)}</div>
       <div class="enhet-namn">${esc(e.namn)}</div>
     </div>`;
+    // Kameror har inget mätvärde att visa - hela tiln blir i stället en
+    // knapp som fäller ut en ögonblicksbild under rutnätet (se
+    // kameraForhandsvisning nedan), samma bild-infrastruktur som
+    // kamerablocken på översikten redan använder.
+    if ((e.entityId ?? "").startsWith("camera.")) {
+      const oppen = oppenKameraTile === e.id;
+      return `<div class="metrik-tile kamera-tile${oppen ? " oppen" : ""}" data-kamera-tile="${esc(e.id)}">
+        <div class="topp"><span class="ikon">📷</span><button class="ta-bort-liten modal-enhet-ta-bort" data-id="${e.id}" title="Koppla bort">×</button></div>
+        <div class="varde" style="font-size:.86rem">${oppen ? "Dölj bild" : "Visa bild"}</div>
+        <div class="enhet-namn">${esc(e.namn)}</div>
+      </div>`;
+    }
     const status = metrikStatus(e.enhet, e.state);
     return `<div class="metrik-tile ${status.niva}">
       <div class="topp"><span class="ikon">${ikonForEnhet(e.enhet)}</span><button class="ta-bort-liten modal-enhet-ta-bort" data-id="${e.id}" title="Koppla bort">×</button></div>
@@ -3330,9 +3360,23 @@ function kopplaEntiteterHtml(idLista) {
       <div class="enhet-namn">${esc(e.namn)}</div>
     </div>`;
   }).join("");
+  const oppenKamera = kopplade.find((e) => e.id === oppenKameraTile && (e.entityId ?? "").startsWith("camera."));
+  const forhandsvisning = oppenKamera ? `<div class="kamera-wrap kamera-forhandsvisning" data-entity="${esc(oppenKamera.entityId)}">
+      <img class="widget-kamera" alt="${esc(oppenKamera.namn)}" src="${BAS}api/kamera?entityId=${encodeURIComponent(oppenKamera.entityId)}&t=${Date.now()}"
+           onerror="this.closest('.kamera-wrap').classList.add('kamera-fel')">
+      <div class="kamera-fel-text">Kunde inte hämta bild – kontrollera entity_id och HA_TOKEN.</div>
+      <div class="kamera-kontroller">
+        <span class="kamera-tid">Uppdaterad ${new Date().toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}</span>
+        <div class="kamera-knappar">
+          <button class="kamera-knapp kamera-uppdatera" title="Uppdatera bild">${IKON_UPPDATERA}</button>
+          <button class="kamera-knapp kamera-fullskarm" title="Visa i fullskärm">${IKON_FULLSKARM}</button>
+        </div>
+      </div>
+    </div>` : "";
   return `<div class="modal-entiteter">
     <label class="lbl">Kopplade entiteter</label>
     ${kopplade.length ? `<div class="metrik-grid">${tiles}</div>` : '<div class="tom">Inga entiteter kopplade.</div>'}
+    ${forhandsvisning}
     ${lediga.length ? `
     <div class="modal-lagg-entitet">
       <select id="mEnhetVal">${lediga.map((e) => `<option value="${esc(e.id)}">${esc(e.namn)}</option>`).join("")}</select>
@@ -3538,9 +3582,13 @@ function stegaAntal(steg) {
   uppdateraSnabbknapp();
 }
 function detaljHistorikHtml(enhetIds) {
+  // Kameror har ingen numerisk mätserie att plotta - de har redan sin egen
+  // bild-toggle bland "Kopplade entiteter" ovanför, så de hoppas över här
+  // i stället för att synas som en tom, missvisande post i legenden.
   const mal = (enhetIds ?? []).map((eid) => {
     const enhet = enheterStatus.find((e) => e.id === eid);
-    return enhet ? { enhet, punkter: historik.filter((p) => p.enhetId === eid).sort((a, b) => new Date(a.tid) - new Date(b.tid)) } : null;
+    if (!enhet || (enhet.entityId ?? "").startsWith("camera.")) return null;
+    return { enhet, punkter: historik.filter((p) => p.enhetId === eid).sort((a, b) => new Date(a.tid) - new Date(b.tid)) };
   }).filter(Boolean);
   if (!mal.length) return "";
   return `<div class="falt" style="margin-top:22px">
@@ -3627,12 +3675,12 @@ function historikGraf(mal) {
   const yta = serierMedSkala.map((s) => {
     const pts = s.punkter.map((p) => ({ x: xFor(p.tid), y: yFor(p.varde, s) }));
     const bottenY = H - MARGINAL / 2;
-    return `<path d="${smalKurva(pts)} L ${pts[pts.length - 1].x.toFixed(1)} ${bottenY} L ${pts[0].x.toFixed(1)} ${bottenY} Z"
+    return `<path class="historik-yta" d="${smalKurva(pts)} L ${pts[pts.length - 1].x.toFixed(1)} ${bottenY} L ${pts[0].x.toFixed(1)} ${bottenY} Z"
       fill="url(#historikGrad-${esc(s.enhet.id)})" stroke="none"/>`;
   }).join("");
   const linjer = serierMedSkala.map((s) => {
     const pts = s.punkter.map((p) => ({ x: xFor(p.tid), y: yFor(p.varde, s) }));
-    return `<path d="${smalKurva(pts)}" fill="none" stroke="${s.farg}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+    return `<path class="historik-linje" d="${smalKurva(pts)}" fill="none" stroke="${s.farg}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
   }).join("");
   const gradienter = serierMedSkala.map((s) => `<linearGradient id="historikGrad-${esc(s.enhet.id)}" x1="0" y1="0" x2="0" y2="1">
     <stop offset="0%" stop-color="${s.farg}" stop-opacity=".32"/>
@@ -3653,6 +3701,30 @@ function historikGraf(mal) {
       </svg>
       <div class="historik-tooltip" id="historikTooltip" style="display:none"></div>
     </div>`;
+}
+// Ritar in linjen som om den drogs upp från vänster till höger (klassiska
+// stroke-dasharray/-dashoffset-tricket - ingen animationsbibliotek behövs),
+// med ytan som tonar in strax efter. Körs vid VARJE omritning av grafen,
+// inte bara första gången - så ett byte mellan Per timme/Per dag också får
+// en tydlig, snygg övergång i stället för att bara hoppa till nya siffror.
+// Måste köras EFTER att SVG:n hunnit in i DOM:en (getTotalLength kräver det).
+function historikGrafAnimera() {
+  document.querySelectorAll(".historik-graf .historik-linje").forEach((path, i) => {
+    const langd = path.getTotalLength();
+    path.style.transition = "none";
+    path.style.strokeDasharray = `${langd}`;
+    path.style.strokeDashoffset = `${langd}`;
+    path.getBoundingClientRect(); // tvinga omflöde så starttillståndet hinner målas innan övergången sätts
+    path.style.transition = `stroke-dashoffset .7s cubic-bezier(.4,0,.2,1) ${i * 0.08}s`;
+    path.style.strokeDashoffset = "0";
+  });
+  document.querySelectorAll(".historik-graf .historik-yta").forEach((path, i) => {
+    path.style.transition = "none";
+    path.style.opacity = "0";
+    path.getBoundingClientRect();
+    path.style.transition = `opacity .5s ease ${0.25 + i * 0.08}s`;
+    path.style.opacity = "1";
+  });
 }
 // Hittar tidsstämpeln närmast musen bland ALLA seriers punkter tillsammans
 // (inte bara en av dem), så en hovring alltid landar på en riktig mätpunkt
@@ -3802,6 +3874,7 @@ function renderaDetaljPanel() {
       <button id="mSparaBtn">Spara</button>
       <div class="status" id="mStatus"></div>`;
   }
+  historikGrafAnimera();
 }
 
 $("eLaggTillBtn").addEventListener("click", async () => {
@@ -3888,6 +3961,15 @@ document.addEventListener("click", async (e) => {
         await sparaOdling(valtMal.id, { enhetIds: [...(o.enhetIds ?? []), valtId] });
       }
     }
+    return;
+  }
+  // Kamera-tile: fäller ut/in en ögonblicksbild. Kollar ta-bort-knappen
+  // FÖRST så den inte också råkar öppna/stänga förhandsvisningen.
+  const kameraTile = e.target.closest("[data-kamera-tile]");
+  if (kameraTile && !e.target.closest(".modal-enhet-ta-bort")) {
+    const id = kameraTile.dataset.kameraTile;
+    oppenKameraTile = oppenKameraTile === id ? null : id;
+    renderaDetaljPanel();
     return;
   }
   // Detaljpanel: koppla bort en entitet
