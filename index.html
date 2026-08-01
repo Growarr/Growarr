@@ -344,9 +344,6 @@ try {
   .karta-sol-btn.aktiv { background:color-mix(in srgb, #fbbf24 22%, var(--surface2)); color:#fbbf24;
     border-color:color-mix(in srgb, #fbbf24 55%, var(--border)); }
   .sol-timmar { font-size:.74rem; color:var(--muted); }
-  .karta-plus { position:absolute; bottom:-16px; right:14px; width:48px; height:48px; border-radius:50%;
-    font-size:1.6rem; line-height:1; display:flex; align-items:center; justify-content:center; padding:0; z-index:5; }
-
   /* Zoomreglage, flytande högst upp på kartan */
   .karta-zoom { position:absolute; top:10px; right:10px; z-index:8; display:flex; align-items:center; gap:2px;
     padding:4px; border-radius:99px; background:color-mix(in srgb, var(--surface) 82%, transparent);
@@ -833,7 +830,6 @@ try {
        mer plats – och därmed en högre automatisk zoomnivå på stående kartor. */
     .karta-canvas { aspect-ratio:4/5; min-height:min(58vh, 440px); }
     .karta-zoom { top:8px; right:8px; }
-    .karta-plus { width:42px; height:42px; font-size:1.4rem; right:10px; bottom:-14px; }
     .karta-flikar { gap:6px; margin-bottom:10px; }
     /* Fält + rullgardin + knapp på en rad blir obrukbart smalt på en telefon */
     .modal-lagg-entitet { flex-wrap:wrap; }
@@ -996,7 +992,6 @@ try {
                 <button id="zoomInBtn" title="Zooma in">+</button>
               </div>
             </div>
-            <button class="karta-plus" id="kartaPlusBtn" title="Lägg till zon på kartan">+</button>
           </div>
           <div id="tradgardOkat" class="karta-grid"></div>
         </div>
@@ -1343,7 +1338,7 @@ const SPRAK_TEXT = {
 function t(nyckel) {
   return SPRAK_TEXT[sprak]?.[nyckel] ?? SPRAK_TEXT.sv[nyckel] ?? nyckel;
 }
-let modalKontext = null; // bara för "ny-zon"-popupen (+ på kartan) – { typ: "ny-zon" }
+let modalKontext = null; // bara för QR-etikett-popupen – { typ: "qr", id }
 // Dragning av zoner är avstängd som standard och slås bara på via "Redigera
 // layout" – annars kan ett vanligt klick för att markera en zon råka tolkas
 // som ett drag-försök (och vice versa).
@@ -3254,11 +3249,6 @@ function kopplaEntiteterHtml(idLista) {
     </div>` : ""}
   </div>`;
 }
-function oppnaNyZonModal() {
-  modalKontext = { typ: "ny-zon" };
-  renderaModal();
-  $("modalBakgrund").style.display = "flex";
-}
 function stangModal() {
   $("modalBakgrund").style.display = "none";
   modalKontext = null;
@@ -3288,25 +3278,6 @@ function renderaModal() {
         koden öppnas den här zonen direkt – ingen letande i kartan.</p>
       <p class="lbl qr-dolj-vid-utskrift" style="word-break:break-all; opacity:.7">${esc(url)}</p>
       <button class="qr-dolj-vid-utskrift" id="qrSkrivUtBtn" style="margin-top:8px">Skriv ut</button>`;
-    return;
-  }
-  if (typ === "ny-zon") {
-    $("modalInnehall").innerHTML = `
-      <button class="ta-bort" id="modalStangBtn" title="Stäng" style="position:absolute; top:16px; right:16px">×</button>
-      <h3>Ny zon</h3>
-      <div class="modal-sub">Dra den på plats på kartan efteråt</div>
-      <div class="falt"><label class="lbl">Namn</label><input type="text" id="mZonNamn" placeholder="t.ex. Stora växthuset"></div>
-      <div class="falt"><label class="lbl">Typ</label>
-        <select id="mZonTyp">
-          <option value="vaxthus">Växthus</option>
-          <option value="utomhus">Utomhusbädd</option>
-          <option value="inomhus">Inomhus</option>
-          <option value="odlingslada">Odlingslåda</option>
-          <option value="annat">Annat</option>
-        </select>
-      </div>
-      <button id="mSkapaZonBtn">Skapa zon</button>
-      <div class="status" id="mStatus"></div>`;
     return;
   }
 }
@@ -3629,24 +3600,6 @@ document.addEventListener("click", async (e) => {
     if (!confirm("Ta bort zonen? Plantor i den blir okategoriserade, och eventuella sektioner flyttas ut.")) return;
     await fetch(`${BAS}api/zoner/ta-bort`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: zonTaBort.dataset.id }) });
     await laddaOdlingar();
-    return;
-  }
-
-  // Popup: skapa ny zon (via + på kartan)
-  const mSkapaZon = e.target.closest("#mSkapaZonBtn");
-  if (mSkapaZon && modalKontext?.typ === "ny-zon") {
-    const st = $("mStatus");
-    const namn = $("mZonNamn").value.trim();
-    if (!namn) { st.textContent = "Namn krävs."; st.className = "status err"; return; }
-    st.textContent = ""; st.className = "status";
-    try {
-      await fetch(`${BAS}api/zoner`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ namn, typ: $("mZonTyp").value, kartaId: aktivKartaId }),
-      });
-      await laddaOdlingar();
-      stangModal();
-    } catch (err) { st.textContent = "Kunde inte spara: " + err.message; st.className = "status err"; }
     return;
   }
 
@@ -4053,7 +4006,6 @@ window.addEventListener("hashchange", () => { visaVy(); oppnaFranHash(); });
 $("navDashboardBtn").addEventListener("click", () => { location.hash = ""; });
 $("navInstallningarBtn").addEventListener("click", () => { location.hash = "installningar"; });
 visaVy();
-$("kartaPlusBtn").addEventListener("click", oppnaNyZonModal);
 
 $("nSparaBtn").addEventListener("click", async () => {
   const st = $("nStatus");
