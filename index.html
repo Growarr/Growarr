@@ -357,6 +357,15 @@ try {
   .karta-zoom .zoom-niva { width:auto; min-width:48px; padding:0 8px; border-radius:99px; font-size:.74rem;
     font-weight:650; font-variant-numeric:tabular-nums; }
 
+  /* Snapplinjer: dyker upp när en dragen zon är nära i linje med en annan
+     zons sparade position, så det går att rada upp lådor/växthus prydligt
+     utan att behöva pixelmäta för hand. Rena visuella hjälplinjer, sparar
+     inget själva – se zonSnappning() i dragMove(). */
+  .snap-linje { position:absolute; background:var(--accent); pointer-events:none; z-index:6;
+    box-shadow:0 0 6px color-mix(in srgb, var(--accent) 70%, transparent); }
+  .snap-linje-v { top:-2000px; bottom:-2000px; width:2px; transform:translateX(-1px); }
+  .snap-linje-h { left:-2000px; right:-2000px; height:2px; transform:translateY(-1px); }
+
   /* Bredden sätts inline per zon (styr även orienteringen) – ingen max-width
      här, den skulle klämma ihop breda växthus. */
   .zon-kort-canvas { position:absolute; transform:translate(-50%,-50%);
@@ -758,6 +767,16 @@ try {
     box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent); }
   .detalj-head h3 { font-size:1.05rem; margin-bottom:2px; }
   .detalj-head .tillbaka-btn { margin-left:auto; flex:0 0 auto; padding:6px 4px; }
+  /* Till skillnad från Avmarkera (dold, se nedan - × i huvudet räcker för att
+     stänga helt) är den här inte redundant: en plantas panel har annars
+     ingen väg tillbaka till zonen den står i utan att stänga och leta upp
+     den på kartan igen. */
+  .tillbaka-zon-btn { margin-left:auto; flex:0 0 auto; display:flex; align-items:center; gap:5px;
+    max-width:40%; padding:6px 10px; border-radius:99px; font-size:.78rem; font-weight:600;
+    background:var(--surface2); color:var(--muted); border:1px solid var(--border); box-shadow:none; }
+  .tillbaka-zon-btn:hover { color:var(--text); border-color:var(--accent); transform:none; box-shadow:none; }
+  .tillbaka-zon-btn span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .tillbaka-zon-btn svg { flex:0 0 auto; }
   .zon-kort.vald { border-color:color-mix(in srgb, var(--accent) 60%, transparent);
     box-shadow:0 0 0 2px var(--accent), 0 0 30px -6px color-mix(in srgb, var(--accent) 60%, transparent),
       0 18px 34px -18px rgba(0,0,0,.65); }
@@ -2316,8 +2335,47 @@ function dragMove(e) {
   if (!rect.width || !rect.height) return;
   dragState.x = (e.clientX - rect.left) / rect.width;
   dragState.y = (e.clientY - rect.top) / rect.height;
+  if (dragState.typ === "zon") zonSnappning(dragState, rect);
   dragState.el.style.left = `${dragState.x * 100}%`;
   dragState.el.style.top = `${dragState.y * 100}%`;
+}
+
+// Fri zon-dragning i sig gör det svårt att pixelmäta fram samma rad/kolumn
+// för hand. Så fort den dragna zonens mitt är nära en annan zons sparade
+// mitt (på samma karta, fristående, inte den man drar) snappas den exakt
+// dit och en ledlinje tänds – släpper man sparas det redan snäppta läget,
+// inget extra steg krävs. Bara mot zoner som själva flyttats en gång
+// (fått ett sparat x/y) – standardrutnätets positioner räknas inte med,
+// annars skulle nya, aldrig flyttade zoner "dra i" varandra av misstag.
+const SNAP_TROSKEL_PX = 7;
+function zonSnappning(s, rect) {
+  const troskelX = SNAP_TROSKEL_PX / rect.width, troskelY = SNAP_TROSKEL_PX / rect.height;
+  let snappadX = null, snappadY = null;
+  for (const z of zoner) {
+    if (z.id === s.id || z.foralderId || z.kartaId !== aktivKartaId) continue;
+    if (z.x != null && snappadX == null && Math.abs(z.x - s.x) < troskelX) snappadX = z.x;
+    if (z.y != null && snappadY == null && Math.abs(z.y - s.y) < troskelY) snappadY = z.y;
+  }
+  if (snappadX != null) s.x = snappadX;
+  if (snappadY != null) s.y = snappadY;
+  visaSnapLinjer(snappadX, snappadY);
+}
+function visaSnapLinjer(x, y) {
+  const scen = $("kartaScen");
+  let vLinje = document.getElementById("snapLinjeX");
+  if (x != null) {
+    if (!vLinje) { vLinje = document.createElement("div"); vLinje.id = "snapLinjeX"; vLinje.className = "snap-linje snap-linje-v"; scen.appendChild(vLinje); }
+    vLinje.style.left = `${x * 100}%`;
+  } else vLinje?.remove();
+  let hLinje = document.getElementById("snapLinjeY");
+  if (y != null) {
+    if (!hLinje) { hLinje = document.createElement("div"); hLinje.id = "snapLinjeY"; hLinje.className = "snap-linje snap-linje-h"; scen.appendChild(hLinje); }
+    hLinje.style.top = `${y * 100}%`;
+  } else hLinje?.remove();
+}
+function dolSnapLinjer() {
+  document.getElementById("snapLinjeX")?.remove();
+  document.getElementById("snapLinjeY")?.remove();
 }
 
 // Vad släpptes objektet över? Det dragna elementet ligger självt under
@@ -2351,6 +2409,7 @@ async function dragEnd(e) {
   const s = dragState;
   s.el.classList.remove("dragging", "panorerar");
   $("tradgardKarta").classList.remove("drar-innehall");
+  dolSnapLinjer();
   dragState = null;
   if (!s.drogs) return;
   // Hindra att den avslutade dragningen också tolkas som ett klick
@@ -3531,7 +3590,9 @@ function renderaDetaljPanel() {
       <div class="detalj-head">
         <span class="ikon">${ikonForVaxt(o.namn)}</span>
         <div><h3>${esc(o.namn)}</h3><div class="modal-sub">${antalFor(o)} st${zon ? ` · ${esc(zon.namn)}` : " · okategoriserat"}</div></div>
-        <button class="tillbaka-btn" id="dAvmarkeraBtn">Avmarkera</button>
+        ${zon
+          ? `<button class="tillbaka-zon-btn" id="dTillbakaZonBtn" data-zon-id="${esc(zon.id)}" title="Tillbaka till ${esc(zon.namn)}">${IKON_TILLBAKA}<span>${esc(zon.namn)}</span></button>`
+          : `<button class="tillbaka-btn" id="dAvmarkeraBtn">Avmarkera</button>`}
       </div>
       ${kopplaEntiteterHtml(o.enhetIds)}
       ${detaljHistorikHtml(o.enhetIds)}
@@ -3664,6 +3725,11 @@ document.addEventListener("click", async (e) => {
 
   // Popup: avmarkera i detaljpanelen
   if (e.target.closest("#dAvmarkeraBtn")) { avmarkeraMal(); return; }
+  // En plantas detaljpanel har ingen "Avmarkera" - bara en väg tillbaka till
+  // zonen den står i, annars fanns inget sätt att komma därifrån till zonens
+  // egna uppgifter utan att först stänga hela panelen och leta upp den på kartan.
+  const tillbakaZon = e.target.closest("#dTillbakaZonBtn");
+  if (tillbakaZon) { valjMal("zon", tillbakaZon.dataset.zonId); return; }
 
   // Lägg till en sektion (t.ex. odlingslåda) inuti den valda zonen
   if (e.target.closest("#zNySektionBtn") && valtMal?.typ === "zon") {
