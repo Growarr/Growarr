@@ -803,6 +803,29 @@ try {
   .metrik-tile .not { font-size:.68rem; font-weight:700; padding:2px 8px; border-radius:99px;
     line-height:1.5; white-space:nowrap; background:color-mix(in srgb, var(--text) 10%, transparent);
     color:var(--muted); }
+  /* Kompakt radlista för "Kopplade entiteter" i detaljpanelen - själva
+     siffran syns redan i rubrikens snabblasning (snabblasningHtml), så den
+     här listan behöver bara vara bra på det den faktiskt gör: kvalitativ
+     status i ord, och att koppla till/bort entiteter. En rad per entitet
+     i stället för stora tiles som bara upprepade samma tal två gånger. */
+  .entitet-lista { display:flex; flex-direction:column; gap:6px; }
+  .entitet-rad-kompakt { display:flex; align-items:center; gap:12px; padding:9px 10px; border-radius:var(--r-sm);
+    background:var(--surface2); border:1px solid var(--border); }
+  .entitet-rad-kompakt.god { background:color-mix(in srgb, var(--ok) 12%, var(--surface2)); border-color:color-mix(in srgb, var(--ok) 32%, var(--border)); }
+  .entitet-rad-kompakt.varning { background:color-mix(in srgb, var(--warn) 12%, var(--surface2)); border-color:color-mix(in srgb, var(--warn) 32%, var(--border)); }
+  .entitet-rad-kompakt.fel { background:color-mix(in srgb, var(--err) 10%, var(--surface2)); border-color:color-mix(in srgb, var(--err) 28%, var(--border)); }
+  .entitet-rad-kompakt .ikon { flex:0 0 auto; width:30px; height:30px; border-radius:50%; display:flex;
+    align-items:center; justify-content:center; font-size:.94rem; background:color-mix(in srgb, var(--text) 8%, transparent); }
+  .entitet-rad-kompakt.god .ikon { background:color-mix(in srgb, var(--ok) 22%, transparent); }
+  .entitet-rad-kompakt.varning .ikon { background:color-mix(in srgb, var(--warn) 22%, transparent); }
+  .entitet-rad-kompakt.fel .ikon { background:color-mix(in srgb, var(--err) 22%, transparent); }
+  .entitet-rad-kompakt .info { flex:1; min-width:0; }
+  .entitet-rad-kompakt .namn { font-size:.86rem; font-weight:650; }
+  .entitet-rad-kompakt .statusrad { font-size:.76rem; color:var(--muted); font-variant-numeric:tabular-nums;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .entitet-rad-kompakt .ta-bort-liten { background:none; border:0; box-shadow:none; color:var(--muted); opacity:.5;
+    cursor:pointer; font-size:.9rem; padding:0; line-height:1; flex:0 0 auto; }
+  .entitet-rad-kompakt .ta-bort-liten:hover { opacity:1; color:var(--err); transform:none; }
   .metrik-tile.god .not { background:color-mix(in srgb, var(--ok) 20%, transparent); color:var(--ok); }
   .metrik-tile.varning .not { background:color-mix(in srgb, var(--warn) 22%, transparent); color:var(--warn); }
   .metrik-tile.fel .varde { font-size:.86rem; color:var(--err); font-weight:600; }
@@ -3351,30 +3374,36 @@ let oppenKameraTile = null;
 function kopplaEntiteterHtml(idLista) {
   const kopplade = entiteterFor(idLista);
   const lediga = enheterStatus.filter((e) => !(idLista ?? []).includes(e.id));
+  // Kompakta rader, inte de stora metrik-tilesen - siffran syns redan i
+  // rubrikens snabblasning (se snabblasningHtml ovan), så den här listan
+  // behöver bara ge det den faktiskt är bra på: kvalitativ status, och att
+  // kunna koppla bort/till entiteter.
   const tiles = kopplade.map((e) => {
-    if (e.fel) return `<div class="metrik-tile fel">
-      <div class="topp"><span class="ikon">⚠️</span><button class="ta-bort-liten modal-enhet-ta-bort" data-id="${e.id}" title="Koppla bort">×</button></div>
-      <div class="varde">${esc(e.fel)}</div>
-      <div class="enhet-namn">${esc(e.namn)}</div>
+    if (e.fel) return `<div class="entitet-rad-kompakt fel">
+      <span class="ikon">⚠️</span>
+      <div class="info"><div class="namn">${esc(e.namn)}</div><div class="statusrad">${esc(e.fel)}</div></div>
+      <button class="ta-bort-liten modal-enhet-ta-bort" data-id="${e.id}" title="Koppla bort">×</button>
     </div>`;
-    // Kameror har inget mätvärde att visa - hela tiln blir i stället en
-    // knapp som fäller ut en ögonblicksbild under rutnätet (se
+    // Kameror har inget mätvärde att visa - hela raden blir i stället en
+    // knapp som fäller ut en ögonblicksbild under listan (se
     // kameraForhandsvisning nedan), samma bild-infrastruktur som
     // kamerablocken på översikten redan använder.
     if ((e.entityId ?? "").startsWith("camera.")) {
       const oppen = oppenKameraTile === e.id;
-      return `<div class="metrik-tile kamera-tile${oppen ? " oppen" : ""}" data-kamera-tile="${esc(e.id)}">
-        <div class="topp"><span class="ikon">📷</span><button class="ta-bort-liten modal-enhet-ta-bort" data-id="${e.id}" title="Koppla bort">×</button></div>
-        <div class="varde" style="font-size:.86rem">${oppen ? "Dölj bild" : "Visa bild"}</div>
-        <div class="enhet-namn">${esc(e.namn)}</div>
+      return `<div class="entitet-rad-kompakt kamera-tile${oppen ? " oppen" : ""}" data-kamera-tile="${esc(e.id)}">
+        <span class="ikon">📷</span>
+        <div class="info"><div class="namn">${esc(e.namn)}</div><div class="statusrad">${oppen ? "Dölj bild" : "Visa bild"}</div></div>
+        <button class="ta-bort-liten modal-enhet-ta-bort" data-id="${e.id}" title="Koppla bort">×</button>
       </div>`;
     }
     const status = metrikStatus(e.enhet, e.state);
-    return `<div class="metrik-tile ${status.niva}">
-      <div class="topp"><span class="ikon">${ikonForEnhet(e.enhet)}</span><button class="ta-bort-liten modal-enhet-ta-bort" data-id="${e.id}" title="Koppla bort">×</button></div>
-      <div class="varde">${esc(e.state)}${e.enhet ? `<span style="font-size:.9rem;font-weight:600"> ${esc(e.enhet)}</span>` : ""}
-        ${status.text ? `<span class="not">${esc(status.text)}</span>` : ""}</div>
-      <div class="enhet-namn">${esc(e.namn)}</div>
+    return `<div class="entitet-rad-kompakt ${status.niva}">
+      <span class="ikon">${ikonForEnhet(e.enhet)}</span>
+      <div class="info">
+        <div class="namn">${esc(e.namn)}</div>
+        <div class="statusrad">${esc(e.state)}${e.enhet ? esc(e.enhet) : ""}${status.text ? ` · ${esc(status.text)}` : ""}</div>
+      </div>
+      <button class="ta-bort-liten modal-enhet-ta-bort" data-id="${e.id}" title="Koppla bort">×</button>
     </div>`;
   }).join("");
   const oppenKamera = kopplade.find((e) => e.id === oppenKameraTile && (e.entityId ?? "").startsWith("camera."));
@@ -3392,7 +3421,7 @@ function kopplaEntiteterHtml(idLista) {
     </div>` : "";
   return `<div class="modal-entiteter">
     <label class="lbl">Kopplade entiteter</label>
-    ${kopplade.length ? `<div class="metrik-grid">${tiles}</div>` : '<div class="tom">Inga entiteter kopplade.</div>'}
+    ${kopplade.length ? `<div class="entitet-lista">${tiles}</div>` : '<div class="tom">Inga entiteter kopplade.</div>'}
     ${forhandsvisning}
     ${lediga.length ? `
     <div class="modal-lagg-entitet">
