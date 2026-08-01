@@ -25,6 +25,12 @@ phone before a cold snap hits.
   <img src="docs/screenshot-demo.png" width="100%" alt="Growarr dashboard on desktop and mobile: garden map, weather, notifications and sensor history">
 </p>
 
+> [!NOTE]
+> Work in progress. My wife does the actual gardening — I just built the
+> app around what she needs — so it's very much shaped by real day-to-day
+> use rather than a finished spec. Feedback, bug reports and feature ideas
+> are genuinely welcome.
+
 ## Why bother
 
 - **A map, not a form.** Drag greenhouses, beds and pots into place. Plants
