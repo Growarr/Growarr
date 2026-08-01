@@ -637,6 +637,35 @@ try {
   .sparkline { width:100%; height:60px; display:block; }
   .historik-minmax { display:flex; justify-content:space-between; font-size:.74rem; color:var(--muted); margin-top:6px; }
 
+  /* ---- Kombinerad historikgraf i zon-/plantdetaljer: flera mätvärden i
+     samma diagram (var och en normaliserad mot sitt eget min/max, så en
+     fuktprocent och en temperatur i grader kan dela samma yta), hovrabar
+     med en gemensam tooltip, och en timme/dag-växlare för grovare trend
+     över längre tid. Se historikGraf()/historikHover() i JS. ---- */
+  .historik-rubrikrad { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+  .historik-granularitet { display:flex; gap:4px; background:var(--surface2); border-radius:99px; padding:3px; }
+  .historik-granularitet button { padding:5px 12px; border-radius:99px; font-size:.72rem; font-weight:650;
+    background:none; color:var(--muted); border:0; box-shadow:none; }
+  .historik-granularitet button.aktiv { background:var(--surface); color:var(--text); box-shadow:0 1px 4px rgba(0,0,0,.16); }
+  .historik-granularitet button:hover { transform:none; box-shadow:none; }
+  .historik-legend { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 10px; font-size:.78rem; color:var(--muted); }
+  .historik-legend-post { display:flex; align-items:center; gap:6px; padding:5px 11px 5px 9px; border-radius:99px;
+    background:var(--surface2); border:1px solid var(--border); }
+  .historik-legend-post i { width:8px; height:8px; border-radius:50%; flex:0 0 auto; }
+  .historik-legend-post .varde { font-weight:700; color:var(--text); font-variant-numeric:tabular-nums; }
+  .historik-graf-wrap { position:relative; background:var(--surface2); border-radius:14px; padding:14px 0 4px; }
+  .historik-graf { width:100%; height:180px; display:block; cursor:crosshair; }
+  .historik-rutlinje { stroke:var(--border); stroke-width:1; stroke-dasharray:3 4; opacity:.6; }
+  .historik-punkt { pointer-events:none; stroke:var(--surface2); stroke-width:2; }
+  .historik-crosshair { pointer-events:none; stroke:var(--muted); stroke-width:1; stroke-dasharray:3 3; opacity:.6; }
+  .historik-tooltip { position:absolute; top:6px; pointer-events:none; background:var(--surface);
+    border:1px solid var(--border); border-radius:10px; padding:8px 10px; font-size:.76rem;
+    box-shadow:0 10px 28px -10px rgba(0,0,0,.45); white-space:nowrap; transform:translateX(-50%); z-index:3; }
+  .historik-tooltip .tid { color:var(--muted); font-size:.7rem; margin-bottom:4px; font-weight:600; }
+  .historik-tooltip .rad { display:flex; align-items:center; gap:6px; }
+  .historik-tooltip .rad i { width:8px; height:8px; border-radius:50%; flex:0 0 auto; }
+  .historik-tooltip .rad .varde { margin-left:auto; font-weight:700; padding-left:10px; }
+
   /* ---- AI-chatt ---- */
   .chatt-knapp { position:fixed; right:24px; bottom:24px; width:56px; height:56px; border-radius:50%;
     padding:0; display:flex; align-items:center; justify-content:center; z-index:40;
@@ -3515,13 +3544,170 @@ function detaljHistorikHtml(enhetIds) {
   }).filter(Boolean);
   if (!mal.length) return "";
   return `<div class="falt" style="margin-top:22px">
-    <label class="lbl">Historik</label>
-    ${mal.map(({ enhet, punkter }) => `
-      <div style="margin-top:8px">
-        <div class="historik-head" style="margin-bottom:2px"><span class="namn" style="font-size:.86rem">${esc(enhet.namn)}</span></div>
-        ${sparkline(punkter)}
-      </div>`).join("")}
+    ${historikGraf(mal)}
   </div>`;
+}
+// ---- Kombinerad, hovrabar historikgraf ----
+// Flera kopplade entiteter (t.ex. jordfuktighet OCH temperatur på samma
+// växthus) ritas i EN graf i stället för en sparkline var, var och en
+// normaliserad mot sitt eget min/max så olika enheter (% vs °C) kan dela
+// samma yta utan en riktig andra y-axel. Positionerna sätts av den VERKLIGA
+// tidsstämpeln (delad tidsaxel), inte bara indexet i listan, så två serier
+// med olika många mätpunkter ändå hamnar rätt i förhållande till varandra.
+let historikGranularitet = "timme";
+let historikGrafData = null; // sätts av historikGraf(), läses av historikHover()
+const HISTORIK_FARGER = ["#34d399", "#60a5fa", "#f472b6", "#fbbf24", "#a78bfa"];
+function bucketeraHistorik(punkter, gran) {
+  if (gran !== "dag" || punkter.length < 2) return punkter;
+  const grupper = new Map();
+  for (const p of punkter) {
+    const dag = p.tid.slice(0, 10);
+    if (!grupper.has(dag)) grupper.set(dag, []);
+    grupper.get(dag).push(p.varde);
+  }
+  return [...grupper.entries()].map(([dag, varden]) => ({
+    tid: `${dag}T12:00:00`,
+    varde: varden.reduce((s, v) => s + v, 0) / varden.length,
+  }));
+}
+// Mjukar upp den annars taggiga punkt-till-punkt-linjen genom att gå via
+// mittpunkten mellan varje par (ett klassiskt lättviktstrick för mjuka
+// kurvor utan en riktig spline-bibliotek) – tillräckligt för sensordata,
+// och noll externa beroenden.
+function smalKurva(pts) {
+  if (pts.length < 2) return "";
+  let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i], p1 = pts[i + 1];
+    const mx = (p0.x + p1.x) / 2, my = (p0.y + p1.y) / 2;
+    d += ` Q ${p0.x.toFixed(1)} ${p0.y.toFixed(1)} ${mx.toFixed(1)} ${my.toFixed(1)}`;
+  }
+  const sista = pts[pts.length - 1];
+  d += ` T ${sista.x.toFixed(1)} ${sista.y.toFixed(1)}`;
+  return d;
+}
+function historikGraf(mal) {
+  const W = 640, H = 190, MARGINAL = 20;
+  const serier = mal.map((m, i) => ({
+    enhet: m.enhet,
+    farg: HISTORIK_FARGER[i % HISTORIK_FARGER.length],
+    punkter: bucketeraHistorik(m.punkter, historikGranularitet),
+  }));
+  const grafbara = serier.filter((s) => s.punkter.length >= 2);
+  const rubrikRad = `<div class="historik-rubrikrad">
+    <label class="lbl" style="margin:0">Historik</label>
+    <div class="historik-granularitet">
+      <button data-gran="timme" class="${historikGranularitet === "timme" ? "aktiv" : ""}">Per timme</button>
+      <button data-gran="dag" class="${historikGranularitet === "dag" ? "aktiv" : ""}">Per dag</button>
+    </div>
+  </div>`;
+  const legend = serier.map((s) => {
+    const senaste = s.punkter.length ? s.punkter[s.punkter.length - 1].varde : null;
+    const enhetText = s.enhet.enhet ?? "";
+    return `<span class="historik-legend-post"><i style="background:${s.farg}"></i>${esc(s.enhet.namn)}
+      ${senaste != null ? `<span class="varde">${senaste.toFixed(1).replace(/\.0$/, "")}${esc(enhetText)}</span>` : ""}</span>`;
+  }).join("");
+  if (!grafbara.length) {
+    historikGrafData = null;
+    return `${rubrikRad}<div class="historik-legend">${legend}</div>
+      <div class="tom" style="padding:18px 0">Samlar data … kolla tillbaka om ett tag.</div>`;
+  }
+  const allaTider = grafbara.flatMap((s) => s.punkter.map((p) => new Date(p.tid).getTime()));
+  const tMin = Math.min(...allaTider), tMax = Math.max(...allaTider), tSpann = (tMax - tMin) || 1;
+  const serierMedSkala = grafbara.map((s) => {
+    const varden = s.punkter.map((p) => p.varde);
+    const min = Math.min(...varden), max = Math.max(...varden);
+    return { ...s, min, spann: (max - min) || 1 };
+  });
+  historikGrafData = { W, H, MARGINAL, tMin, tSpann, serier: serierMedSkala };
+  const xFor = (t) => ((new Date(t).getTime() - tMin) / tSpann) * W;
+  const yFor = (v, s) => H - MARGINAL - ((v - s.min) / s.spann) * (H - MARGINAL * 2);
+  const rutnat = [0.25, 0.5, 0.75].map((andel) =>
+    `<line class="historik-rutlinje" x1="0" y1="${(H * andel).toFixed(1)}" x2="${W}" y2="${(H * andel).toFixed(1)}"/>`).join("");
+  const yta = serierMedSkala.map((s) => {
+    const pts = s.punkter.map((p) => ({ x: xFor(p.tid), y: yFor(p.varde, s) }));
+    const bottenY = H - MARGINAL / 2;
+    return `<path d="${smalKurva(pts)} L ${pts[pts.length - 1].x.toFixed(1)} ${bottenY} L ${pts[0].x.toFixed(1)} ${bottenY} Z"
+      fill="url(#historikGrad-${esc(s.enhet.id)})" stroke="none"/>`;
+  }).join("");
+  const linjer = serierMedSkala.map((s) => {
+    const pts = s.punkter.map((p) => ({ x: xFor(p.tid), y: yFor(p.varde, s) }));
+    return `<path d="${smalKurva(pts)}" fill="none" stroke="${s.farg}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+  }).join("");
+  const gradienter = serierMedSkala.map((s) => `<linearGradient id="historikGrad-${esc(s.enhet.id)}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="${s.farg}" stop-opacity=".32"/>
+    <stop offset="100%" stop-color="${s.farg}" stop-opacity="0"/>
+  </linearGradient>`).join("");
+  const punkter = serierMedSkala.map((s) =>
+    `<circle class="historik-punkt" id="historikPunkt-${esc(s.enhet.id)}" r="3.5" fill="${s.farg}" style="display:none"/>`).join("");
+  return `${rubrikRad}<div class="historik-legend">${legend}</div>
+    <div class="historik-graf-wrap">
+      <svg viewBox="0 0 ${W} ${H}" class="historik-graf" id="historikGrafSvg" preserveAspectRatio="none"
+        onmousemove="historikHover(event)" onmouseleave="historikHoverUt()">
+        <defs>${gradienter}</defs>
+        ${rutnat}
+        ${yta}
+        ${linjer}
+        <line class="historik-crosshair" id="historikCrosshair" x1="0" y1="0" x2="0" y2="${H}" style="display:none"/>
+        ${punkter}
+      </svg>
+      <div class="historik-tooltip" id="historikTooltip" style="display:none"></div>
+    </div>`;
+}
+// Hittar tidsstämpeln närmast musen bland ALLA seriers punkter tillsammans
+// (inte bara en av dem), så en hovring alltid landar på en riktig mätpunkt
+// och tooltipen kan visa värdet för varje serie vid ungefär samma tidpunkt.
+function historikHover(e) {
+  const d = historikGrafData;
+  if (!d) return;
+  const svg = $("historikGrafSvg");
+  const rect = svg.getBoundingClientRect();
+  if (!rect.width) return;
+  const musX = ((e.clientX - rect.left) / rect.width) * d.W;
+  const musTid = d.tMin + (musX / d.W) * d.tSpann;
+  let bastTid = null, bastAvstand = Infinity;
+  for (const s of d.serier) for (const p of s.punkter) {
+    const avstand = Math.abs(new Date(p.tid).getTime() - musTid);
+    if (avstand < bastAvstand) { bastAvstand = avstand; bastTid = p.tid; }
+  }
+  if (bastTid == null) return;
+  const x = ((new Date(bastTid).getTime() - d.tMin) / d.tSpann) * d.W;
+  const crosshair = $("historikCrosshair");
+  crosshair.setAttribute("x1", x); crosshair.setAttribute("x2", x);
+  crosshair.style.display = "";
+  const rader = [];
+  for (const s of d.serier) {
+    // Närmaste punkt i just den här serien till den valda tiden - serierna
+    // delar inte nödvändigtvis exakt samma tidsstämplar.
+    let bastP = null, bastD = Infinity;
+    for (const p of s.punkter) {
+      const av = Math.abs(new Date(p.tid).getTime() - new Date(bastTid).getTime());
+      if (av < bastD) { bastD = av; bastP = p; }
+    }
+    const cirkel = document.getElementById(`historikPunkt-${s.enhet.id}`);
+    if (bastP && bastD < d.tSpann) {
+      cirkel.setAttribute("cx", ((new Date(bastP.tid).getTime() - d.tMin) / d.tSpann) * d.W);
+      cirkel.setAttribute("cy", d.H - d.MARGINAL - ((bastP.varde - s.min) / s.spann) * (d.H - d.MARGINAL * 2));
+      cirkel.style.display = "";
+      rader.push(`<div class="rad"><i style="background:${s.farg}"></i>${esc(s.enhet.namn)}
+        <span class="varde">${bastP.varde.toFixed(1).replace(/\.0$/, "")}${esc(s.enhet.enhet ?? "")}</span></div>`);
+    } else cirkel.style.display = "none";
+  }
+  const tooltip = $("historikTooltip");
+  const datum = new Date(bastTid);
+  const tidText = historikGranularitet === "dag"
+    ? datum.toLocaleDateString("sv-SE", { day: "numeric", month: "short" })
+    : datum.toLocaleString("sv-SE", { weekday: "short", hour: "2-digit", minute: "2-digit" });
+  tooltip.innerHTML = `<div class="tid">${esc(tidText)}</div>${rader.join("")}`;
+  tooltip.style.display = "";
+  const vaggBredd = svg.parentElement.clientWidth;
+  const tooltipX = Math.min(vaggBredd - 70, Math.max(70, (x / d.W) * vaggBredd));
+  tooltip.style.left = `${tooltipX}px`;
+}
+function historikHoverUt() {
+  $("historikCrosshair").style.display = "none";
+  document.querySelectorAll(".historik-punkt").forEach((c) => { c.style.display = "none"; });
+  $("historikTooltip").style.display = "none";
 }
 // "≈ 6,5 timmar sol idag" – räknat på var solen står och vad som skuggar.
 function solTimmarText(z) {
@@ -3855,6 +4041,8 @@ document.addEventListener("click", async (e) => {
   // Tillbaka-chippen som dyker upp när man "drillat in" på en zon i kompakt läge
   const breadcrumbBackEl = e.target.closest("#breadcrumbBackBtn");
   if (breadcrumbBackEl) { stangDrillIn(); return; }
+  const granVal = e.target.closest(".historik-granularitet button");
+  if (granVal) { historikGranularitet = granVal.dataset.gran; renderaDetaljPanel(); return; }
   // Välj mål: klick på en planta väger tyngre än klick på hela zon-kortet
   const chipEl = e.target.closest(".vaxt-grupp, .vaxt-fyll");
   if (chipEl) { valjMal("odling", chipEl.dataset.id); return; }
