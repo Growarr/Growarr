@@ -21,6 +21,13 @@ It's two things in one repo: **the panel** (a single Docker container) and
 a free nightly **frost watch** that runs on GitHub Actions and texts your
 phone before a cold snap hits.
 
+<p align="center">
+  <img src="docs/screenshot-desktop.png" width="100%" alt="Growarr dashboard: garden map, weather, notifications and sensor history">
+</p>
+<p align="center">
+  <img src="docs/screenshot-mobile.png" width="230" alt="Growarr on mobile">
+</p>
+
 ## Why bother
 
 - **A map, not a form.** Drag greenhouses, beds and pots into place. Plants
