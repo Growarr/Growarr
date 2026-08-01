@@ -22,10 +22,7 @@ a free nightly **frost watch** that runs on GitHub Actions and texts your
 phone before a cold snap hits.
 
 <p align="center">
-  <img src="docs/screenshot-desktop.png" width="100%" alt="Growarr dashboard: garden map, weather, notifications and sensor history">
-</p>
-<p align="center">
-  <img src="docs/screenshot-mobile.png" width="230" alt="Growarr on mobile">
+  <img src="docs/screenshot-demo.png" width="100%" alt="Growarr dashboard on desktop and mobile: garden map, weather, notifications and sensor history">
 </p>
 
 ## Why bother
