@@ -14,7 +14,7 @@
 Most garden trackers are a spreadsheet with extra steps. Growarr is a real,
 drag-and-drop map of your greenhouse, beds and pots that cross-references
 the local forecast, learns your garden's own microclimate, and tells you
-what actually needs attention today — self-hosted, and built to plug
+what actually needs attention today. Self-hosted, and built to plug
 straight into a Home Assistant setup you already run.
 
 It's two things in one repo: **the panel** (a single Docker container) and
@@ -26,8 +26,8 @@ phone before a cold snap hits.
 </p>
 
 > [!NOTE]
-> Work in progress. My wife does the actual gardening — I just built the
-> app around what she needs — so it's very much shaped by real day-to-day
+> Work in progress. My wife does the actual gardening, and I just built the
+> app around what she needs, so it's very much shaped by real day-to-day
 > use rather than a finished spec. Feedback, bug reports and feature ideas
 > are genuinely welcome.
 
@@ -41,12 +41,12 @@ phone before a cold snap hits.
 - **Ask it anything.** Photograph a sick-looking plant and get an answer
   from Claude that's grounded in your actual sensors, not generic advice.
 - **It tells you what matters.** A notification center surfaces frost risk,
-  dry soil, and harvest windows — optionally prioritized and merged by
+  dry soil, and harvest windows, optionally prioritized and merged by
   Claude so you get one useful line instead of five.
 - **Sun and shadow, worked out for real.** See exactly which beds shade
   each other at any hour, computed from your garden's own coordinates.
 - **Feels native on a phone.** Bottom-sheet panels, a floating glass nav
-  bar, dark mode — not a desktop dashboard squeezed onto a small screen.
+  bar, dark mode. Not a desktop dashboard squeezed onto a small screen.
 - **Your data, your box.** One container, one data file, your own Home
   Assistant entities. No accounts, no cloud sync.
 
@@ -68,7 +68,7 @@ and updates roll out on their own.
 
 | Variable | Required | What it does |
 |---|---|---|
-| `PORT` | No — default `8097` | Port the panel listens on |
+| `PORT` | No (default `8097`) | Port the panel listens on |
 | `HA_URL` | For Home Assistant features | Your HA base URL |
 | `HA_TOKEN` | For Home Assistant features | A long-lived HA access token |
 | `GEO_LAT`, `GEO_LON` | For weather & sun map | Your garden's coordinates |
@@ -90,7 +90,7 @@ infrastructure, so it needs its own repo secrets:
 
 1. Add secrets **`GEO_LAT`** and **`GEO_LON`**.
 2. Add secret **`NTFY_TOPIC`** and/or **`WEBHOOK_URL`**.
-3. Optional: repo variable **`FROST_TROSKEL`** (°C, default `3`) — margin
+3. Optional: repo variable **`FROST_TROSKEL`** (°C, default `3`). Margin
    against ground frost, since the forecast is air temperature 2m up.
 4. Run it once by hand from the **Actions** tab, or wait for the nightly
    schedule (18:00 Swedish time).
@@ -108,7 +108,7 @@ Point a custom location at the panel, e.g. in Nginx Proxy Manager:
 - Forward to: your HA host, port `8097`
 
 Then add it to Home Assistant's sidebar as a dashboard pointing at
-`https://your-domain/growarr/` — keep the trailing slash, or the panel's
+`https://your-domain/growarr/`. Keep the trailing slash, or the panel's
 own API calls end up in the wrong place.
 
 </details>
@@ -141,7 +141,7 @@ own API calls end up in the wrong place.
 
 ## No login, by design
 
-The panel has no auth of its own — same model as the rest of a typical
+The panel has no auth of its own, same model as the rest of a typical
 home-lab. Keep it behind your VPN, your LAN, or whatever Zero Trust layer
 already fronts your other self-hosted apps.
 
