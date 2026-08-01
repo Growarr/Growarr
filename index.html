@@ -980,7 +980,6 @@ try {
 
         <div id="vyOversikt">
           <div class="karta-header" style="margin-top:8px">
-            <span style="flex:1"></span>
             <button class="karta-redigera-btn" id="kompaktBtn" title="Växla till en enkel planritning med former och namn">
               <span id="kompaktBtnIkon"></span>
               <span id="kompaktBtnText">Kompakt</span>
@@ -2341,21 +2340,25 @@ function dragMove(e) {
 }
 
 // Fri zon-dragning i sig gör det svårt att pixelmäta fram samma rad/kolumn
-// för hand. Så fort den dragna zonens mitt är nära en annan zons sparade
-// mitt (på samma karta, fristående, inte den man drar) snappas den exakt
-// dit och en ledlinje tänds – släpper man sparas det redan snäppta läget,
-// inget extra steg krävs. Bara mot zoner som själva flyttats en gång
-// (fått ett sparat x/y) – standardrutnätets positioner räknas inte med,
-// annars skulle nya, aldrig flyttade zoner "dra i" varandra av misstag.
+// för hand. Så fort den dragna zonens mitt är nära en annan zons mitt (på
+// samma karta, fristående, inte den man drar) snappas den exakt dit och en
+// ledlinje tänds – släpper man sparas det redan snäppta läget, inget extra
+// steg krävs. Räknar med zonPosition() precis som renderaKarta() gör, så
+// även zoner som ALDRIG flyttats än (bara ligger på sin standardplats i
+// rutnätet) fortfarande går att rada upp mot – annars fick man först dra
+// iväg en zon en helt onödig gång bara för att ge den ett "riktigt" x/y
+// innan nästa kunde snäppa mot den.
 const SNAP_TROSKEL_PX = 7;
 function zonSnappning(s, rect) {
   const troskelX = SNAP_TROSKEL_PX / rect.width, troskelY = SNAP_TROSKEL_PX / rect.height;
+  const toppzoner = zoner.filter((z) => z.kartaId === aktivKartaId && !z.foralderId);
   let snappadX = null, snappadY = null;
-  for (const z of zoner) {
-    if (z.id === s.id || z.foralderId || z.kartaId !== aktivKartaId) continue;
-    if (z.x != null && snappadX == null && Math.abs(z.x - s.x) < troskelX) snappadX = z.x;
-    if (z.y != null && snappadY == null && Math.abs(z.y - s.y) < troskelY) snappadY = z.y;
-  }
+  toppzoner.forEach((z, i) => {
+    if (z.id === s.id) return;
+    const { x, y } = zonPosition(z, i);
+    if (snappadX == null && Math.abs(x - s.x) < troskelX) snappadX = x;
+    if (snappadY == null && Math.abs(y - s.y) < troskelY) snappadY = y;
+  });
   if (snappadX != null) s.x = snappadX;
   if (snappadY != null) s.y = snappadY;
   visaSnapLinjer(snappadX, snappadY);
