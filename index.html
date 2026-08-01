@@ -3508,21 +3508,21 @@ function renderaDetaljPanel() {
         })()}</div></div>
         <button class="tillbaka-btn" id="dAvmarkeraBtn">Avmarkera</button>
       </div>
+      ${kopplaEntiteterHtml(z.enhetIds)}
+      ${mikroklimatText(z)}
+      ${detaljHistorikHtml(z.enhetIds)}
+      ${zonPlantorHtml(z)}
+      ${zonSektionerHtml(z)}
       ${z.foralderId ? "" : `<div class="falt">
         <label class="lbl">Höjd över marken (m) – styr hur lång skugga zonen kastar i solkartan</label>
         <input type="number" id="mHojdM" min="0" max="20" step="0.1" value="${hojdMFor(z)}">
         ${solTimmarText(z)}
       </div>`}
-      ${mikroklimatText(z)}
       <div class="falt"><label class="lbl">Jord</label><input type="text" id="mJord" placeholder="t.ex. näringsrik potatisjord + kompost" value="${esc(z.jord ?? "")}"></div>
       <div class="falt"><label class="lbl">Anteckning</label><textarea id="mAnteckning" placeholder="fritt att skriva">${esc(z.anteckning ?? "")}</textarea></div>
       <button id="mSparaBtn">Spara</button>
       <button class="karta-redigera-btn" id="mQrBtn" data-id="${esc(z.id)}" style="margin-left:8px">QR-etikett</button>
-      <div class="status" id="mStatus"></div>
-      ${zonSektionerHtml(z)}
-      ${zonPlantorHtml(z)}
-      ${kopplaEntiteterHtml(z.enhetIds)}
-      ${detaljHistorikHtml(z.enhetIds)}`;
+      <div class="status" id="mStatus"></div>`;
   } else {
     const o = odlingar.find((x) => x.id === id);
     if (!o) { valtMal = null; return renderaDetaljPanel(); }
@@ -3533,6 +3533,8 @@ function renderaDetaljPanel() {
         <div><h3>${esc(o.namn)}</h3><div class="modal-sub">${antalFor(o)} st${zon ? ` · ${esc(zon.namn)}` : " · okategoriserat"}</div></div>
         <button class="tillbaka-btn" id="dAvmarkeraBtn">Avmarkera</button>
       </div>
+      ${kopplaEntiteterHtml(o.enhetIds)}
+      ${detaljHistorikHtml(o.enhetIds)}
       <div class="skapa-rad">
         <div><label class="lbl">Antal (st)</label><input type="number" id="mAntal" min="1" max="200" value="${antalFor(o)}"></div>
         <div><label class="lbl">På kartan</label>
@@ -3548,9 +3550,7 @@ function renderaDetaljPanel() {
       <div class="falt"><label class="lbl">Jord</label><input type="text" id="mJord" placeholder="t.ex. kruka med kaktusjord" value="${esc(o.jord ?? "")}"></div>
       <div class="falt"><label class="lbl">Anteckning</label><textarea id="mAnteckning" placeholder="fritt att skriva">${esc(o.anteckning ?? "")}</textarea></div>
       <button id="mSparaBtn">Spara</button>
-      <div class="status" id="mStatus"></div>
-      ${kopplaEntiteterHtml(o.enhetIds)}
-      ${detaljHistorikHtml(o.enhetIds)}`;
+      <div class="status" id="mStatus"></div>`;
   }
 }
 
