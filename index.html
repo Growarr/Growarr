@@ -401,7 +401,7 @@ try {
       repeating-linear-gradient(90deg, color-mix(in srgb, var(--text) 5%, transparent) 0 1px, transparent 1px 64px),
       repeating-linear-gradient(0deg, color-mix(in srgb, var(--text) 5%, transparent) 0 1px, transparent 1px 64px),
       var(--surface2); }
-  /* Bara den programmatiska zoom-in/ut-animationen (drillInZon/stangDrillIn)
+  /* Bara den programmatiska zoom-in/ut-animationen (fokuseraZon/stangFokusZon)
      ska vara mjuk – under vanlig pinch/drag ska kartan följa fingret direkt
      utan fördröjning, därför en tillfällig klass i stället för en permanent
      transition på .karta-scen. */
@@ -1438,7 +1438,7 @@ let redigerarLayout = false;
 // renderaKarta() ritar samma zoner. Standard påslaget – en ren planritning
 // känns rakare vid första besöket än fulla, texturerade kort; "Karta" växlar
 // till det rika läget för den som vill se växthusglas och jord i detalj.
-let kompaktLage = true;
+let kompaktLage = false;
 // Vilken av de fyra flikarna ovanför trädgårdskortet som är aktiv –
 // styr bara vad som visas, ingen egen data.
 let vyAktiv = "oversikt";
@@ -1812,7 +1812,7 @@ function renderaKarta() {
   const synligaIder = new Set(synligaZoner.map((z) => z.id));
   // Om zonen man var inzoomad på försvann (bytt kartflik, borttagen) finns
   // inget att zooma tillbaka från – släpp tillbaka till översikten tyst.
-  if (kompaktZoomZonId && !synligaIder.has(kompaktZoomZonId)) kompaktZoomZonId = null;
+  if (fokusZonId && !synligaIder.has(fokusZonId)) fokusZonId = null;
   const grupper = new Map(synligaZoner.map((z) => [z.id, []]));
   const okategoriserade = [];
   for (const o of odlingar) {
@@ -1847,15 +1847,18 @@ function renderaKarta() {
       const h = z.hojd ?? (sektioner.length ? 210 : 100);
       // I kompakt läge visas zonen som en flatfärgad, korrekt proporsionerad
       // form – som ett litet arkitektritat siteplan – UTOM den man just
-      // "drillat in på" (kompaktZoomZonId), som får den rikare, plantfyllda
-      // kortvyn precis som den vanliga kartan. Se drillInZon/stangDrillIn.
-      const visaRikt = !kompaktLage || z.id === kompaktZoomZonId;
+      // zoomat in på (fokusZonId), som får den rikare, plantfyllda kortvyn
+      // precis som den vanliga kartan alltid visar. Se fokuseraZon/
+      // stangFokusZon. I den vanliga (icke-kompakta) vyn är alla zoner redan
+      // i sitt rika läge, så där gör fokusZonId bara att rätt kort får
+      // fokus-ramen nedan – ingen extra döljning behövs.
+      const visaRikt = !kompaktLage || z.id === fokusZonId;
       if (!visaRikt) {
         // .zon-kort (utan -canvas) räcker för att återanvända den vanliga
         // klick-för-att-markera-logiken; ingen dragning i det här läget.
         const antal = [...lista, ...(sektioner.flatMap((s) => grupper.get(s.id) ?? []))]
           .reduce((s, o) => s + antalFor(o), 0);
-        const dimmad = kompaktZoomZonId ? " dimmad" : "";
+        const dimmad = fokusZonId ? " dimmad" : "";
         return `<div class="zon-kort zon-pin ${esc(z.typ || "annat")}${vald ? " vald" : ""}${dimmad}" data-id="${z.id}"
             style="left:${x * 100}%; top:${y * 100}%; width:${b}px; height:${h}px">
           <span class="pin-dot"></span>
@@ -1866,7 +1869,7 @@ function renderaKarta() {
       const enhetBadges = entiteterFor(z.enhetIds).filter((e) => !e.fel)
         .map((e) => `<span class="zon-enhet">${ikonForEnhet(e.enhet)} ${esc(e.state)}${e.enhet ? " " + esc(e.enhet) : ""}</span>`).join("");
       const tomText = sektioner.length ? "" : '<span class="zon-tom">Inget planterat än</span>';
-      const fokus = kompaktLage && z.id === kompaktZoomZonId;
+      const fokus = z.id === fokusZonId;
       return `<div class="zon-kort zon-kort-canvas${vald ? " vald" : ""}${fokus ? " fokus" : ""}" data-id="${z.id}"
           style="left:${x * 100}%; top:${y * 100}%; width:${b}px">
         <div class="zon-topp">
@@ -2184,13 +2187,15 @@ function passaKarta() {
   tillampaZoom();
 }
 
-// ---- Kompakt läge: "zooma in" på en zon och se dess plantor ----
-// Samma idé som att klicka ett kluster på Apple/Google Maps: från plan-
-// ritningsöversikten zoomar kameran in på just den zonen och byter den till
-// den rikare, plantfyllda kortvyn – övriga zoner tonas ner men ligger kvar
-// för sammanhanget. Återanvänder både den vanliga zonkorts-renderingen och
-// pan/zoom-motorn ovan i stället för att bygga en egen miniatyrvy per zon.
-let kompaktZoomZonId = null;
+// ---- "Zooma in" på en zon när man klickar den ----
+// Samma idé som att klicka ett kluster på Apple/Google Maps: kameran
+// panorerar/förstorar för att fylla zonen, och en "← tillbaka"-chip dyker
+// upp för att zooma ut igen. I kompakt läge byter dessutom just den zonen
+// till sin rika, plantfyllda kortvy (övriga tonas ner) – i den vanliga
+// kartvyn är alla zoner redan i sitt rika läge, så där är det bara själva
+// kamerarörelsen som är nytt. Öppnar samtidigt detaljpanelen (valjMal), så
+// ett enda klick både zoomar och visar det man vill se.
+let fokusZonId = null;
 
 // Bara den programmatiska in/ut-zoomningen ska vara mjukt animerad – vanlig
 // pinch/drag ska följa fingret direkt, därför en tillfällig CSS-klass i
@@ -2216,21 +2221,21 @@ function zoomaTillZon(zonId) {
   kartaPanY = (fh - hojd * kartaZoom) / 2 - y1 * kartaZoom;
   tillampaZoom();
 }
-function drillInZon(zonId) {
+function fokuseraZon(zonId) {
   if (redigerarLayout) return;
-  kompaktZoomZonId = zonId;
-  renderaKarta();
+  fokusZonId = zonId;
+  valjMal("zon", zonId); // renderar om kartan åt oss också
   animeraKartaTransform(() => zoomaTillZon(zonId));
 }
-function stangDrillIn() {
-  kompaktZoomZonId = null;
+function stangFokusZon() {
+  fokusZonId = null;
   renderaKarta();
   animeraKartaTransform(() => passaKarta());
 }
 function renderaBreadcrumb() {
   const el = $("kartaBreadcrumb");
-  if (!kompaktZoomZonId) { el.style.display = "none"; el.innerHTML = ""; return; }
-  const z = zoner.find((x) => x.id === kompaktZoomZonId);
+  if (!fokusZonId) { el.style.display = "none"; el.innerHTML = ""; return; }
+  const z = zoner.find((x) => x.id === fokusZonId);
   el.style.display = "flex";
   el.innerHTML = `<button id="breadcrumbBackBtn" title="Tillbaka till översikten">${IKON_TILLBAKA}</button><span>${esc(z?.namn ?? "")}</span>`;
 }
@@ -4170,9 +4175,9 @@ document.addEventListener("click", async (e) => {
     return;
   }
 
-  // Tillbaka-chippen som dyker upp när man "drillat in" på en zon i kompakt läge
+  // Tillbaka-chippen som dyker upp när kameran zoomat in på en zon
   const breadcrumbBackEl = e.target.closest("#breadcrumbBackBtn");
-  if (breadcrumbBackEl) { stangDrillIn(); return; }
+  if (breadcrumbBackEl) { stangFokusZon(); return; }
   const granVal = e.target.closest(".historik-granularitet button");
   if (granVal) { historikGranularitet = granVal.dataset.gran; renderaDetaljPanel(); return; }
   // Välj mål: klick på en planta väger tyngre än klick på hela zon-kortet
@@ -4181,12 +4186,11 @@ document.addEventListener("click", async (e) => {
   // Sektionen måste testas före zon-kortet – annars fångar föräldern klicket
   const sektionEl = e.target.closest(".zon-sektion");
   if (sektionEl) { valjMal("zon", sektionEl.dataset.id); return; }
-  // En flatfärgad zon-pin (kompakt läge): klick zoomar in på zonen och visar
-  // dess plantor i stället för att öppna detaljpanelen direkt.
-  const zonPinEl = e.target.closest(".zon-pin");
-  if (zonPinEl) { drillInZon(zonPinEl.dataset.id); return; }
+  // Zon-kortet (flatfärgad zon-pin i kompakt läge, eller det rika kortet i
+  // den vanliga kartvyn) – klick zoomar in kameran på zonen OCH öppnar
+  // detaljpanelen i samma klick, i båda lägena.
   const zonKortEl = e.target.closest(".zon-kort");
-  if (zonKortEl && !zonKortEl.classList.contains("okategoriserat")) { valjMal("zon", zonKortEl.dataset.id); return; }
+  if (zonKortEl && !zonKortEl.classList.contains("okategoriserat")) { fokuseraZon(zonKortEl.dataset.id); return; }
 
   // Per zon-fliken: klick på ett sammanfattningskort öppnar samma
   // detaljpanel som klick på kartan – samma data, en genväg dit.
@@ -4294,7 +4298,7 @@ function tillampaKompaktUI() {
 tillampaKompaktUI();
 $("kompaktBtn").addEventListener("click", () => {
   kompaktLage = !kompaktLage;
-  kompaktZoomZonId = null; // börja alltid om i översikten, inte inzoomad
+  fokusZonId = null; // börja alltid om i översikten, inte inzoomad
   tillampaKompaktUI();
   kartaAnvandarstyrd = false; // anpassa om zoomen till det nya lägets mått
   renderaKarta();
