@@ -605,24 +605,38 @@ try {
   /* ---- Per zon / Per planta: enkla sammanfattningskort, samma familj som
      historik-kort men klickbara – de öppnar den riktiga detaljpanelen (Per
      zon) eller expanderar en detaljsektion under gridden (Per planta). ---- */
-  .zon-summary-grid, .sort-summary-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+  .zon-summary-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
     gap:14px; margin-top:16px; }
+  /* Variety cards are a picker, not content: they only carry a name, a
+     count and a place count, so they can be far tighter than the zone
+     cards, which also show linked sensor readings. */
+  .sort-summary-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(112px,1fr));
+    gap:8px; margin-top:14px; }
   .zon-summary-kort, .sort-summary-kort { background:var(--surface2); border:1px solid var(--border);
     border-radius:var(--r-sm); padding:14px; cursor:pointer; transition:border-color .15s ease, transform .12s ease; }
+  .sort-summary-kort { padding:10px 10px 9px; border-radius:12px; }
   .zon-summary-kort:hover, .sort-summary-kort:hover { border-color:color-mix(in srgb, var(--accent) 45%, var(--border)); }
   .zon-summary-kort.vald, .sort-summary-kort.vald { border-color:var(--accent);
     box-shadow:0 0 0 1px var(--accent); }
   .zon-summary-kort .ikon, .sort-summary-kort .ikon { font-size:1.3rem; display:block; margin-bottom:6px; }
   .zon-summary-kort .namn, .sort-summary-kort .namn { font-weight:650; font-size:.92rem; display:block; }
+  /* Two lines, not four, and line-height reset: the inherited 1.6 from body
+     added ~25px of empty space to a card this small. */
+  .sort-summary-kort { line-height:1.25; }
+  .sort-summary-kort .topprad { display:flex; align-items:center; gap:6px; min-width:0; }
+  .sort-summary-kort .ikon { font-size:1rem; margin:0; flex:0 0 auto; }
+  .sort-summary-kort .namn { font-size:.8rem; display:block; min-width:0;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .zon-summary-kort .sub { font-size:.76rem; color:var(--muted); margin-top:2px; }
   .zon-summary-kort .antal { font-size:.8rem; font-weight:600; color:var(--accent); margin-top:8px; }
   .zon-summary-kort .antal.tom-text { color:var(--muted); font-weight:500; }
   .zon-summary-kort .entitet-rad { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
   .zon-summary-kort .entitet-rad span { font-size:.7rem; font-weight:600; background:var(--surface);
     border:1px solid var(--border); border-radius:99px; padding:2px 8px; }
-  .sort-summary-kort .antal { font-size:1.15rem; font-weight:700; display:block; margin-top:6px;
+  .sort-summary-kort .antal { font-size:.95rem; font-weight:700; display:block; margin-top:4px;
     font-variant-numeric:tabular-nums; }
-  .sort-summary-kort .platser { font-size:.72rem; color:var(--muted); display:block; margin-top:1px; }
+  .sort-summary-kort .platser { font-size:.7rem; font-weight:500; color:var(--muted); }
+  /* Save and delete side by side; delete stays visually secondary until     hovered, so it is reachable without inviting a mis-click. */  .detalj-knapprad { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }  .ta-bort-knapp { background:var(--surface2); color:var(--muted); border:1px solid var(--border);    box-shadow:none; font-size:.84rem; padding:9px 16px; }  .ta-bort-knapp:hover { background:color-mix(in srgb, var(--err) 14%, var(--surface2));    border-color:color-mix(in srgb, var(--err) 42%, var(--border)); color:var(--err);    transform:none; box-shadow:none; }
   .sort-detalj { margin-top:20px; padding-top:18px; border-top:1px solid var(--border); }
 
   .historik-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin-top:4px; }
@@ -702,10 +716,17 @@ try {
   .kalender-nav:hover { background:color-mix(in srgb, var(--accent) 16%, var(--surface2)); transform:none; box-shadow:none; }
   .kalender-veckodagar { display:grid; grid-template-columns:repeat(7,1fr); text-align:center;
     font-size:.72rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px; }
-  .kalender-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
-  .kalender-dag { position:relative; aspect-ratio:1; display:flex; flex-direction:column; align-items:center;
-    justify-content:center; gap:3px; border-radius:12px; background:none; border:1px solid transparent;
-    color:var(--text); font-size:.86rem; box-shadow:none; cursor:pointer; }
+  /* The calendar is a date picker, not a wall planner: capped so it stays a
+     compact block instead of stretching across a wide dashboard column. */
+  .kalender-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; max-width:380px; }
+  .kalender-veckodagar { max-width:380px; }
+  .kalender-huvud { max-width:380px; }
+  /* Fixed height rather than aspect-ratio:1. Square cells in a 7-column grid
+     grow with the container, so on a wide screen the calendar turned into a
+     ~700px tall block of mostly empty space. */
+  .kalender-dag { position:relative; height:42px; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; gap:2px; border-radius:10px; background:none; border:1px solid transparent;
+    color:var(--text); font-size:.82rem; box-shadow:none; cursor:pointer; }
   .kalender-dag.tom { visibility:hidden; cursor:default; }
   .kalender-dag:not(.tom):hover { background:var(--surface2); transform:none; box-shadow:none; }
   .kalender-dag.idag { border-color:var(--accent); font-weight:700; }
@@ -1611,7 +1632,7 @@ const SPRAK_TEXT = {
     sprak: "Språk", svenska: "Svenska", engelska: "English",
     // Validation and status
     bakgrund: "Bakgrund", bakgrund_hjalp: "Rutnät, rent eller din egen flygbild",    bakgrund_rutnat: "Rutnät", bakgrund_ren: "Rent", bakgrund_foto: "Foto",    bakgrund_hjalp_lang: "Rent och Foto tar båda bort rutnätet. Ladda upp en flygbild (en skärmdump från Google Maps duger) för att lägga ut zonerna över er faktiska tomt.",    flygbild: "Flygbild", ladda_upp_bild: "Ladda upp bild", byt_bild: "Byt bild",    bildstyrka: "Bildstyrka", bildstyrka_hjalp: "Tona ner bilden så plantikonerna syns tydligt ovanpå.",    laddar_upp: "Laddar upp …", ingen_karta: "Ingen karta vald.",
-    namn_kravs: "Namn krävs.", kunde_inte_spara: "Kunde inte spara: ", sparat: "Sparat.",
+    namn_kravs: "Namn krävs.", kunde_inte_spara: "Kunde inte spara: ", sparat: "Sparat.", okategoriserat: "Okategoriserat", fyller_ytan_kort: "fyller ytan", var_finns: "Var", inga_odlingar: "Inga odlingar ännu – lägg till en planta i en zon på kartan.", plats: "plats", platser: "platser", bekrafta_ta_bort_zon: "Ta bort zonen? Plantorna blir okategoriserade och sektioner flyttas upp en nivå.", bekrafta_ta_bort_planta: "Ta bort odlingen?",
     valj_zon: "Välj en zon.", valj_veckodag: "Välj minst en veckodag.",
     // Create-new modal
     skapa_sub: "Zoner, plantor, kartor och egna block",
@@ -1693,7 +1714,7 @@ const SPRAK_TEXT = {
     tema_hjalp: "Follows your device's light/dark setting by default, or pick one yourself.",
     sprak: "Language", svenska: "Svenska", engelska: "English",
     bakgrund: "Background", bakgrund_hjalp: "Grid, plain or your own aerial photo",    bakgrund_rutnat: "Grid", bakgrund_ren: "Plain", bakgrund_foto: "Photo",    bakgrund_hjalp_lang: "Plain and Photo both drop the grid. Upload an aerial shot (a Google Maps screenshot works) to lay your zones out over your actual property.",    flygbild: "Aerial photo", ladda_upp_bild: "Upload image", byt_bild: "Replace image",    bildstyrka: "Image strength", bildstyrka_hjalp: "Dim the photo so the plant icons stay readable on top of it.",    laddar_upp: "Uploading …", ingen_karta: "No map selected.",
-    namn_kravs: "A name is required.", kunde_inte_spara: "Could not save: ", sparat: "Saved.",
+    namn_kravs: "A name is required.", kunde_inte_spara: "Could not save: ", sparat: "Saved.", okategoriserat: "Uncategorised", fyller_ytan_kort: "fills the area", var_finns: "Where", inga_odlingar: "Nothing planted yet. Add a plant to a zone on the map.", plats: "place", platser: "places", bekrafta_ta_bort_zon: "Delete this zone? Its plants become uncategorised and any sections move up a level.", bekrafta_ta_bort_planta: "Delete this planting?",
     valj_zon: "Pick a zone.", valj_veckodag: "Pick at least one day.",
     skapa_sub: "Zones, plants, maps and custom blocks",
     flik_zon: "Zone", flik_planta: "Plant", flik_karta: "Map", flik_block: "Block",
@@ -3390,10 +3411,12 @@ function odlingarPerSort() {
 function perPlantaDetaljHtml(sort) {
   const rader = sort.poster.map((o) => {
     const zon = zoner.find((z) => z.id === o.zonId);
-    return `<div class="plant-rad">
+    // Clickable: this is the only place a planting is listed by where it
+    // grows, so it should be the way in to editing or removing it too.
+    return `<div class="plant-rad plant-rad-klickbar" data-id="${esc(o.id)}">
       <span class="plant-ikon">${ikonForVaxt(o.namn)}</span>
-      <span class="namn">${zon ? esc(zon.namn) : "Okategoriserat"}</span>
-      <span class="varde">${antalFor(o)} st${layoutFor(o) === "fyll" ? " · fyller ytan" : ""}</span>
+      <span class="namn">${zon ? esc(zon.namn) : t("okategoriserat")}</span>
+      <span class="varde">${antalFor(o)} st${layoutFor(o) === "fyll" ? ` · ${t("fyller_ytan_kort")}` : ""}</span>
     </div>`;
   }).join("");
   // Kombinerad historik: varje kopplad entitet över alla instanser av
@@ -3410,15 +3433,15 @@ function perPlantaDetaljHtml(sort) {
     </div>`;
   }).join("");
   return `<div class="sort-detalj">
-    <label class="lbl">Var ${esc(sort.namn)} finns (${sort.totalt} st totalt)</label>
+    <label class="lbl">${t("var_finns")}: ${esc(sort.namn)} (${sort.totalt})</label>
     <div class="plant-lista">${rader}</div>
-    ${historikHtml ? `<label class="lbl" style="margin-top:18px">Historik</label>${historikHtml}` : ""}
+    ${historikHtml ? `<label class="lbl" style="margin-top:18px">${t("historik")}</label>${historikHtml}` : ""}
   </div>`;
 }
 function renderaPerPlanta() {
   const sorter = odlingarPerSort();
   if (!sorter.length) {
-    $("vyPerPlanta").innerHTML = '<div class="tom">Inga odlingar ännu – lägg till en planta i en zon på kartan.</div>';
+    $("vyPerPlanta").innerHTML = `<div class="tom">${t("inga_odlingar")}</div>`;
     return;
   }
   if (!sorter.some((s) => s.namn.toLowerCase() === valdSortNyckel)) valdSortNyckel = sorter[0].namn.toLowerCase();
@@ -3426,10 +3449,8 @@ function renderaPerPlanta() {
   $("vyPerPlanta").innerHTML = `
     <div class="sort-summary-grid">${sorter.map((s) => `
       <div class="sort-summary-kort${vald.namn === s.namn ? " vald" : ""}" data-namn="${esc(s.namn.toLowerCase())}">
-        <span class="ikon">${ikonForVaxt(s.namn)}</span>
-        <span class="namn">${esc(s.namn)}</span>
-        <span class="antal">${s.totalt} st</span>
-        <span class="platser">${s.poster.length} ${s.poster.length === 1 ? "plats" : "platser"}</span>
+        <span class="topprad"><span class="ikon">${ikonForVaxt(s.namn)}</span><span class="namn">${esc(s.namn)}</span></span>
+        <span class="antal">${s.totalt} <span class="platser">· ${s.poster.length} ${s.poster.length === 1 ? t("plats") : t("platser")}</span></span>
       </div>`).join("")}</div>
     ${perPlantaDetaljHtml(vald)}`;
 }
@@ -4308,7 +4329,10 @@ function renderaDetaljPanel() {
         </div>`}
         <div class="falt" style="margin-top:12px"><label class="lbl">${t("jord")}</label><input type="text" id="mJord" placeholder="${t("jord_placeholder_zon")}" value="${esc(z.jord ?? "")}"></div>
         <div class="falt"><label class="lbl">${t("anteckning")}</label><textarea id="mAnteckning" placeholder="${t("anteckning_placeholder")}">${esc(z.anteckning ?? "")}</textarea></div>
-        <button id="mSparaBtn">${t("spara")}</button>
+        <div class="detalj-knapprad">
+          <button id="mSparaBtn">${t("spara")}</button>
+          <button class="ta-bort-knapp" id="mTaBortBtn" data-typ="zon" data-id="${esc(z.id)}">${t("ta_bort")}</button>
+        </div>
         <div class="status" id="mStatus"></div>
       </div>`;
   } else {
@@ -4345,7 +4369,10 @@ function renderaDetaljPanel() {
         <div class="falt"><label class="lbl">${t("skordefonster")}</label><input type="text" id="mSkordFonster" value="${esc(o.skordFonster ?? "")}"></div>
         <div class="falt"><label class="lbl">${t("jord")}</label><input type="text" id="mJord" placeholder="${t("jord_placeholder_planta")}" value="${esc(o.jord ?? "")}"></div>
         <div class="falt"><label class="lbl">${t("anteckning")}</label><textarea id="mAnteckning" placeholder="${t("anteckning_placeholder")}">${esc(o.anteckning ?? "")}</textarea></div>
-        <button id="mSparaBtn">${t("spara")}</button>
+        <div class="detalj-knapprad">
+          <button id="mSparaBtn">${t("spara")}</button>
+          <button class="ta-bort-knapp" id="mTaBortBtn" data-typ="odling" data-id="${esc(o.id)}">${t("ta_bort")}</button>
+        </div>
         <div class="status" id="mStatus"></div>
       </div>`;
   }
@@ -4402,6 +4429,24 @@ document.addEventListener("click", async (e) => {
   }
 
   // Popup: spara jord/anteckning
+  // Deleting straight from the detail panel. This previously required Edit
+  // layout mode plus finding the row in a zone's plant list, which was a lot
+  // of steps for "remove this". Confirmed first, since it cannot be undone.
+  const mTaBort = e.target.closest("#mTaBortBtn");
+  if (mTaBort) {
+    const arZon = mTaBort.dataset.typ === "zon";
+    const namn = arZon
+      ? zoner.find((z) => z.id === mTaBort.dataset.id)?.namn
+      : odlingar.find((o) => o.id === mTaBort.dataset.id)?.namn;
+    if (!confirm(`${t(arZon ? "bekrafta_ta_bort_zon" : "bekrafta_ta_bort_planta")}\n\n${namn ?? ""}`)) return;
+    await fetch(`${BAS}api/${arZon ? "zones" : "plantings"}/delete`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: mTaBort.dataset.id }),
+    });
+    avmarkeraMal();
+    await laddaOdlingar();
+    return;
+  }
   const mSpara = e.target.closest("#mSparaBtn");
   if (mSpara && valtMal) {
     const st = $("mStatus");
