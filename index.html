@@ -5034,6 +5034,14 @@ $("sprakSegment").addEventListener("click", (e) => {
   if (!btn) return;
   sparaSprak(btn.dataset.sprak);
   tillampaSprak(btn.dataset.sprak);
+  // Only on an explicit click, never on the passive default a fresh device
+  // applies at startup - otherwise a second browser that has simply never
+  // touched the toggle would silently flip the household's shared AI
+  // language back and forth every time someone happens to load it.
+  fetch(`${BAS}api/settings`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sprak: btn.dataset.sprak }),
+  }).catch(() => {});
 });
 
 // ---- Kompakt kartläge: prickar + namn i stället för fulla kort ----

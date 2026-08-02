@@ -205,9 +205,22 @@ async function hamtaAllaEntiteter() {
 // sensorers senaste värden, väderprognos) och ber om en kort, konkret
 // bevattningsrekommendation. Cachas i timmar för att hålla kostnaden
 // försumbar – väder och jordfuktighet ändras inte minut för minut.
-let bevattningCache = null; // { tid, resultat }
+let bevattningCache = null; // { tid, sprak, resultat }
 const BEVATTNING_CACHE_MS = 4 * 3600 * 1000;
 const ZON_TYPER_NAMN = { vaxthus: "växthus", utomhus: "utomhusbädd", inomhus: "inomhus", odlingslada: "odlingslåda", annat: "annat" };
+
+// The language toggle in the panel is per-device (localStorage), but Claude's
+// generated text (watering insight, notification wording, schedule reasons,
+// chat replies) is written once and shared by whoever reads it - there is no
+// per-viewer version of a cached recommendation. So it follows whichever
+// language was last explicitly chosen via the Settings toggle, stored here
+// rather than per-browser. Defaults to Swedish, not the UI's own English
+// default: this app has been running in Swedish daily for its actual users,
+// and upgrading should not silently switch their AI text to English under
+// them just because nobody has touched the toggle since this shipped.
+function sprakNamn(installningar) {
+  return installningar?.sprak === "en" ? "English" : "Svenska";
+}
 
 async function byggTradgardsSammanfattning(d, vader) {
   const zonRader = d.zoner.map((z) => {
@@ -245,9 +258,12 @@ async function byggTradgardsSammanfattning(d, vader) {
 
 async function hamtaSmartBevattning() {
   if (!ANTHROPIC_API_KEY) return { text: null, fel: "ANTHROPIC_API_KEY är inte konfigurerad" };
-  if (bevattningCache && Date.now() - bevattningCache.tid < BEVATTNING_CACHE_MS) return bevattningCache.resultat;
   try {
     const [d, vader] = await Promise.all([lasData(), hamtaVader()]);
+    const sprak = sprakNamn(d.installningar);
+    if (bevattningCache && bevattningCache.sprak === sprak && Date.now() - bevattningCache.tid < BEVATTNING_CACHE_MS) {
+      return bevattningCache.resultat;
+    }
     const sammanfattning = await byggTradgardsSammanfattning(d, vader);
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -261,7 +277,7 @@ async function hamtaSmartBevattning() {
         max_tokens: 300,
         messages: [{
           role: "user",
-          content: `Du är en erfaren trädgårdsrådgivare. Ge en kort (max 3 meningar), konkret bevattningsrekommendation på svenska utifrån datan nedan. Nämn specifika zoner eller odlingar vid namn om något sticker ut (torr jord, ingen nederbörd väntad, en sensor som visar lågt värde). Ingen inledande hälsningsfras, gå rakt på sak.\n\n${sammanfattning}`,
+          content: `Du är en erfaren trädgårdsrådgivare. Ge en kort (max 3 meningar), konkret bevattningsrekommendation på ${sprak} utifrån datan nedan. Nämn specifika zoner eller odlingar vid namn om något sticker ut (torr jord, ingen nederbörd väntad, en sensor som visar lågt värde). Ingen inledande hälsningsfras, gå rakt på sak.\n\n${sammanfattning}`,
         }],
       }),
     });
@@ -270,7 +286,7 @@ async function hamtaSmartBevattning() {
     const text = data.content?.[0]?.text?.trim();
     if (!text) return { text: null, fel: "Tomt svar från Claude" };
     const resultat = { text, tid: new Date().toISOString() };
-    bevattningCache = { tid: Date.now(), resultat };
+    bevattningCache = { tid: Date.now(), sprak, resultat };
     return resultat;
   } catch (err) {
     return { text: null, fel: err.message };
@@ -292,12 +308,13 @@ const NOTISER_AI_CACHE_MS = 3 * 3600 * 1000;
 async function hamtaAiNotiser(kandidater) {
   if (!ANTHROPIC_API_KEY) return { fel: "ANTHROPIC_API_KEY är inte konfigurerad", notiser: kandidater };
   if (!Array.isArray(kandidater) || !kandidater.length) return { notiser: [] };
-  const nyckel = kandidater.map((k) => k.id).sort().join(",");
-  if (notiserAiCache && notiserAiCache.nyckel === nyckel && Date.now() - notiserAiCache.tid < NOTISER_AI_CACHE_MS) {
-    return notiserAiCache.resultat;
-  }
   try {
     const [d, vader] = await Promise.all([lasData(), hamtaVader()]);
+    const sprak = sprakNamn(d.installningar);
+    const nyckel = `${sprak}|${kandidater.map((k) => k.id).sort().join(",")}`;
+    if (notiserAiCache && notiserAiCache.nyckel === nyckel && Date.now() - notiserAiCache.tid < NOTISER_AI_CACHE_MS) {
+      return notiserAiCache.resultat;
+    }
     const sammanfattning = await byggTradgardsSammanfattning(d, vader);
     const kandidatText = kandidater.map((k) => `- id: ${k.id} | titel: ${k.titel} | text: ${k.text} | nivå: ${k.niva}`).join("\n");
     const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -313,7 +330,7 @@ async function hamtaAiNotiser(kandidater) {
 Uppgift:
 1. Sortera dem efter faktisk angelägenhet för DEN HÄR trädgården (t.ex. väger frostrisk för känsliga plantor tyngre än lätt torr jord i en tålig sort).
 2. Om två eller fler kandidater egentligen beskriver samma underliggande problem (t.ex. flera "kallt"-varningar samma natt), slå ihop dem till en – behåll första kandidatens id, nämn alla berörda platser i texten.
-3. Skriv om "text" till en kort, konkret, specifik mening (max ~20 ord) som väger in sammanfattningen nedan.
+3. Skriv om "text" till en kort, konkret, specifik mening (max ~20 ord, på ${sprak}) som väger in sammanfattningen nedan.
 
 Regler, viktigast: Hitta ALDRIG på mätvärden, platser eller fakta som inte står i kandidaterna eller sammanfattningen. Lägg ALDRIG till en notis utöver kandidaterna – bara sortera, slå ihop och skriv om. Varje id i ditt svar måste vara ett id som redan finns bland kandidaterna.
 
@@ -452,8 +469,9 @@ function raknaSchemaKandidater(d) {
 
 // Plain-language fallback used when there is no API key, or the call fails.
 // Same numbers, just phrased by us instead of by Claude.
-function enkelMotivering(k) {
+function enkelMotivering(k, sprak = "Svenska") {
   const { nu, taktPerDygn, dagarTillTorrt } = k.matt;
+  if (sprak === "English") return `Soil moisture is at ${nu}% and dropping about ${taktPerDygn}%/day, so dry in roughly ${dagarTillTorrt} days.`;
   return `Jordfuktigheten ligger på ${nu} % och sjunker ca ${taktPerDygn} %/dygn, alltså torr om ungefär ${dagarTillTorrt} dygn.`;
 }
 
@@ -462,7 +480,9 @@ async function hamtaAiSchemaforslag() {
   const fristaende = d.zoner.filter((z) => !z.foralderId);
   if (!fristaende.length) return { forslag: [] };
 
+  const sprak = sprakNamn(d.installningar);
   const nyckel = [
+    sprak,
     fristaende.map((z) => z.id).sort().join(","),
     (d.scheman ?? []).map((s) => `${s.zonId}:${s.veckodagar.join("")}`).sort().join(","),
     // Coarse history size: recompute once meaningfully more data has arrived,
@@ -481,7 +501,7 @@ async function hamtaAiSchemaforslag() {
   }
   // Works with no API key at all: the measured candidates stand on their own.
   const utanAi = {
-    forslag: kandidater.map((k) => ({ zonId: k.zonId, zonNamn: k.zonNamn, veckodagar: k.veckodagar, motivering: enkelMotivering(k) })),
+    forslag: kandidater.map((k) => ({ zonId: k.zonId, zonNamn: k.zonNamn, veckodagar: k.veckodagar, motivering: enkelMotivering(k, sprak) })),
   };
   if (!ANTHROPIC_API_KEY) {
     schemaAiCache = { nyckel, tid: Date.now(), resultat: utanAi };
@@ -503,7 +523,7 @@ async function hamtaAiSchemaforslag() {
           content: `Du hjälper till att formulera bevattningsförslag i en trädgårdsapp. Uträkningarna är redan gjorda – din uppgift är att skriva om dem till begriplig text, och bara justera intervallet om väder eller växtval tydligt motiverar det.
 
 Uppgift per kandidat:
-1. Skriv en "motivering": EN kort mening på svenska (max ~20 ord) som förklarar varför, byggd på siffrorna nedan. Nämn gärna den faktiska mätningen.
+1. Skriv en "motivering": EN kort mening på ${sprak} (max ~20 ord) som förklarar varför, byggd på siffrorna nedan. Nämn gärna den faktiska mätningen.
 2. Behåll "veckodagar" som de är om du inte har ett tydligt skäl att ändra, t.ex. mycket regn i prognosen (glesare) eller värmebölja i ett växthus (tätare).
 
 Regler, viktigast: Hitta ALDRIG på mätvärden – använd bara siffrorna nedan. Lägg ALDRIG till en kandidat; svaret ska innehålla exakt de zonId som listas. veckodagar är siffror, 0 = söndag ... 6 = lördag.
@@ -539,11 +559,11 @@ ${sammanfattning}`,
       forslag.push({
         zonId: k.zonId, zonNamn: k.zonNamn,
         veckodagar: dagar.length ? dagar : k.veckodagar,
-        motivering: typeof f.motivering === "string" && f.motivering ? f.motivering.slice(0, 200) : enkelMotivering(k),
+        motivering: typeof f.motivering === "string" && f.motivering ? f.motivering.slice(0, 200) : enkelMotivering(k, sprak),
       });
     }
     for (const k of kandidater) {
-      if (!sedda.has(k.zonId)) forslag.push({ zonId: k.zonId, zonNamn: k.zonNamn, veckodagar: k.veckodagar, motivering: enkelMotivering(k) });
+      if (!sedda.has(k.zonId)) forslag.push({ zonId: k.zonId, zonNamn: k.zonNamn, veckodagar: k.veckodagar, motivering: enkelMotivering(k, sprak) });
     }
     const resultat = { forslag, viaAi: true };
     schemaAiCache = { nyckel, tid: Date.now(), resultat };
@@ -593,7 +613,7 @@ async function svaraChatt(meddelanden) {
       body: JSON.stringify({
         model: CHATT_MODELL,
         max_tokens: 2000,
-        system: `Du är en kunnig och konkret trädgårdsrådgivare som hjälper ett par med sin odling. Svara på svenska, kort och praktiskt – hellre två träffsäkra stycken än en lång uppsats.
+        system: `Du är en kunnig och konkret trädgårdsrådgivare som hjälper ett par med sin odling. Svara på ${sprakNamn(d.installningar)}, kort och praktiskt – hellre två träffsäkra stycken än en lång uppsats.
 
 Om användaren bifogar ett foto: beskriv först kort vad du faktiskt ser på plantan (färg, fläckar, form, jord), och koppla sedan ihop det med mätdatan nedan om den är relevant. Var tydlig med vad som är säkert och vad som är en gissning – hitta aldrig på mätvärden som inte står här.
 
@@ -1043,17 +1063,28 @@ const server = createServer(async (req, res) => {
       return skickaJson(res, 200, installningar);
     }
     if (req.method === "POST" && p.endsWith("/api/settings")) {
-      const { ntfyTopic, webhookUrl, norrGrader, kartaBreddM } = await lasBody(req);
+      // Only touches fields actually sent, rather than rebuilding the whole
+      // object each time - the language toggle posts just { sprak }, and
+      // must not blank ntfyTopic/webhookUrl in the process (or vice versa).
+      const { ntfyTopic, webhookUrl, norrGrader, kartaBreddM, sprak } = await lasBody(req);
       const data = await muteraData((d) => {
-        const grader = Number(norrGrader);
-        const bredd = Number(kartaBreddM);
-        d.installningar = {
-          ntfyTopic: ntfyTopic || "", webhookUrl: webhookUrl || "",
-          // Kompassriktningen som pekar uppåt på kartan, och hur många meter
-          // kartan är bred – tillsammans ger de skuggorna rätt håll och längd.
-          norrGrader: Number.isFinite(grader) ? ((grader % 360) + 360) % 360 : (d.installningar?.norrGrader ?? 0),
-          kartaBreddM: Number.isFinite(bredd) && bredd > 0 ? Math.min(500, bredd) : (d.installningar?.kartaBreddM ?? 20),
-        };
+        const install = d.installningar ?? {};
+        if (ntfyTopic !== undefined) install.ntfyTopic = ntfyTopic || "";
+        if (webhookUrl !== undefined) install.webhookUrl = webhookUrl || "";
+        // Kompassriktningen som pekar uppåt på kartan, och hur många meter
+        // kartan är bred – tillsammans ger de skuggorna rätt håll och längd.
+        if (norrGrader !== undefined) {
+          const grader = Number(norrGrader);
+          install.norrGrader = Number.isFinite(grader) ? ((grader % 360) + 360) % 360 : (install.norrGrader ?? 0);
+        }
+        if (kartaBreddM !== undefined) {
+          const bredd = Number(kartaBreddM);
+          install.kartaBreddM = Number.isFinite(bredd) && bredd > 0 ? Math.min(500, bredd) : (install.kartaBreddM ?? 20);
+        }
+        // Which language Claude writes generated text in - see sprakNamn().
+        // Not the UI's own language, which is per-device via localStorage.
+        if (sprak !== undefined) install.sprak = sprak === "en" ? "en" : "sv";
+        d.installningar = install;
       });
       return skickaJson(res, 200, data.installningar);
     }
