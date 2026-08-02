@@ -37,10 +37,10 @@ async function lasData() {
     return {
       kartor: d.kartor ?? [], zoner: d.zoner ?? [], odlingar: d.odlingar ?? [], enheter: d.enheter ?? [],
       widgets: d.widgets ?? [], installningar: d.installningar ?? {}, historik: d.historik ?? [],
-      notiser: d.notiser ?? [],
+      notiser: d.notiser ?? [], scheman: d.scheman ?? [],
     };
   } catch {
-    return { kartor: [], zoner: [], odlingar: [], enheter: [], widgets: [], installningar: {}, historik: [], notiser: [] };
+    return { kartor: [], zoner: [], odlingar: [], enheter: [], widgets: [], installningar: {}, historik: [], notiser: [], scheman: [] };
   }
 }
 async function skrivData(data) {
@@ -654,6 +654,25 @@ const server = createServer(async (req, res) => {
         // istället för att bli osynliga.
         for (const z of d.zoner) if (z.kartaId === id) z.kartaId = d.kartor[0].id;
       });
+      return skickaJson(res, 200, data);
+    }
+    // Vattningsscheman: bara en lista veckodagar per zon - ingen faktisk
+    // ventil/pump finns att styra än (se README:s Roadmap), så ett schema
+    // ger en påminnelse i notiscentret på schemalagda dagar i stället för
+    // att låtsas kunna vattna på riktigt.
+    if (req.method === "POST" && p.endsWith("/api/scheman")) {
+      const { zonId, veckodagar } = await lasBody(req);
+      if (!zonId) return skickaJson(res, 400, { fel: "zonId saknas" });
+      const dagar = Array.isArray(veckodagar) ? veckodagar.map(Number).filter((n) => n >= 0 && n <= 6) : [];
+      if (!dagar.length) return skickaJson(res, 400, { fel: "minst en veckodag krävs" });
+      const data = await muteraData((d) => {
+        d.scheman.push({ id: randomUUID(), zonId, veckodagar: [...new Set(dagar)].sort() });
+      });
+      return skickaJson(res, 200, data);
+    }
+    if (req.method === "POST" && p.endsWith("/api/scheman/ta-bort")) {
+      const { id } = await lasBody(req);
+      const data = await muteraData((d) => { d.scheman = d.scheman.filter((s) => s.id !== id); });
       return skickaJson(res, 200, data);
     }
     if (req.method === "POST" && p.endsWith("/api/widgets")) {

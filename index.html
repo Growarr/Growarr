@@ -672,6 +672,58 @@ try {
   .historik-tooltip .rad i { width:8px; height:8px; border-radius:50%; flex:0 0 auto; }
   .historik-tooltip .rad .varde { margin-left:auto; font-weight:700; padding-left:10px; }
 
+  /* ---- Anteckningar: lista över alla fria texter + en enkel kalender ---- */
+  .anteckning-lista { display:flex; flex-direction:column; gap:10px; }
+  .anteckning-kort { display:flex; gap:14px; padding:14px; border-radius:var(--r-sm);
+    background:var(--surface2); border:1px solid var(--border); cursor:pointer; transition:border-color .12s ease; }
+  .anteckning-kort:hover { border-color:var(--accent); }
+  .anteckning-kort .ikon { flex:0 0 auto; font-size:1.4rem; line-height:1.3; }
+  .anteckning-kort .info { min-width:0; flex:1; }
+  .anteckning-kort .rubrikrad { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+  .anteckning-kort .namn { font-weight:700; }
+  .anteckning-kort .zon { font-size:.76rem; color:var(--muted); }
+  .anteckning-kort .text { margin-top:4px; font-size:.88rem; color:var(--text); white-space:pre-wrap; }
+  .anteckning-kort .datum { margin-top:6px; font-size:.72rem; color:var(--muted); }
+
+  .kalender-huvud { display:flex; align-items:center; justify-content:center; gap:18px; margin-bottom:16px; }
+  .kalender-manad { font-size:1.05rem; font-weight:700; min-width:160px; text-align:center; }
+  .kalender-nav { width:32px; height:32px; padding:0; border-radius:50%; background:var(--surface2);
+    border:1px solid var(--border); color:var(--text); font-size:1.1rem; line-height:1; box-shadow:none; }
+  .kalender-nav:hover { background:color-mix(in srgb, var(--accent) 16%, var(--surface2)); transform:none; box-shadow:none; }
+  .kalender-veckodagar { display:grid; grid-template-columns:repeat(7,1fr); text-align:center;
+    font-size:.72rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px; }
+  .kalender-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+  .kalender-dag { position:relative; aspect-ratio:1; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; gap:3px; border-radius:12px; background:none; border:1px solid transparent;
+    color:var(--text); font-size:.86rem; box-shadow:none; cursor:pointer; }
+  .kalender-dag.tom { visibility:hidden; cursor:default; }
+  .kalender-dag:not(.tom):hover { background:var(--surface2); transform:none; box-shadow:none; }
+  .kalender-dag.idag { border-color:var(--accent); font-weight:700; }
+  .kalender-dag.vald { background:var(--grad); color:#04140e; font-weight:700; }
+  .kalender-dag .prick { width:5px; height:5px; border-radius:50%; background:var(--accent); }
+  .kalender-dag.vald .prick { background:#04140e; }
+  .kalender-skord { margin-top:18px; padding-top:14px; border-top:1px solid var(--border); }
+  .skord-chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  .skord-chip { font-size:.78rem; font-weight:600; padding:5px 12px; border-radius:99px;
+    background:var(--surface2); border:1px solid var(--border); }
+  .kalender-dagdetalj { margin-top:18px; padding-top:14px; border-top:1px solid var(--border); }
+
+  /* ---- Schema: vattningspåminnelser per veckodag ---- */
+  .schema-lista { display:flex; flex-direction:column; gap:8px; margin-bottom:18px; }
+  .schema-rad { display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:var(--r-sm);
+    background:var(--surface2); border:1px solid var(--border); }
+  .schema-rad .ikon { font-size:1.1rem; flex:0 0 auto; }
+  .schema-rad .info { flex:1; min-width:0; }
+  .schema-rad .namn { font-weight:700; }
+  .schema-rad .dagar { font-size:.78rem; color:var(--muted); margin-top:2px; }
+  .schema-idag { font-size:.68rem; font-weight:700; padding:3px 10px; border-radius:99px;
+    background:color-mix(in srgb, var(--accent) 22%, transparent); color:var(--text); flex:0 0 auto; }
+  .schema-dagval { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+  .schema-dag-btn { padding:8px 0; width:44px; border-radius:10px; background:var(--surface2);
+    border:1px solid var(--border); color:var(--muted); font-size:.78rem; font-weight:650; box-shadow:none; }
+  .schema-dag-btn:hover { color:var(--text); transform:none; box-shadow:none; }
+  .schema-dag-btn.aktiv { background:var(--grad); color:#04140e; border-color:transparent; }
+
   /* ---- AI-chatt ---- */
   .chatt-knapp { position:fixed; right:24px; bottom:24px; width:56px; height:56px; border-radius:50%;
     padding:0; display:flex; align-items:center; justify-content:center; z-index:40;
@@ -999,6 +1051,15 @@ try {
   <button class="side-btn" id="navDashboardBtn" title="Översikt">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/></svg>
   </button>
+  <button class="side-btn" id="navAnteckningarBtn" title="Anteckningar">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/><path d="M9 13h6M9 17h6"/></svg>
+  </button>
+  <button class="side-btn" id="navHistorikBtn" title="Historik">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-6 3 4 5-8"/></svg>
+  </button>
+  <button class="side-btn" id="navSchemaBtn" title="Schema">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
+  </button>
   <button class="side-btn" id="navInstallningarBtn" title="Inställningar">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
   </button>
@@ -1122,6 +1183,46 @@ try {
 
   </div>
 
+</div>
+
+<div class="wrap" id="anteckningarVy" style="display:none">
+  <div class="vy-header">
+    <div>
+      <p class="app-brand">Growarr</p>
+      <h1 class="vy-titel">Anteckningar</h1>
+    </div>
+  </div>
+  <div class="card" style="margin-top:20px">
+    <div class="vy-segment" id="anteckningarSegment" style="max-width:280px">
+      <button class="vy-segment-btn aktiv" data-lage="lista">Lista</button>
+      <button class="vy-segment-btn" data-lage="kalender">Kalender</button>
+    </div>
+    <div id="anteckningarInnehall" style="margin-top:18px"></div>
+  </div>
+</div>
+
+<div class="wrap" id="historikVy" style="display:none">
+  <div class="vy-header">
+    <div>
+      <p class="app-brand">Growarr</p>
+      <h1 class="vy-titel">Historik</h1>
+    </div>
+  </div>
+  <div class="card" style="margin-top:20px">
+    <div id="globalHistorikInnehall">Laddar …</div>
+  </div>
+</div>
+
+<div class="wrap" id="schemaVy" style="display:none">
+  <div class="vy-header">
+    <div>
+      <p class="app-brand">Growarr</p>
+      <h1 class="vy-titel">Schema</h1>
+    </div>
+  </div>
+  <div class="card" style="margin-top:20px">
+    <div id="schemaInnehall">Laddar …</div>
+  </div>
 </div>
 
 <div class="wrap" id="installningarVy" style="display:none">
@@ -1416,6 +1517,7 @@ let enheterStatus = [];
 let historik = [];
 let installningar = {};
 let notiserHanterade = []; // { id, atgard, tid } – hämtade från servern
+let scheman = []; // { id, zonId, veckodagar: [0-6] } – vattningspåminnelser
 let sprak = "sv"; // sätts riktigt av tillampaSprak() vid start, se längre ner
 // Lexikon för nya funktioner, se kommentaren vid tillampaSprak(). Lägg en
 // rad här per ny sträng och skriv t("nyckel") i HTML-byggaren istället för
@@ -1588,7 +1690,8 @@ async function laddaOdlingar() {
     kartor = data.kartor ?? [];
     widgets = data.widgets ?? [];
     notiserHanterade = data.notiser ?? [];
-  } catch { odlingar = []; zoner = []; kartor = []; widgets = []; notiserHanterade = []; }
+    scheman = data.scheman ?? [];
+  } catch { odlingar = []; zoner = []; kartor = []; widgets = []; notiserHanterade = []; scheman = []; }
   // Håll aktiv flik giltig även om kartan tagits bort i en annan flik/enhet.
   if (!kartor.some((k) => k.id === aktivKartaId)) aktivKartaId = kartor[0]?.id ?? null;
   renderaKartaFlikar();
@@ -2807,6 +2910,21 @@ function berakningNotiser() {
         titel: `${m.label}: ${status.text}`, text: `${m.enhet.namn} · ${m.enhet.state}${m.enhet.enhet ?? ""}`,
       });
     }
+  }
+
+  // Vattningsscheman – en påminnelse per zon vars schema säger att idag är
+  // en vattningsdag. Precis som skördepåminnelserna innehåller id:t dagens
+  // datum, så en avklarad påminnelse kommer tillbaka nästa gång zonen står
+  // på schemat, i stället för att vara borta för gott efter en enda ✓.
+  const idagVeckodag = new Date().getDay();
+  for (const s of scheman) {
+    if (!s.veckodagar.includes(idagVeckodag)) continue;
+    const zon = zoner.find((z) => z.id === s.zonId);
+    if (!zon) continue;
+    notiser.push({
+      id: `schema-${s.id}-${idag}`, ikon: "💧", niva: "info",
+      titel: `Dags att vattna ${zon.namn}`, text: "Enligt ditt schema.",
+    });
   }
   return notiser;
 }
@@ -4100,6 +4218,49 @@ document.addEventListener("click", async (e) => {
     renderaDetaljPanel();
     return;
   }
+  // Anteckningar-vyn: klick på ett kort eller en planta i kalenderns
+  // dagdetalj öppnar samma detaljpanel som på kartan, fast måste först
+  // växla tillbaka till Översikt (panelen ligger inuti dashboardVy).
+  const anteckningKortEl = e.target.closest(".anteckning-kort");
+  if (anteckningKortEl) { oppnaOdlingFranAnnanVy(anteckningKortEl.dataset.id); return; }
+  const kalenderPlantRadEl = e.target.closest(".kalender-dagdetalj .plant-rad-klickbar");
+  if (kalenderPlantRadEl) { oppnaOdlingFranAnnanVy(kalenderPlantRadEl.dataset.id); return; }
+  const kalenderForegBtn = e.target.closest("#kalenderForegBtn");
+  if (kalenderForegBtn) { bytAnteckningarManad(-1); return; }
+  const kalenderNastaBtn = e.target.closest("#kalenderNastaBtn");
+  if (kalenderNastaBtn) { bytAnteckningarManad(1); return; }
+  const kalenderDagEl = e.target.closest(".kalender-dag:not(.tom)");
+  if (kalenderDagEl) {
+    anteckningarValdDag = anteckningarValdDag === kalenderDagEl.dataset.datum ? null : kalenderDagEl.dataset.datum;
+    renderaAnteckningar();
+    return;
+  }
+  // Schema-vyn: välj veckodagar (flera i taget), ta bort ett schema, eller
+  // spara ett nytt.
+  const schemaDagBtn = e.target.closest(".schema-dag-btn");
+  if (schemaDagBtn) { schemaDagBtn.classList.toggle("aktiv"); return; }
+  const schemaTaBort = e.target.closest(".schema-ta-bort");
+  if (schemaTaBort) {
+    await fetch(`${BAS}api/scheman/ta-bort`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: schemaTaBort.dataset.id }) });
+    await laddaOdlingar();
+    renderaSchema();
+    return;
+  }
+  const schemaLaggTill = e.target.closest("#schemaLaggTillBtn");
+  if (schemaLaggTill) {
+    const zonId = $("schemaZonVal")?.value;
+    const dagar = [...document.querySelectorAll(".schema-dag-btn.aktiv")].map((b) => Number(b.dataset.dag));
+    const st = $("schemaStatus");
+    if (!zonId) { st.textContent = "Välj en zon."; st.className = "status err"; return; }
+    if (!dagar.length) { st.textContent = "Välj minst en veckodag."; st.className = "status err"; return; }
+    st.textContent = ""; st.className = "status";
+    try {
+      await fetch(`${BAS}api/scheman`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ zonId, veckodagar: dagar }) });
+      await laddaOdlingar();
+      renderaSchema();
+    } catch (err) { st.textContent = "Kunde inte spara: " + err.message; st.className = "status err"; }
+    return;
+  }
   // Klicka på en planta i listan (inte × i redigeringsläge) för att se dess
   // egen översikt – samma detaljpanel som klick på kartan.
   const plantRadEl = e.target.closest(".plant-rad-klickbar");
@@ -4191,7 +4352,14 @@ document.addEventListener("click", async (e) => {
   const breadcrumbBackEl = e.target.closest("#breadcrumbBackBtn");
   if (breadcrumbBackEl) { stangFokusZon(); return; }
   const granVal = e.target.closest(".historik-granularitet button");
-  if (granVal) { historikGranularitet = granVal.dataset.gran; renderaDetaljPanel(); return; }
+  if (granVal) {
+    historikGranularitet = granVal.dataset.gran;
+    if (location.hash.replace(/^#/, "") === "historik") renderaGlobalHistorik();
+    else renderaDetaljPanel();
+    return;
+  }
+  const globalHistorikBtn = e.target.closest("#globalHistorikVal .vy-segment-btn");
+  if (globalHistorikBtn) { globalHistorikValdMal = globalHistorikBtn.dataset.mal; renderaGlobalHistorik(); return; }
   // Välj mål: klick på en planta väger tyngre än klick på hela zon-kortet
   const chipEl = e.target.closest(".vaxt-grupp, .vaxt-fyll");
   if (chipEl) { valjMal("odling", chipEl.dataset.id); return; }
@@ -4378,19 +4546,31 @@ $("solReglage").addEventListener("change", () => {
   renderaSol();
 });
 
-// ---- Vyer: dashboard (översikt) vs. inställningar, styrt av URL-hash så
-// att bakåtknappen i webbläsaren fungerar och länken går att dela/bokmärka.
+// ---- Vyer: översikt / anteckningar / historik / schema / inställningar,
+// styrt av URL-hash så att bakåtknappen i webbläsaren fungerar och länken
+// går att dela/bokmärka.
+const VYER = {
+  "": { vy: "dashboardVy", nav: "navDashboardBtn" },
+  anteckningar: { vy: "anteckningarVy", nav: "navAnteckningarBtn" },
+  historik: { vy: "historikVy", nav: "navHistorikBtn" },
+  schema: { vy: "schemaVy", nav: "navSchemaBtn" },
+  installningar: { vy: "installningarVy", nav: "navInstallningarBtn" },
+};
 function visaVy() {
-  // OBS: lokalt namn, inte den globala installningar-posten
-  const visaInstallningar = location.hash === "#installningar";
-  $("dashboardVy").style.display = visaInstallningar ? "none" : "";
-  $("installningarVy").style.display = visaInstallningar ? "" : "none";
-  $("navDashboardBtn").classList.toggle("aktiv", !visaInstallningar);
-  $("navInstallningarBtn").classList.toggle("aktiv", visaInstallningar);
+  const hash = location.hash.replace(/^#/, "");
+  const aktiv = VYER[hash] ?? VYER[""];
+  for (const key in VYER) {
+    const v = VYER[key];
+    $(v.vy).style.display = v === aktiv ? "" : "none";
+    $(v.nav).classList.toggle("aktiv", v === aktiv);
+  }
   window.scrollTo(0, 0);
   // Kartan är omätbar medan översikten är dold (0 px), så anpassningen måste
   // göras om när man kommer tillbaka hit.
-  if (!visaInstallningar && !kartaAnvandarstyrd) passaKarta();
+  if (aktiv.vy === "dashboardVy" && !kartaAnvandarstyrd) passaKarta();
+  if (aktiv.vy === "anteckningarVy") renderaAnteckningar();
+  if (aktiv.vy === "historikVy") renderaGlobalHistorik();
+  if (aktiv.vy === "schemaVy") renderaSchema();
 }
 // #zon=<id> öppnar en zon direkt – det är den länken QR-etiketterna bär.
 function oppnaFranHash() {
@@ -4409,7 +4589,198 @@ function oppnaFranHash() {
 }
 window.addEventListener("hashchange", () => { visaVy(); oppnaFranHash(); });
 $("navDashboardBtn").addEventListener("click", () => { location.hash = ""; });
+$("navAnteckningarBtn").addEventListener("click", () => { location.hash = "anteckningar"; });
+$("navHistorikBtn").addEventListener("click", () => { location.hash = "historik"; });
+$("navSchemaBtn").addEventListener("click", () => { location.hash = "schema"; });
 $("navInstallningarBtn").addEventListener("click", () => { location.hash = "installningar"; });
+
+// ---- Anteckningar: alla fria texter man skrivit på sina odlingar, samlade
+// på ett ställe i stället för utspridda i varje zons detaljpanel. Kalender-
+// läget visar dessutom NÄR saker planterats (exakt datum) och vilken månad
+// olika sorter ska skördas – ett enkelt trädgårdsschema, inte bara text.
+let anteckningarLage = "lista";
+let anteckningarManad = new Date().toISOString().slice(0, 7);
+let anteckningarValdDag = null;
+function datumText(d) {
+  return new Date(d + "T12:00:00").toLocaleDateString("sv-SE", { day: "numeric", month: "long", year: "numeric" });
+}
+function anteckningarListaHtml() {
+  const poster = odlingar.filter((o) => (o.anteckning ?? "").trim())
+    .sort((a, b) => (b.planterad ?? "").localeCompare(a.planterad ?? ""));
+  if (!poster.length) return '<div class="tom">Inga anteckningar än – skriv en fri text på en planta i dess detaljpanel så samlas den här.</div>';
+  return `<div class="anteckning-lista">${poster.map((o) => {
+    const zon = zoner.find((z) => z.id === o.zonId);
+    return `<div class="anteckning-kort" data-id="${esc(o.id)}">
+      <span class="ikon">${ikonForVaxt(o.namn)}</span>
+      <div class="info">
+        <div class="rubrikrad"><span class="namn">${esc(o.namn)}</span>${zon ? `<span class="zon">${esc(zon.namn)}</span>` : ""}</div>
+        <div class="text">${esc(o.anteckning)}</div>
+        ${o.planterad ? `<div class="datum">Planterad ${datumText(o.planterad)}</div>` : ""}
+      </div>
+    </div>`;
+  }).join("")}</div>`;
+}
+function bytAnteckningarManad(delta) {
+  const [ar, man] = anteckningarManad.split("-").map(Number);
+  const d = new Date(ar, man - 1 + delta, 1);
+  anteckningarManad = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  anteckningarValdDag = null;
+  renderaAnteckningar();
+}
+function anteckningarKalenderHtml() {
+  const [ar, man] = anteckningarManad.split("-").map(Number);
+  const forstaVeckodag = (new Date(ar, man - 1, 1).getDay() + 6) % 7;
+  const dagarIManad = new Date(ar, man, 0).getDate();
+  const planteradePerDag = new Map();
+  for (const o of odlingar) {
+    if (!o.planterad) continue;
+    if (!planteradePerDag.has(o.planterad)) planteradePerDag.set(o.planterad, []);
+    planteradePerDag.get(o.planterad).push(o);
+  }
+  const skordDennaManad = odlingar.filter((o) => o.skordManad === anteckningarManad);
+  const idagStr = new Date().toISOString().slice(0, 10);
+  const manadText = new Date(ar, man - 1, 1).toLocaleDateString("sv-SE", { month: "long", year: "numeric" });
+
+  let celler = "";
+  for (let i = 0; i < forstaVeckodag; i++) celler += `<span class="kalender-dag tom"></span>`;
+  for (let d = 1; d <= dagarIManad; d++) {
+    const datumStr = `${ar}-${String(man).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    const poster = planteradePerDag.get(datumStr) ?? [];
+    const idag = datumStr === idagStr;
+    const vald = datumStr === anteckningarValdDag;
+    celler += `<button class="kalender-dag${idag ? " idag" : ""}${vald ? " vald" : ""}${poster.length ? " har-event" : ""}" data-datum="${datumStr}">
+      <span class="tal">${d}</span>${poster.length ? `<span class="prick"></span>` : ""}
+    </button>`;
+  }
+  const valdaPoster = anteckningarValdDag ? (planteradePerDag.get(anteckningarValdDag) ?? []) : [];
+  return `
+    <div class="kalender-huvud">
+      <button class="kalender-nav" id="kalenderForegBtn" title="Föregående månad">‹</button>
+      <span class="kalender-manad">${manadText.charAt(0).toUpperCase() + manadText.slice(1)}</span>
+      <button class="kalender-nav" id="kalenderNastaBtn" title="Nästa månad">›</button>
+    </div>
+    <div class="kalender-veckodagar">${["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"].map((d) => `<span>${d}</span>`).join("")}</div>
+    <div class="kalender-grid">${celler}</div>
+    ${skordDennaManad.length ? `<div class="kalender-skord">
+      <div class="lbl">Skörd denna månad</div>
+      <div class="skord-chips">${skordDennaManad.map((o) => `<span class="skord-chip">${ikonForVaxt(o.namn)} ${esc(o.namn)}</span>`).join("")}</div>
+    </div>` : ""}
+    ${anteckningarValdDag ? `<div class="kalender-dagdetalj">
+      <div class="lbl">${datumText(anteckningarValdDag)}</div>
+      ${valdaPoster.length ? valdaPoster.map((o) => {
+        const zon = zoner.find((z) => z.id === o.zonId);
+        return `<div class="plant-rad plant-rad-klickbar" data-id="${esc(o.id)}">
+          <span class="plant-ikon">${ikonForVaxt(o.namn)}</span>
+          <span class="namn">${esc(o.namn)}</span>
+          <span class="varde">${zon ? esc(zon.namn) : "okategoriserat"}</span>
+        </div>`;
+      }).join("") : '<div class="tom">Inget planterat den här dagen.</div>'}
+    </div>` : ""}`;
+}
+function renderaAnteckningar() {
+  $("anteckningarInnehall").innerHTML = anteckningarLage === "kalender" ? anteckningarKalenderHtml() : anteckningarListaHtml();
+}
+$("anteckningarSegment").addEventListener("click", (e) => {
+  const btn = e.target.closest(".vy-segment-btn");
+  if (!btn) return;
+  anteckningarLage = btn.dataset.lage;
+  document.querySelectorAll("#anteckningarSegment .vy-segment-btn").forEach((b) => b.classList.toggle("aktiv", b === btn));
+  renderaAnteckningar();
+});
+// Öppnar en plantas detaljpanel från en ANNAN vy (anteckningar/kalender) –
+// panelen ligger inuti dashboardVy, så den måste visas igen först, annars
+// är den osynlig fast "öppen" (display:none på en förälder vinner alltid).
+function oppnaOdlingFranAnnanVy(id) {
+  const o = odlingar.find((x) => x.id === id);
+  if (!o) return;
+  const zon = o.zonId ? zoner.find((z) => z.id === o.zonId) : null;
+  if (zon && zon.kartaId !== aktivKartaId) {
+    aktivKartaId = zon.kartaId;
+    kartaAnvandarstyrd = false;
+    renderaKartaFlikar();
+  }
+  location.hash = "";
+  visaVy();
+  renderaKarta();
+  valjMal("odling", id);
+}
+
+// ---- Historik (global): samma kombinerade, hovrabara graf som redan finns
+// i zon-/plantdetaljerna, bara med en väljare överst för VILKEN zon eller
+// planta man tittar på i stället för att bara visa den man råkat markera på
+// kartan. Återanvänder detaljHistorikHtml() rakt av - ingen anledning att
+// bygga om själva grafen bara för att den nu visas på en egen sida.
+let globalHistorikValdMal = null; // "zon:<id>" eller "odling:<id>"
+function historikMal_alla() {
+  return [
+    ...zoner.filter((z) => (z.enhetIds ?? []).length).map((z) => ({ typ: "zon", id: z.id, namn: z.namn, enhetIds: z.enhetIds })),
+    ...odlingar.filter((o) => (o.enhetIds ?? []).length).map((o) => ({ typ: "odling", id: o.id, namn: o.namn, enhetIds: o.enhetIds })),
+  ];
+}
+function renderaGlobalHistorik() {
+  const alla = historikMal_alla();
+  if (!alla.length) {
+    $("globalHistorikInnehall").innerHTML = '<div class="tom">Inga entiteter kopplade till några zoner eller plantor än – koppla en under en zons eller plantas detaljer på Översikt.</div>';
+    return;
+  }
+  if (!globalHistorikValdMal || !alla.some((a) => `${a.typ}:${a.id}` === globalHistorikValdMal)) {
+    globalHistorikValdMal = `${alla[0].typ}:${alla[0].id}`;
+  }
+  const vald = alla.find((a) => `${a.typ}:${a.id}` === globalHistorikValdMal);
+  $("globalHistorikInnehall").innerHTML = `
+    <div class="vy-segment" id="globalHistorikVal" style="max-width:100%; overflow-x:auto; flex-wrap:nowrap">
+      ${alla.map((a) => `<button class="vy-segment-btn${`${a.typ}:${a.id}` === globalHistorikValdMal ? " aktiv" : ""}" data-mal="${a.typ}:${esc(a.id)}">${esc(a.namn)}</button>`).join("")}
+    </div>
+    <div style="margin-top:18px">${detaljHistorikHtml(vald.enhetIds)}</div>`;
+  historikGrafAnimera();
+}
+
+// ---- Schema: vattningspåminnelser per veckodag ----
+// Ingen ventil eller pump finns kopplad än (se README:s Roadmap), så ett
+// schema styr ingenting på riktigt – det lägger bara en påminnelse i
+// notiscentret på schemalagda dagar, byggt på samma id+datum-mönster som
+// skördepåminnelserna. Den dagen en riktig bevattningsventil finns kan
+// samma scheman driva den utan att UI:t behöver ändras.
+const VECKODAGAR_NAMN = ["Sön", "Mån", "Tis", "Ons", "Tor", "Fre", "Lör"]; // matchar Date.getDay()
+function schemaListaHtml() {
+  if (!scheman.length) return '<div class="tom">Inga scheman ännu – lägg till ett nedan.</div>';
+  const idagVeckodag = new Date().getDay();
+  return `<div class="schema-lista">${scheman.map((s) => {
+    const zon = zoner.find((z) => z.id === s.zonId);
+    const idagSchemalagd = s.veckodagar.includes(idagVeckodag);
+    return `<div class="schema-rad">
+      <span class="ikon">💧</span>
+      <div class="info">
+        <div class="namn">${esc(zon?.namn ?? "Okänd zon")}</div>
+        <div class="dagar">${s.veckodagar.map((d) => VECKODAGAR_NAMN[d]).join(", ")}</div>
+      </div>
+      ${idagSchemalagd ? `<span class="schema-idag">Idag</span>` : ""}
+      <button class="ta-bort-liten schema-ta-bort" data-id="${esc(s.id)}" title="Ta bort schema">×</button>
+    </div>`;
+  }).join("")}</div>`;
+}
+function schemaFormularHtml() {
+  const fristaende = zoner.filter((z) => !z.foralderId);
+  if (!fristaende.length) return '<div class="modal-entiteter"><label class="lbl">Nytt schema</label><div class="tom">Lägg till en zon på Översikt först.</div></div>';
+  return `<div class="modal-entiteter">
+    <label class="lbl">Nytt schema</label>
+    <div class="falt" style="margin-top:12px">
+      <label class="lbl">Zon</label>
+      <select id="schemaZonVal">${fristaende.map((z) => `<option value="${esc(z.id)}">${esc(z.namn)}</option>`).join("")}</select>
+    </div>
+    <div class="falt">
+      <label class="lbl">Veckodagar</label>
+      <div class="schema-dagval">
+        ${[1, 2, 3, 4, 5, 6, 0].map((d) => `<button type="button" class="schema-dag-btn" data-dag="${d}">${VECKODAGAR_NAMN[d]}</button>`).join("")}
+      </div>
+    </div>
+    <button id="schemaLaggTillBtn">Lägg till schema</button>
+    <div class="status" id="schemaStatus"></div>
+  </div>`;
+}
+function renderaSchema() {
+  $("schemaInnehall").innerHTML = schemaListaHtml() + schemaFormularHtml();
+}
 visaVy();
 
 $("nSparaBtn").addEventListener("click", async () => {
