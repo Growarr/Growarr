@@ -1703,8 +1703,18 @@ const SPRAK_TEXT = {
     fraga_radgivare: "Ask the garden adviser", ta_bort_bild: "Remove image",
   },
 };
+// A key missing from BOTH languages falls through as its own name, which is
+// easy to miss in a long view. Log it once so a typo or a forgotten
+// SPRAK_TEXT entry is obvious instead of quietly cosmetic.
+const okandaNycklar = new Set();
 function t(nyckel) {
-  return SPRAK_TEXT[sprak]?.[nyckel] ?? SPRAK_TEXT.sv[nyckel] ?? nyckel;
+  const traff = SPRAK_TEXT[sprak]?.[nyckel] ?? SPRAK_TEXT.sv[nyckel];
+  if (traff !== undefined) return traff;
+  if (!okandaNycklar.has(nyckel)) {
+    okandaNycklar.add(nyckel);
+    console.warn(`[i18n] unknown key: "${nyckel}"`);
+  }
+  return nyckel;
 }
 let modalKontext = null; // bara för QR-etikett-popupen – { typ: "qr", id }
 // Dragning av zoner är avstängd som standard och slås bara på via "Redigera
@@ -4675,7 +4685,21 @@ function tillampaSprak(val) {
     visaVy();
   } catch { /* startup: not everything exists yet, the static markup above is done */ }
 }
-tillampaSprak(lasSprak() ?? "sv");
+// English is the default on a fresh device. A saved choice always wins, so
+// picking Swedish sticks per device (localStorage, same as the theme).
+tillampaSprak(lasSprak() ?? "en");
+
+// Guard against translation drift. Every string added to sv needs an en
+// counterpart and vice versa, and it is easy to forget one half when adding
+// a feature. This compares the two key sets at startup and names whatever
+// is missing in the console, so the gap shows up while developing instead
+// of as a stray Swedish word in the English UI months later.
+(function granskaOversattningar() {
+  const saknasIEn = Object.keys(SPRAK_TEXT.sv).filter((k) => !(k in SPRAK_TEXT.en));
+  const saknasISv = Object.keys(SPRAK_TEXT.en).filter((k) => !(k in SPRAK_TEXT.sv));
+  if (saknasIEn.length) console.warn(`[i18n] missing English (${saknasIEn.length}):`, saknasIEn.join(", "));
+  if (saknasISv.length) console.warn(`[i18n] missing Swedish (${saknasISv.length}):`, saknasISv.join(", "));
+})();
 $("sprakSegment").addEventListener("click", (e) => {
   const btn = e.target.closest(".vy-segment-btn");
   if (!btn) return;

@@ -350,111 +350,202 @@ ${sammanfattning}`,
   }
 }
 
-// ---- AI-föreslagna vattningsscheman (Claude) ----
-// Claude får se zoner, odlingar, sensorhistorik och väder och föreslår
-// veckoscheman – flera åt gången, ett per zon där den ser ett mönster värt
-// att agera på (t.ex. en jordfuktighet som stadigt sjunker mellan
-// mätningarna, eller en zontyp som torkar snabbt i värmen). Förslagen är
-// bara förslag: de sparas inte, utan visas i Schema-vyn tills man aktivt
-// lägger till eller avfärdar dem.
+// ---- Watering schedule suggestions ----
+// Deliberately split in two halves:
 //
-// Cachen är kort och nycklas på FAKTISK data (zoner, befintliga scheman och
-// antal historikpunkter), inte bara på tid. Så fort trädgården ändras –
-// mer mätdata, ett schema tillagt, en ny zon – räknas förslagen om, vilket
-// är själva poängen med "märker den beteenden ska den föreslå igen".
+//   1. Plain arithmetic finds the candidates. For every zone with a moisture
+//      sensor we fit a trend line through the logged history, work out how
+//      fast it is drying, and from that how many days are left before it
+//      crosses the "too dry" mark. That is a slope calculation, not
+//      something that needs a language model, and doing it locally means
+//      suggestions still work with no API key at all.
+//
+//   2. Claude only rewrites the wording. It gets the numbers we already
+//      computed and turns them into one readable sentence, and may adjust
+//      the interval if the forecast or the plants motivate it. It can never
+//      introduce a zone or an interval we did not derive from the data.
+//
+// Suggestions are never saved; they show up in the Schedule view until you
+// add or dismiss them.
+//
+// The cache is keyed on actual garden state (zones, existing schedules,
+// volume of history) rather than just elapsed time, so fresh measurements
+// produce fresh suggestions instead of one stale answer.
 let schemaAiCache = null; // { nyckel, tid, resultat }
 const SCHEMA_AI_CACHE_MS = 6 * 3600 * 1000;
 const VECKODAG_NAMN = ["söndag", "måndag", "tisdag", "onsdag", "torsdag", "fredag", "lördag"];
+const TORR_GRANS = 25;        // % moisture we want to water before reaching
+const MIN_MATPUNKTER = 6;     // fewer points than this and a trend line is noise
+const MIN_LUTNING = 0.7;      // %/day; anything flatter is not really drying out
+
+// Least-squares slope of value against time, in units per day. Returns null
+// when there is too little data for the answer to mean anything.
+function torkTakt(punkter) {
+  if (punkter.length < MIN_MATPUNKTER) return null;
+  const t0 = new Date(punkter[0].tid).getTime();
+  const xs = punkter.map((p) => (new Date(p.tid).getTime() - t0) / 86400000);
+  const ys = punkter.map((p) => Number(p.varde));
+  if (ys.some((y) => !Number.isFinite(y))) return null;
+  const n = xs.length;
+  const mx = xs.reduce((a, b) => a + b, 0) / n;
+  const my = ys.reduce((a, b) => a + b, 0) / n;
+  let tal = 0, namn = 0;
+  for (let i = 0; i < n; i++) { tal += (xs[i] - mx) * (ys[i] - my); namn += (xs[i] - mx) ** 2; }
+  if (namn === 0) return null;
+  return tal / namn; // negative means drying out
+}
+
+// Turn "water every N days" into concrete weekdays, spread across the week
+// rather than bunched together. 0 = Sunday, matching Date.getDay().
+function veckodagarForIntervall(intervall) {
+  if (intervall <= 1) return [0, 1, 2, 3, 4, 5, 6];
+  if (intervall === 2) return [1, 3, 5];
+  if (intervall === 3) return [1, 4];
+  if (intervall <= 5) return [1, 5];
+  return [3];
+}
+
+// The unit of measurement lives on the live Home Assistant state rather than
+// in our own data file, so this is a name-based guess. Kept small and
+// separate so the intent stays obvious.
+function enhetArFuktsensor(enhet) {
+  const namn = (enhet.namn ?? "").toLowerCase();
+  return namn.includes("fukt") || namn.includes("moist") || namn.includes("humid");
+}
+
+// The arithmetic half: which zones are drying out, and how fast?
+function raknaSchemaKandidater(d) {
+  const kandidater = [];
+  const harSchema = new Set((d.scheman ?? []).map((s) => s.zonId));
+  for (const zon of d.zoner.filter((z) => !z.foralderId)) {
+    if (harSchema.has(zon.id)) continue; // already scheduled, leave it alone
+    for (const enhetId of zon.enhetIds ?? []) {
+      const enhet = d.enheter.find((e) => e.id === enhetId);
+      if (!enhet || !enhetArFuktsensor(enhet)) continue;
+      const punkter = (d.historik ?? [])
+        .filter((p) => p.enhetId === enhetId)
+        .sort((a, b) => new Date(a.tid) - new Date(b.tid));
+      const lutning = torkTakt(punkter);
+      if (lutning == null || lutning > -MIN_LUTNING) continue; // flat, or getting wetter
+      const nu = Number(punkter[punkter.length - 1].varde);
+      // Already below the dry mark is no reason to skip: that is exactly when
+      // a schedule is wanted. dagarTillTorrt clamps to 1 in that case.
+      if (!Number.isFinite(nu)) continue;
+      const takt = Math.abs(lutning);
+      const dagarTillTorrt = Math.max(1, Math.round((nu - TORR_GRANS) / takt));
+      const intervall = Math.min(7, Math.max(1, dagarTillTorrt));
+      kandidater.push({
+        zonId: zon.id, zonNamn: zon.namn, veckodagar: veckodagarForIntervall(intervall),
+        // Everything Claude is allowed to mention is measured, never guessed
+        // Math.max(0): a glitching sensor should never print a negative %
+        matt: { nu: Math.max(0, Math.round(nu)), taktPerDygn: Math.round(takt * 10) / 10, dagarTillTorrt, intervall, sensor: enhet.namn },
+      });
+      break; // one suggestion per zone is enough
+    }
+  }
+  return kandidater;
+}
+
+// Plain-language fallback used when there is no API key, or the call fails.
+// Same numbers, just phrased by us instead of by Claude.
+function enkelMotivering(k) {
+  const { nu, taktPerDygn, dagarTillTorrt } = k.matt;
+  return `Jordfuktigheten ligger på ${nu} % och sjunker ca ${taktPerDygn} %/dygn, alltså torr om ungefär ${dagarTillTorrt} dygn.`;
+}
 
 async function hamtaAiSchemaforslag() {
-  if (!ANTHROPIC_API_KEY) return { fel: "ANTHROPIC_API_KEY är inte konfigurerad", forslag: [] };
   const [d, vader] = await Promise.all([lasData(), hamtaVader()]);
   const fristaende = d.zoner.filter((z) => !z.foralderId);
   if (!fristaende.length) return { forslag: [] };
+
   const nyckel = [
     fristaende.map((z) => z.id).sort().join(","),
     (d.scheman ?? []).map((s) => `${s.zonId}:${s.veckodagar.join("")}`).sort().join(","),
-    // Grovt hackad historikstorlek: förslagen ska räknas om när det kommit
-    // in meningsfullt mycket ny mätdata, inte vid varje enskild mätpunkt.
+    // Coarse history size: recompute once meaningfully more data has arrived,
+    // not on every single logged measurement.
     Math.floor((d.historik ?? []).length / 24),
   ].join("|");
   if (schemaAiCache && schemaAiCache.nyckel === nyckel && Date.now() - schemaAiCache.tid < SCHEMA_AI_CACHE_MS) {
     return schemaAiCache.resultat;
   }
+
+  const kandidater = raknaSchemaKandidater(d);
+  if (!kandidater.length) {
+    const tomt = { forslag: [] };
+    schemaAiCache = { nyckel, tid: Date.now(), resultat: tomt };
+    return tomt;
+  }
+  // Works with no API key at all: the measured candidates stand on their own.
+  const utanAi = {
+    forslag: kandidater.map((k) => ({ zonId: k.zonId, zonNamn: k.zonNamn, veckodagar: k.veckodagar, motivering: enkelMotivering(k) })),
+  };
+  if (!ANTHROPIC_API_KEY) {
+    schemaAiCache = { nyckel, tid: Date.now(), resultat: utanAi };
+    return utanAi;
+  }
+
   try {
     const sammanfattning = await byggTradgardsSammanfattning(d, vader);
-    const historikText = historikSammanfattning(d);
-    const befintliga = (d.scheman ?? []).map((s) => {
-      const zon = d.zoner.find((z) => z.id === s.zonId);
-      return `- ${zon?.namn ?? "okänd zon"} (zonId: ${s.zonId}): ${s.veckodagar.map((v) => VECKODAG_NAMN[v]).join(", ")}`;
-    });
-    const zonLista = fristaende.map((z) => `- zonId: ${z.id} | namn: ${z.namn} | typ: ${ZON_TYPER_NAMN[z.typ] ?? z.typ}`).join("\n");
+    const kandidatText = kandidater.map((k) =>
+      `- zonId: ${k.zonId} | zon: ${k.zonNamn} | sensor: ${k.matt.sensor} | nu: ${k.matt.nu} % | torkar: ${k.matt.taktPerDygn} %/dygn | torr om: ${k.matt.dagarTillTorrt} dygn | intervall: var ${k.matt.intervall}:e dygn | veckodagar: [${k.veckodagar.join(",")}]`).join("\n");
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
       body: JSON.stringify({
         model: ANTHROPIC_MODEL,
-        max_tokens: 1000,
+        max_tokens: 800,
         messages: [{
           role: "user",
-          content: `Du är en erfaren trädgårdsrådgivare. Föreslå veckoscheman för bevattning utifrån datan nedan.
+          content: `Du hjälper till att formulera bevattningsförslag i en trädgårdsapp. Uträkningarna är redan gjorda – din uppgift är att skriva om dem till begriplig text, och bara justera intervallet om väder eller växtval tydligt motiverar det.
 
-Uppgift: Ge 0–4 förslag. Föreslå ett schema för en zon när du ser ett konkret skäl i datan – t.ex. en jordfuktighet som sjunker stadigt mellan mätningarna, en zontyp som torkar snabbt (växthus, kruka) i den väntade värmen, eller en odling med högt vattenbehov. Föreslå hellre färre och välmotiverade än många svaga.
+Uppgift per kandidat:
+1. Skriv en "motivering": EN kort mening på svenska (max ~20 ord) som förklarar varför, byggd på siffrorna nedan. Nämn gärna den faktiska mätningen.
+2. Behåll "veckodagar" som de är om du inte har ett tydligt skäl att ändra, t.ex. mycket regn i prognosen (glesare) eller värmebölja i ett växthus (tätare).
 
-Regler:
-- veckodagar anges som siffror, 0 = söndag, 1 = måndag ... 6 = lördag.
-- Föreslå INTE ett schema som är identiskt med ett befintligt (se nedan). Ett tätare eller glesare schema för samma zon är däremot okej om datan motiverar det – förklara i så fall varför i "motivering".
-- "motivering" ska vara EN kort mening på svenska som pekar på det du faktiskt ser i datan, max ~20 ord.
-- Hitta ALDRIG på mätvärden eller zoner. Varje zonId måste finnas i listan nedan.
-- Ser du inget tydligt mönster: svara med tom lista. Det är ett helt giltigt svar.
+Regler, viktigast: Hitta ALDRIG på mätvärden – använd bara siffrorna nedan. Lägg ALDRIG till en kandidat; svaret ska innehålla exakt de zonId som listas. veckodagar är siffror, 0 = söndag ... 6 = lördag.
 
-Svara ENDAST med kompakt JSON, inget annat: {"forslag":[{"zonId":"...","veckodagar":[1,4],"motivering":"..."}]}
+Svara ENDAST med kompakt JSON: {"forslag":[{"zonId":"...","veckodagar":[1,4],"motivering":"..."}]}
 
-Zoner att välja bland:
-${zonLista}
-
-Befintliga scheman:
-${befintliga.length ? befintliga.join("\n") : "(inga scheman ännu)"}
-
-Sensorhistorik:
-${historikText}
+Kandidater (uträknade ur mätdatan):
+${kandidatText}
 
 Trädgården:
 ${sammanfattning}`,
         }],
       }),
     });
-    if (!res.ok) return { fel: `Claude svarade ${res.status}`, forslag: [] };
+    if (!res.ok) return utanAi;
     const data = await res.json();
-    if (data.stop_reason === "refusal") return { fel: "Claude avböjde", forslag: [] };
+    if (data.stop_reason === "refusal") return utanAi;
     const text = data.content?.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
     const parsed = JSON.parse((text ?? "").replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, ""));
-    // Samma hårda validering som för AI-notiserna: allt Claude hittar på som
-    // inte matchar en verklig zon kasseras tyst, och ett förslag som är
-    // identiskt med ett befintligt schema filtreras bort även om Claude
-    // ombads låta bli.
-    const giltigaZoner = new Map(fristaende.map((z) => [z.id, z]));
-    const befintligaNycklar = new Set((d.scheman ?? []).map((s) => `${s.zonId}:${[...s.veckodagar].sort().join(",")}`));
+    // Hard validation, same principle as the AI notifications: our computed
+    // candidate list is the source of truth. A zone we did not derive cannot
+    // appear, and anything Claude omits falls back to our own wording rather
+    // than silently vanishing.
+    const giltiga = new Map(kandidater.map((k) => [k.zonId, k]));
     const sedda = new Set();
     const forslag = [];
     for (const f of parsed.forslag ?? []) {
-      const zon = giltigaZoner.get(f?.zonId);
-      if (!zon) continue;
-      const dagar = [...new Set((Array.isArray(f.veckodagar) ? f.veckodagar : []).map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n <= 6))].sort();
-      if (!dagar.length) continue;
-      const nyckelF = `${zon.id}:${dagar.join(",")}`;
-      if (befintligaNycklar.has(nyckelF) || sedda.has(nyckelF)) continue;
-      sedda.add(nyckelF);
+      const k = giltiga.get(f?.zonId);
+      if (!k || sedda.has(k.zonId)) continue;
+      sedda.add(k.zonId);
+      const dagar = [...new Set((Array.isArray(f.veckodagar) ? f.veckodagar : []).map(Number)
+        .filter((n) => Number.isInteger(n) && n >= 0 && n <= 6))].sort();
       forslag.push({
-        zonId: zon.id, zonNamn: zon.namn, veckodagar: dagar,
-        motivering: typeof f.motivering === "string" ? f.motivering.slice(0, 200) : "",
+        zonId: k.zonId, zonNamn: k.zonNamn,
+        veckodagar: dagar.length ? dagar : k.veckodagar,
+        motivering: typeof f.motivering === "string" && f.motivering ? f.motivering.slice(0, 200) : enkelMotivering(k),
       });
+    }
+    for (const k of kandidater) {
+      if (!sedda.has(k.zonId)) forslag.push({ zonId: k.zonId, zonNamn: k.zonNamn, veckodagar: k.veckodagar, motivering: enkelMotivering(k) });
     }
     const resultat = { forslag, viaAi: true };
     schemaAiCache = { nyckel, tid: Date.now(), resultat };
     return resultat;
-  } catch (err) {
-    return { fel: err.message, forslag: [] };
+  } catch {
+    return utanAi;
   }
 }
 
