@@ -49,6 +49,11 @@ phone before a cold snap hits.
   bar, dark mode. Not a desktop dashboard squeezed onto a small screen.
 - **Your data, your box.** One container, one data file, your own Home
   Assistant entities. No accounts, no cloud sync.
+- **Notes, history and a watering schedule, each their own page.** Every
+  planting's notes in one list with a planting/harvest calendar, one
+  searchable chart across every sensor you've linked, and weekday-based
+  watering reminders (a stand-in for real irrigation until there's a valve
+  to actually drive).
 
 ## Getting started
 
