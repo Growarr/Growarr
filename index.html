@@ -723,6 +723,14 @@ try {
     border:1px solid var(--border); color:var(--muted); font-size:.78rem; font-weight:650; box-shadow:none; }
   .schema-dag-btn:hover { color:var(--text); transform:none; box-shadow:none; }
   .schema-dag-btn.aktiv { background:var(--grad); color:#04140e; border-color:transparent; }
+  /* AI-förslag ser medvetet annorlunda ut än sparade scheman – de är
+     ännu inget som påminner om något, bara ett förslag att ta ställning till. */
+  .schema-rad.forslag { background:color-mix(in srgb, var(--accent) 8%, var(--surface2));
+    border-style:dashed; border-color:color-mix(in srgb, var(--accent) 34%, var(--border)); }
+  .schema-rad .motivering { font-size:.76rem; color:var(--muted); margin-top:4px; }
+  .forslag-lagg-till { padding:6px 14px; font-size:.76rem; font-weight:650; border-radius:99px;
+    background:var(--grad); color:#04140e; border:0; flex:0 0 auto; box-shadow:none; }
+  .forslag-lagg-till:hover { transform:none; box-shadow:0 3px 10px -3px color-mix(in srgb, var(--accent) 60%, transparent); }
 
   /* ---- AI-chatt ---- */
   .chatt-knapp { position:fixed; right:24px; bottom:24px; width:56px; height:56px; border-radius:50%;
@@ -1193,11 +1201,12 @@ try {
     </div>
   </div>
   <div class="card" style="margin-top:20px">
-    <div class="vy-segment" id="anteckningarSegment" style="max-width:280px">
-      <button class="vy-segment-btn aktiv" data-lage="lista">Lista</button>
-      <button class="vy-segment-btn" data-lage="kalender">Kalender</button>
-    </div>
-    <div id="anteckningarInnehall" style="margin-top:18px"></div>
+    <h2>Kalender</h2>
+    <div id="anteckningarKalender"></div>
+  </div>
+  <div class="card">
+    <h2>Alla anteckningar</h2>
+    <div id="anteckningarInnehall"></div>
   </div>
 </div>
 
@@ -4239,6 +4248,24 @@ document.addEventListener("click", async (e) => {
   // spara ett nytt.
   const schemaDagBtn = e.target.closest(".schema-dag-btn");
   if (schemaDagBtn) { schemaDagBtn.classList.toggle("aktiv"); return; }
+  // AI-förslag: lägg till som riktigt schema, eller avfärda det.
+  const forslagLaggTill = e.target.closest(".forslag-lagg-till");
+  if (forslagLaggTill) {
+    const f = schemaForslag.find((x) => forslagNyckel(x) === forslagLaggTill.dataset.nyckel);
+    if (f) {
+      schemaForslagAvfardade.add(forslagNyckel(f)); // ligger nu i listan ovanför i stället
+      await fetch(`${BAS}api/scheman`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ zonId: f.zonId, veckodagar: f.veckodagar }) });
+      await laddaOdlingar();
+      renderaSchema();
+    }
+    return;
+  }
+  const forslagAvfarda = e.target.closest(".forslag-avfarda");
+  if (forslagAvfarda) {
+    schemaForslagAvfardade.add(forslagAvfarda.dataset.nyckel);
+    renderaSchema();
+    return;
+  }
   const schemaTaBort = e.target.closest(".schema-ta-bort");
   if (schemaTaBort) {
     await fetch(`${BAS}api/scheman/ta-bort`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: schemaTaBort.dataset.id }) });
@@ -4565,12 +4592,16 @@ function visaVy() {
     $(v.nav).classList.toggle("aktiv", v === aktiv);
   }
   window.scrollTo(0, 0);
+  // "Skapa nytt" skapar zoner, plantor, kartor och block – allt sådant hör
+  // hemma på översikten. På anteckningar/historik/schema/inställningar vore
+  // knappen bara en genväg tillbaka hit, så den döljs där.
+  $("skapaBtn").style.display = aktiv.vy === "dashboardVy" ? "" : "none";
   // Kartan är omätbar medan översikten är dold (0 px), så anpassningen måste
   // göras om när man kommer tillbaka hit.
   if (aktiv.vy === "dashboardVy" && !kartaAnvandarstyrd) passaKarta();
   if (aktiv.vy === "anteckningarVy") renderaAnteckningar();
   if (aktiv.vy === "historikVy") renderaGlobalHistorik();
-  if (aktiv.vy === "schemaVy") renderaSchema();
+  if (aktiv.vy === "schemaVy") { renderaSchema(); laddaSchemaForslag(); }
 }
 // #zon=<id> öppnar en zon direkt – det är den länken QR-etiketterna bär.
 function oppnaFranHash() {
@@ -4595,10 +4626,11 @@ $("navSchemaBtn").addEventListener("click", () => { location.hash = "schema"; })
 $("navInstallningarBtn").addEventListener("click", () => { location.hash = "installningar"; });
 
 // ---- Anteckningar: alla fria texter man skrivit på sina odlingar, samlade
-// på ett ställe i stället för utspridda i varje zons detaljpanel. Kalender-
-// läget visar dessutom NÄR saker planterats (exakt datum) och vilken månad
-// olika sorter ska skördas – ett enkelt trädgårdsschema, inte bara text.
-let anteckningarLage = "lista";
+// på ett ställe i stället för utspridda i varje zons detaljpanel. Kalendern
+// ligger som ett eget kort överst – den visar NÄR saker planterats (exakt
+// datum) och vilken månad olika sorter ska skördas, alltså trädgårdsårets
+// överblick, som hör hemma före den kronologiska textlistan snarare än
+// gömd bakom en flikväxel.
 let anteckningarManad = new Date().toISOString().slice(0, 7);
 let anteckningarValdDag = null;
 function datumText(d) {
@@ -4678,15 +4710,9 @@ function anteckningarKalenderHtml() {
     </div>` : ""}`;
 }
 function renderaAnteckningar() {
-  $("anteckningarInnehall").innerHTML = anteckningarLage === "kalender" ? anteckningarKalenderHtml() : anteckningarListaHtml();
+  $("anteckningarKalender").innerHTML = anteckningarKalenderHtml();
+  $("anteckningarInnehall").innerHTML = anteckningarListaHtml();
 }
-$("anteckningarSegment").addEventListener("click", (e) => {
-  const btn = e.target.closest(".vy-segment-btn");
-  if (!btn) return;
-  anteckningarLage = btn.dataset.lage;
-  document.querySelectorAll("#anteckningarSegment .vy-segment-btn").forEach((b) => b.classList.toggle("aktiv", b === btn));
-  renderaAnteckningar();
-});
 // Öppnar en plantas detaljpanel från en ANNAN vy (anteckningar/kalender) –
 // panelen ligger inuti dashboardVy, så den måste visas igen först, annars
 // är den osynlig fast "öppen" (display:none på en förälder vinner alltid).
@@ -4778,8 +4804,52 @@ function schemaFormularHtml() {
     <div class="status" id="schemaStatus"></div>
   </div>`;
 }
+// AI-förslag: Claude tittar på sensorhistorik, zontyper och väder och
+// föreslår scheman den ser skäl för (se hamtaAiSchemaforslag i server.js).
+// Förslagen sparas aldrig automatiskt – de ligger som kort man aktivt
+// lägger till eller avfärdar, så appen aldrig börjar påminna om något man
+// inte sagt ja till. Avfärdade förslag hålls borta för den här sessionen.
+let schemaForslag = [];
+let schemaForslagLaddar = false;
+const schemaForslagAvfardade = new Set();
+function forslagNyckel(f) { return `${f.zonId}:${[...f.veckodagar].sort().join(",")}`; }
+async function laddaSchemaForslag() {
+  if (schemaForslagLaddar) return;
+  schemaForslagLaddar = true;
+  renderaSchema();
+  try {
+    const res = await fetch(`${BAS}api/scheman/forslag`, { cache: "no-store" });
+    const data = await res.json();
+    schemaForslag = data.forslag ?? [];
+  } catch { schemaForslag = []; }
+  schemaForslagLaddar = false;
+  renderaSchema();
+}
+function schemaForslagHtml() {
+  const synliga = schemaForslag.filter((f) => !schemaForslagAvfardade.has(forslagNyckel(f)));
+  if (schemaForslagLaddar) {
+    return `<div class="modal-entiteter"><label class="lbl">✨ Förslag från AI</label>
+      <div class="tom">Letar efter mönster i din trädgård …</div></div>`;
+  }
+  if (!synliga.length) return "";
+  return `<div class="modal-entiteter">
+    <label class="lbl">✨ Förslag från AI</label>
+    <div class="schema-lista" style="margin-top:12px; margin-bottom:0">
+      ${synliga.map((f) => `<div class="schema-rad forslag" data-nyckel="${esc(forslagNyckel(f))}">
+        <span class="ikon">✨</span>
+        <div class="info">
+          <div class="namn">${esc(f.zonNamn)}</div>
+          <div class="dagar">${f.veckodagar.map((d) => VECKODAGAR_NAMN[d]).join(", ")}</div>
+          ${f.motivering ? `<div class="motivering">${esc(f.motivering)}</div>` : ""}
+        </div>
+        <button class="forslag-lagg-till" data-nyckel="${esc(forslagNyckel(f))}" title="Lägg till schemat">Lägg till</button>
+        <button class="ta-bort-liten forslag-avfarda" data-nyckel="${esc(forslagNyckel(f))}" title="Avfärda förslaget">×</button>
+      </div>`).join("")}
+    </div>
+  </div>`;
+}
 function renderaSchema() {
-  $("schemaInnehall").innerHTML = schemaListaHtml() + schemaFormularHtml();
+  $("schemaInnehall").innerHTML = schemaListaHtml() + schemaForslagHtml() + schemaFormularHtml();
 }
 visaVy();
 

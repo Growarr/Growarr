@@ -350,6 +350,114 @@ ${sammanfattning}`,
   }
 }
 
+// ---- AI-föreslagna vattningsscheman (Claude) ----
+// Claude får se zoner, odlingar, sensorhistorik och väder och föreslår
+// veckoscheman – flera åt gången, ett per zon där den ser ett mönster värt
+// att agera på (t.ex. en jordfuktighet som stadigt sjunker mellan
+// mätningarna, eller en zontyp som torkar snabbt i värmen). Förslagen är
+// bara förslag: de sparas inte, utan visas i Schema-vyn tills man aktivt
+// lägger till eller avfärdar dem.
+//
+// Cachen är kort och nycklas på FAKTISK data (zoner, befintliga scheman och
+// antal historikpunkter), inte bara på tid. Så fort trädgården ändras –
+// mer mätdata, ett schema tillagt, en ny zon – räknas förslagen om, vilket
+// är själva poängen med "märker den beteenden ska den föreslå igen".
+let schemaAiCache = null; // { nyckel, tid, resultat }
+const SCHEMA_AI_CACHE_MS = 6 * 3600 * 1000;
+const VECKODAG_NAMN = ["söndag", "måndag", "tisdag", "onsdag", "torsdag", "fredag", "lördag"];
+
+async function hamtaAiSchemaforslag() {
+  if (!ANTHROPIC_API_KEY) return { fel: "ANTHROPIC_API_KEY är inte konfigurerad", forslag: [] };
+  const [d, vader] = await Promise.all([lasData(), hamtaVader()]);
+  const fristaende = d.zoner.filter((z) => !z.foralderId);
+  if (!fristaende.length) return { forslag: [] };
+  const nyckel = [
+    fristaende.map((z) => z.id).sort().join(","),
+    (d.scheman ?? []).map((s) => `${s.zonId}:${s.veckodagar.join("")}`).sort().join(","),
+    // Grovt hackad historikstorlek: förslagen ska räknas om när det kommit
+    // in meningsfullt mycket ny mätdata, inte vid varje enskild mätpunkt.
+    Math.floor((d.historik ?? []).length / 24),
+  ].join("|");
+  if (schemaAiCache && schemaAiCache.nyckel === nyckel && Date.now() - schemaAiCache.tid < SCHEMA_AI_CACHE_MS) {
+    return schemaAiCache.resultat;
+  }
+  try {
+    const sammanfattning = await byggTradgardsSammanfattning(d, vader);
+    const historikText = historikSammanfattning(d);
+    const befintliga = (d.scheman ?? []).map((s) => {
+      const zon = d.zoner.find((z) => z.id === s.zonId);
+      return `- ${zon?.namn ?? "okänd zon"} (zonId: ${s.zonId}): ${s.veckodagar.map((v) => VECKODAG_NAMN[v]).join(", ")}`;
+    });
+    const zonLista = fristaende.map((z) => `- zonId: ${z.id} | namn: ${z.namn} | typ: ${ZON_TYPER_NAMN[z.typ] ?? z.typ}`).join("\n");
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: ANTHROPIC_MODEL,
+        max_tokens: 1000,
+        messages: [{
+          role: "user",
+          content: `Du är en erfaren trädgårdsrådgivare. Föreslå veckoscheman för bevattning utifrån datan nedan.
+
+Uppgift: Ge 0–4 förslag. Föreslå ett schema för en zon när du ser ett konkret skäl i datan – t.ex. en jordfuktighet som sjunker stadigt mellan mätningarna, en zontyp som torkar snabbt (växthus, kruka) i den väntade värmen, eller en odling med högt vattenbehov. Föreslå hellre färre och välmotiverade än många svaga.
+
+Regler:
+- veckodagar anges som siffror, 0 = söndag, 1 = måndag ... 6 = lördag.
+- Föreslå INTE ett schema som är identiskt med ett befintligt (se nedan). Ett tätare eller glesare schema för samma zon är däremot okej om datan motiverar det – förklara i så fall varför i "motivering".
+- "motivering" ska vara EN kort mening på svenska som pekar på det du faktiskt ser i datan, max ~20 ord.
+- Hitta ALDRIG på mätvärden eller zoner. Varje zonId måste finnas i listan nedan.
+- Ser du inget tydligt mönster: svara med tom lista. Det är ett helt giltigt svar.
+
+Svara ENDAST med kompakt JSON, inget annat: {"forslag":[{"zonId":"...","veckodagar":[1,4],"motivering":"..."}]}
+
+Zoner att välja bland:
+${zonLista}
+
+Befintliga scheman:
+${befintliga.length ? befintliga.join("\n") : "(inga scheman ännu)"}
+
+Sensorhistorik:
+${historikText}
+
+Trädgården:
+${sammanfattning}`,
+        }],
+      }),
+    });
+    if (!res.ok) return { fel: `Claude svarade ${res.status}`, forslag: [] };
+    const data = await res.json();
+    if (data.stop_reason === "refusal") return { fel: "Claude avböjde", forslag: [] };
+    const text = data.content?.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
+    const parsed = JSON.parse((text ?? "").replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, ""));
+    // Samma hårda validering som för AI-notiserna: allt Claude hittar på som
+    // inte matchar en verklig zon kasseras tyst, och ett förslag som är
+    // identiskt med ett befintligt schema filtreras bort även om Claude
+    // ombads låta bli.
+    const giltigaZoner = new Map(fristaende.map((z) => [z.id, z]));
+    const befintligaNycklar = new Set((d.scheman ?? []).map((s) => `${s.zonId}:${[...s.veckodagar].sort().join(",")}`));
+    const sedda = new Set();
+    const forslag = [];
+    for (const f of parsed.forslag ?? []) {
+      const zon = giltigaZoner.get(f?.zonId);
+      if (!zon) continue;
+      const dagar = [...new Set((Array.isArray(f.veckodagar) ? f.veckodagar : []).map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n <= 6))].sort();
+      if (!dagar.length) continue;
+      const nyckelF = `${zon.id}:${dagar.join(",")}`;
+      if (befintligaNycklar.has(nyckelF) || sedda.has(nyckelF)) continue;
+      sedda.add(nyckelF);
+      forslag.push({
+        zonId: zon.id, zonNamn: zon.namn, veckodagar: dagar,
+        motivering: typeof f.motivering === "string" ? f.motivering.slice(0, 200) : "",
+      });
+    }
+    const resultat = { forslag, viaAi: true };
+    schemaAiCache = { nyckel, tid: Date.now(), resultat };
+    return resultat;
+  } catch (err) {
+    return { fel: err.message, forslag: [] };
+  }
+}
+
 // ---- AI-chatt (Claude, med bildstöd) ----
 // Användaren kan fråga t.ex. "varför ser den här plantan ut så här?" och
 // bifoga ett foto. Vi skickar med hela trädgårdssammanfattningen (zoner,
@@ -805,6 +913,9 @@ const server = createServer(async (req, res) => {
     if (req.method === "POST" && p.endsWith("/api/notiser/ai")) {
       const { kandidater } = await lasBody(req);
       return skickaJson(res, 200, await hamtaAiNotiser(kandidater));
+    }
+    if (req.method === "GET" && p.endsWith("/api/scheman/forslag")) {
+      return skickaJson(res, 200, await hamtaAiSchemaforslag());
     }
     if (req.method === "POST" && p.endsWith("/api/chatt")) {
       const { meddelanden } = await lasBody(req);
