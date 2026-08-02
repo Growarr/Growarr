@@ -873,15 +873,22 @@ const server = createServer(async (req, res) => {
     // How a map draws its backdrop: "rutnat" (the default grid), "ren"
     // (flat, no grid) or "foto" (an uploaded aerial image).
     if (req.method === "POST" && p.endsWith("/api/maps/update")) {
-      const { id, bakgrund, bildOpacitet } = await lasBody(req);
+      const { id, bakgrund, bildOpacitet, bildRotation, bildSkala, bildX, bildY } = await lasBody(req);
+      // Clamped to the same ranges the sliders offer, so a hand-written API
+      // call cannot push the photo somewhere it can never be dragged back from.
+      const tal = (v, min, max, fallback) => {
+        const n = Number(v);
+        return Number.isFinite(n) ? Math.min(max, Math.max(min, Math.round(n))) : fallback;
+      };
       const data = await muteraData((d) => {
         const k = d.kartor.find((x) => x.id === id);
         if (!k) return;
         if (bakgrund !== undefined) k.bakgrund = ["ren", "foto"].includes(bakgrund) ? bakgrund : "rutnat";
-        if (bildOpacitet !== undefined) {
-          const n = Number(bildOpacitet);
-          k.bildOpacitet = Number.isFinite(n) ? Math.min(100, Math.max(10, Math.round(n))) : 60;
-        }
+        if (bildOpacitet !== undefined) k.bildOpacitet = tal(bildOpacitet, 10, 100, 60);
+        if (bildRotation !== undefined) k.bildRotation = tal(bildRotation, -180, 180, 0);
+        if (bildSkala !== undefined) k.bildSkala = tal(bildSkala, 20, 400, 100);
+        if (bildX !== undefined) k.bildX = tal(bildX, -800, 800, 0);
+        if (bildY !== undefined) k.bildY = tal(bildY, -800, 800, 0);
       });
       return skickaJson(res, 200, data);
     }

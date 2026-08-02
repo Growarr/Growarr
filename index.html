@@ -315,8 +315,11 @@ try {
   .karta-canvas.ren-bakgrund { background:var(--surface2); }
   /* Sits behind the scene, dimmed on its own so a full-colour aerial photo
      doesn't drown out the plant icons drawn on top of it. */
-  .karta-bild-lager { position:absolute; inset:0; width:100%; height:100%;
-    object-fit:cover; pointer-events:none; user-select:none; z-index:0; }
+  /* Sized to the scene's own coordinate space (1000x700), not the frame, so
+     it pans and zooms together with the zones drawn on top of it. */
+  .karta-bild-lager { position:absolute; left:0; top:0; width:1000px; height:700px;
+    object-fit:cover; pointer-events:none; user-select:none; z-index:0;
+    transform-origin:50% 50%; }
   /* Thumbnail of the uploaded image inside the background dialog. */
   .bakgrund-forhands { display:block; width:100%; max-height:170px; object-fit:cover;
     border-radius:var(--r-sm); border:1px solid var(--border); margin-bottom:10px; }
@@ -1177,7 +1180,6 @@ try {
           </div>
           <div class="karta-canvas-wrap">
             <div id="tradgardKarta" class="karta-canvas">
-              <img id="kartaBildLager" class="karta-bild-lager" alt="" style="display:none">
               <div id="kartaScen" class="karta-scen"></div>
               <div class="karta-tom" id="kartaTom" style="display:none" data-i18n="karta_tom">Inga zoner på den här kartan ännu</div>
               <div class="karta-breadcrumb" id="kartaBreadcrumb" style="display:none"></div>
@@ -1632,7 +1634,7 @@ const SPRAK_TEXT = {
     sprak: "Språk", svenska: "Svenska", engelska: "English",
     // Validation and status
     bakgrund: "Bakgrund", bakgrund_hjalp: "Rutnät, rent eller din egen flygbild",    bakgrund_rutnat: "Rutnät", bakgrund_ren: "Rent", bakgrund_foto: "Foto",    bakgrund_hjalp_lang: "Rent och Foto tar båda bort rutnätet. Ladda upp en flygbild (en skärmdump från Google Maps duger) för att lägga ut zonerna över er faktiska tomt.",    flygbild: "Flygbild", ladda_upp_bild: "Ladda upp bild", byt_bild: "Byt bild",    bildstyrka: "Bildstyrka", bildstyrka_hjalp: "Tona ner bilden så plantikonerna syns tydligt ovanpå.",    laddar_upp: "Laddar upp …", ingen_karta: "Ingen karta vald.",
-    namn_kravs: "Namn krävs.", kunde_inte_spara: "Kunde inte spara: ", sparat: "Sparat.", okategoriserat: "Okategoriserat", fyller_ytan_kort: "fyller ytan", var_finns: "Var", inga_odlingar: "Inga odlingar ännu – lägg till en planta i en zon på kartan.", plats: "plats", platser: "platser", bekrafta_ta_bort_zon: "Ta bort zonen? Plantorna blir okategoriserade och sektioner flyttas upp en nivå.", bekrafta_ta_bort_planta: "Ta bort odlingen?",
+    namn_kravs: "Namn krävs.", kunde_inte_spara: "Kunde inte spara: ", sparat: "Sparat.", okategoriserat: "Okategoriserat", fyller_ytan_kort: "fyller ytan", var_finns: "Var", inga_odlingar: "Inga odlingar ännu – lägg till en planta i en zon på kartan.", plats: "plats", platser: "platser", bekrafta_ta_bort_zon: "Ta bort zonen? Plantorna blir okategoriserade och sektioner flyttas upp en nivå.", bekrafta_ta_bort_planta: "Ta bort odlingen?", passa_in_bilden: "Passa in bilden", passa_in_hjalp: "Vrid, skala och flytta bilden tills bäddarna hamnar där de faktiskt ligger.", rotation: "Rotation", storlek: "Storlek", flytta_x: "Flytta i sidled", flytta_y: "Flytta upp/ner", aterstall_placering: "Återställ placering",
     valj_zon: "Välj en zon.", valj_veckodag: "Välj minst en veckodag.",
     // Create-new modal
     skapa_sub: "Zoner, plantor, kartor och egna block",
@@ -1714,7 +1716,7 @@ const SPRAK_TEXT = {
     tema_hjalp: "Follows your device's light/dark setting by default, or pick one yourself.",
     sprak: "Language", svenska: "Svenska", engelska: "English",
     bakgrund: "Background", bakgrund_hjalp: "Grid, plain or your own aerial photo",    bakgrund_rutnat: "Grid", bakgrund_ren: "Plain", bakgrund_foto: "Photo",    bakgrund_hjalp_lang: "Plain and Photo both drop the grid. Upload an aerial shot (a Google Maps screenshot works) to lay your zones out over your actual property.",    flygbild: "Aerial photo", ladda_upp_bild: "Upload image", byt_bild: "Replace image",    bildstyrka: "Image strength", bildstyrka_hjalp: "Dim the photo so the plant icons stay readable on top of it.",    laddar_upp: "Uploading …", ingen_karta: "No map selected.",
-    namn_kravs: "A name is required.", kunde_inte_spara: "Could not save: ", sparat: "Saved.", okategoriserat: "Uncategorised", fyller_ytan_kort: "fills the area", var_finns: "Where", inga_odlingar: "Nothing planted yet. Add a plant to a zone on the map.", plats: "place", platser: "places", bekrafta_ta_bort_zon: "Delete this zone? Its plants become uncategorised and any sections move up a level.", bekrafta_ta_bort_planta: "Delete this planting?",
+    namn_kravs: "A name is required.", kunde_inte_spara: "Could not save: ", sparat: "Saved.", okategoriserat: "Uncategorised", fyller_ytan_kort: "fills the area", var_finns: "Where", inga_odlingar: "Nothing planted yet. Add a plant to a zone on the map.", plats: "place", platser: "places", bekrafta_ta_bort_zon: "Delete this zone? Its plants become uncategorised and any sections move up a level.", bekrafta_ta_bort_planta: "Delete this planting?", passa_in_bilden: "Line the photo up", passa_in_hjalp: "Rotate, resize and nudge the photo until your beds sit where they really are.", rotation: "Rotation", storlek: "Size", flytta_x: "Move sideways", flytta_y: "Move up/down", aterstall_placering: "Reset placement",
     valj_zon: "Pick a zone.", valj_veckodag: "Pick at least one day.",
     skapa_sub: "Zones, plants, maps and custom blocks",
     flik_zon: "Zone", flik_planta: "Plant", flik_karta: "Map", flik_block: "Block",
@@ -1944,21 +1946,36 @@ function renderaKartaFlikar() {
 // rather than a CSS background, so it can be dimmed independently: a
 // full-colour aerial shot at 100% makes the plant icons unreadable.
 function aktivKarta() { return kartor.find((k) => k.id === aktivKartaId) ?? null; }
+// Defaults for the photo's own placement, so an uploaded image can be lined
+// up with the zones: it is nearly never shot at the same angle or framing.
+function bildRot(k) { return Number(k?.bildRotation ?? 0); }
+function bildSkala(k) { return Number(k?.bildSkala ?? 100); }
+function bildX(k) { return Number(k?.bildX ?? 0); }
+function bildY(k) { return Number(k?.bildY ?? 0); }
 function tillampaKartBakgrund() {
   const k = aktivKarta();
   const ram = $("tradgardKarta");
-  const lager = $("kartaBildLager");
+  const scen = $("kartaScen");
   const lage = k?.bakgrund ?? "rutnat";
   ram.classList.toggle("ren-bakgrund", lage === "ren" || lage === "foto");
-  if (lage === "foto" && k?.harBild) {
-    lager.style.display = "";
-    lager.style.opacity = String((k.bildOpacitet ?? 60) / 100);
-    const src = `${BAS}api/map-image?kartaId=${encodeURIComponent(k.id)}&v=${k.bildVersion ?? 0}`;
-    if (lager.getAttribute("src") !== src) lager.setAttribute("src", src);
-  } else {
-    lager.style.display = "none";
-    lager.removeAttribute("src");
+  // The image lives INSIDE the scene, so panning and zooming the map moves
+  // the photo with the zones: it represents the actual ground, and would be
+  // useless as a reference if it stayed pinned to the frame. renderaKarta()
+  // clears the scene with innerHTML, so recreate it here, same as renderaSol.
+  let lager = scen.querySelector("#kartaBildLager");
+  if (lage !== "foto" || !k?.harBild) { lager?.remove(); return; }
+  if (!lager) {
+    lager = document.createElement("img");
+    lager.id = "kartaBildLager";
+    lager.className = "karta-bild-lager";
+    lager.alt = "";
+    scen.prepend(lager); // behind the zones
   }
+  lager.style.opacity = String((k.bildOpacitet ?? 60) / 100);
+  lager.style.transform =
+    `translate(${bildX(k)}px, ${bildY(k)}px) rotate(${bildRot(k)}deg) scale(${bildSkala(k) / 100})`;
+  const src = `${BAS}api/map-image?kartaId=${encodeURIComponent(k.id)}&v=${k.bildVersion ?? 0}`;
+  if (lager.getAttribute("src") !== src) lager.setAttribute("src", src);
 }
 function manadNamn(m) {
   // "2026-09" -> "september 2026"
@@ -3858,6 +3875,25 @@ function bakgrundModalHtml() {
       <label class="lbl">${t("bildstyrka")} <span id="bakgrundOpacitetVarde">${k.bildOpacitet ?? 60}%</span></label>
       <input type="range" id="bakgrundOpacitet" min="10" max="100" step="5" value="${k.bildOpacitet ?? 60}" style="width:100%">
       <p class="lbl">${t("bildstyrka_hjalp")}</p>
+    </div>
+    <div class="falt">
+      <label class="lbl">${t("passa_in_bilden")}</label>
+      <p class="lbl">${t("passa_in_hjalp")}</p>
+      <label class="lbl" style="margin-top:10px">${t("rotation")} <span id="bakgrundRotationVarde">${bildRot(k)}°</span></label>
+      <input type="range" id="bakgrundRotation" min="-180" max="180" step="1" value="${bildRot(k)}" style="width:100%">
+      <label class="lbl">${t("storlek")} <span id="bakgrundSkalaVarde">${bildSkala(k)}%</span></label>
+      <input type="range" id="bakgrundSkala" min="20" max="400" step="5" value="${bildSkala(k)}" style="width:100%">
+      <div class="skapa-rad">
+        <div>
+          <label class="lbl">${t("flytta_x")} <span id="bakgrundXVarde">${bildX(k)}</span></label>
+          <input type="range" id="bakgrundX" min="-800" max="800" step="5" value="${bildX(k)}" style="width:100%">
+        </div>
+        <div>
+          <label class="lbl">${t("flytta_y")} <span id="bakgrundYVarde">${bildY(k)}</span></label>
+          <input type="range" id="bakgrundY" min="-800" max="800" step="5" value="${bildY(k)}" style="width:100%">
+        </div>
+      </div>
+      <button class="karta-redigera-btn" id="bakgrundAterstallBtn" style="margin-top:10px">${t("aterstall_placering")}</button>
     </div>` : ""}
     <div class="status" id="bakgrundStatus"></div>`;
 }
@@ -4587,6 +4623,10 @@ document.addEventListener("click", async (e) => {
     return;
   }
   if (e.target.closest("#bakgrundValjBildBtn")) { $("kartaBildFil").click(); return; }
+  if (e.target.closest("#bakgrundAterstallBtn")) {
+    await sparaKartaBakgrund({ bildRotation: 0, bildSkala: 100, bildX: 0, bildY: 0 });
+    return;
+  }
   if (e.target.closest("#bakgrundTaBortBildBtn")) {
     await fetch(`${BAS}api/maps/image/delete`, {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -4968,14 +5008,29 @@ $("kartaBildFil").addEventListener("change", async (e) => {
 });
 // Live preview while dragging; only persist when the drag ends, so one slide
 // doesn't fire twenty writes at the server.
+// Which slider maps to which stored field, and how its label reads.
+const BAKGRUND_REGLAGE = {
+  bakgrundOpacitet: { falt: "bildOpacitet", etikett: "bakgrundOpacitetVarde", suffix: "%" },
+  bakgrundRotation: { falt: "bildRotation", etikett: "bakgrundRotationVarde", suffix: "°" },
+  bakgrundSkala: { falt: "bildSkala", etikett: "bakgrundSkalaVarde", suffix: "%" },
+  bakgrundX: { falt: "bildX", etikett: "bakgrundXVarde", suffix: "" },
+  bakgrundY: { falt: "bildY", etikett: "bakgrundYVarde", suffix: "" },
+};
+// Preview live while dragging, persist only on release, so one drag is one
+// write rather than twenty.
 document.addEventListener("input", (e) => {
-  if (e.target.id !== "bakgrundOpacitet") return;
-  $("bakgrundOpacitetVarde").textContent = `${e.target.value}%`;
-  $("kartaBildLager").style.opacity = String(Number(e.target.value) / 100);
+  const cfg = BAKGRUND_REGLAGE[e.target.id];
+  if (!cfg) return;
+  const k = aktivKarta();
+  if (!k) return;
+  $(cfg.etikett).textContent = `${e.target.value}${cfg.suffix}`;
+  k[cfg.falt] = Number(e.target.value); // local only, saved on change
+  tillampaKartBakgrund();
 });
 document.addEventListener("change", async (e) => {
-  if (e.target.id !== "bakgrundOpacitet") return;
-  await sparaKartaBakgrund({ bildOpacitet: Number(e.target.value) });
+  const cfg = BAKGRUND_REGLAGE[e.target.id];
+  if (!cfg) return;
+  await sparaKartaBakgrund({ [cfg.falt]: Number(e.target.value) });
 });
 $("solReglage").addEventListener("input", () => {
   solMinut = Number($("solReglage").value) || 0;
