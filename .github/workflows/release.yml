@@ -1,9 +1,14 @@
 name: Release
 
-# Runs only when a version tag is pushed (e.g. v1.1.0), on top of the
+# Runs only when a version tag is pushed (e.g. v0.1.0), on top of the
 # existing docker-publish.yml which keeps :latest fresh on every push to
 # main. This is what lets a docker-compose.yml pin a known-good version
 # instead of always tracking whatever is newest.
+#
+# v0.x releases are marked "Pre-release" on GitHub automatically: semver's
+# own meaning for a 0.x version is "anything may still change", which
+# matches this project's actual state better than pretending otherwise.
+# That stops the moment a v1.x tag is pushed - no extra step needed then.
 on:
   push:
     tags: ["v*.*.*"]
@@ -40,3 +45,4 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          prerelease: ${{ startsWith(github.ref_name, 'v0.') }}

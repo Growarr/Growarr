@@ -70,10 +70,10 @@ and updates roll out on their own.
 
 Prefer to update on your own terms instead? Check the
 [releases](https://github.com/mathiasmholm/growarr/releases) for a specific
-version, e.g. `v1.1.0`, and pin `docker-compose.yml` to it:
+version, e.g. `v0.1.0`, and pin `docker-compose.yml` to it:
 
 ```yaml
-image: ghcr.io/mathiasmholm/growarr:v1.1.0 # instead of :latest
+image: ghcr.io/mathiasmholm/growarr:v0.1.0 # instead of :latest
 ```
 
 <details>
