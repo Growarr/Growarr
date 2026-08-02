@@ -3,7 +3,7 @@
 // sensorer, ventiler m.m. som HA-entiteter här den dagen ni har dem
 // installerade – ingen kodändring behövs, bara ange entity_id i panelen.
 import { createServer } from "node:http";
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir, unlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
@@ -18,6 +18,10 @@ const NTFY_TOPIC = process.env.NTFY_TOPIC || "";
 const WEBHOOK_URL = process.env.WEBHOOK_URL || "";
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || "";
 const ANTHROPIC_MODEL = "claude-sonnet-5";
+// Background images live as files next to the data file, never inside it.
+// tradgard.json is re-read on every API request, so a megabyte of base64 in
+// there would slow the whole app down; a separate file costs nothing.
+const KARTBILD_DIR = join(dirname(DATA_PATH), "maps");
 const PANEL_HTML = join(dirname(fileURLToPath(import.meta.url)), "index.html");
 const LOGO_PNG = join(dirname(fileURLToPath(import.meta.url)), "logo.png");
 
@@ -853,7 +857,68 @@ const server = createServer(async (req, res) => {
         // istället för att bli osynliga.
         for (const z of d.zoner) if (z.kartaId === id) z.kartaId = d.kartor[0].id;
       });
+      // Best effort: an orphaned background image is harmless, a failed
+      // delete of the map itself would not be.
+      unlink(join(KARTBILD_DIR, `${id}.jpg`)).catch(() => {});
       return skickaJson(res, 200, data);
+    }
+    // How a map draws its backdrop: "rutnat" (the default grid), "ren"
+    // (flat, no grid) or "foto" (an uploaded aerial image).
+    if (req.method === "POST" && p.endsWith("/api/maps/update")) {
+      const { id, bakgrund, bildOpacitet } = await lasBody(req);
+      const data = await muteraData((d) => {
+        const k = d.kartor.find((x) => x.id === id);
+        if (!k) return;
+        if (bakgrund !== undefined) k.bakgrund = ["ren", "foto"].includes(bakgrund) ? bakgrund : "rutnat";
+        if (bildOpacitet !== undefined) {
+          const n = Number(bildOpacitet);
+          k.bildOpacitet = Number.isFinite(n) ? Math.min(100, Math.max(10, Math.round(n))) : 60;
+        }
+      });
+      return skickaJson(res, 200, data);
+    }
+    if (req.method === "POST" && p.endsWith("/api/maps/image")) {
+      const { id, data: bildData } = await lasBody(req);
+      if (!id || typeof bildData !== "string") return skickaJson(res, 400, { fel: "id och data krävs" });
+      const buffert = Buffer.from(bildData, "base64");
+      // The panel already downscales before upload; this is just a backstop
+      // against something else posting a huge file straight at the API.
+      if (buffert.length > 8 * 1024 * 1024) return skickaJson(res, 413, { fel: "bilden är för stor" });
+      await mkdir(KARTBILD_DIR, { recursive: true });
+      await writeFile(join(KARTBILD_DIR, `${id}.jpg`), buffert);
+      const uppdaterad = await muteraData((d) => {
+        const k = d.kartor.find((x) => x.id === id);
+        if (!k) return;
+        k.harBild = true;
+        k.bakgrund = "foto"; // uploading one obviously means you want to see it
+        k.bildOpacitet = k.bildOpacitet ?? 60;
+        k.bildVersion = Date.now(); // cache-buster for the <img> src
+      });
+      return skickaJson(res, 200, uppdaterad);
+    }
+    if (req.method === "POST" && p.endsWith("/api/maps/image/delete")) {
+      const { id } = await lasBody(req);
+      await unlink(join(KARTBILD_DIR, `${id}.jpg`)).catch(() => {});
+      const data = await muteraData((d) => {
+        const k = d.kartor.find((x) => x.id === id);
+        if (!k) return;
+        k.harBild = false;
+        if (k.bakgrund === "foto") k.bakgrund = "rutnat";
+      });
+      return skickaJson(res, 200, data);
+    }
+    if (req.method === "GET" && p.endsWith("/api/map-image")) {
+      const id = url.searchParams.get("kartaId") ?? "";
+      // The id comes from the query string, so refuse anything that could
+      // walk out of the images directory.
+      if (!/^[A-Za-z0-9-]+$/.test(id)) return skickaJson(res, 400, { fel: "ogiltigt kartaId" });
+      try {
+        const bild = await readFile(join(KARTBILD_DIR, `${id}.jpg`));
+        res.writeHead(200, { "Content-Type": "image/jpeg", "Cache-Control": "public, max-age=31536000" });
+        return res.end(bild);
+      } catch {
+        return skickaJson(res, 404, { fel: "ingen bild för den kartan" });
+      }
     }
     // Vattningsscheman: bara en lista veckodagar per zon - ingen faktisk
     // ventil/pump finns att styra än (se README:s Roadmap), så ett schema
