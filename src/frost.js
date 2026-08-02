@@ -1,88 +1,91 @@
-// Kollar SMHI:s väderprognos (gratis, ingen nyckel behövs) för frostrisk
-// kommande dygn, och skickar push via ntfy om lägsta väntade temperatur
-// ligger under tröskeln. Körs gratis på GitHub Actions, samma mönster som
-// Bostadsvakt. OBS: SMHI:s "t" är lufttemperatur 2 m upp, inte marktemperatur
-// – markfrost kan förekomma en bit över 0°C på klara, vindstilla nätter,
-// därav standardtröskeln på 3°C istället för 0°C.
+// Checks SMHI's forecast (free, no key needed) for frost risk over the next
+// day, and sends a push via ntfy if the lowest expected temperature falls
+// below the threshold. Runs for free on GitHub Actions. Note: SMHI's "t" is
+// air temperature 2m up, not ground temperature - ground frost can occur a
+// couple of degrees above 0°C on clear, still nights, hence the default
+// 3°C threshold instead of 0°C.
 const LAT = process.env.GEO_LAT;
 const LON = process.env.GEO_LON;
-const TROSKEL = Number(process.env.FROST_TROSKEL ?? 3);
+const THRESHOLD = Number(process.env.FROST_THRESHOLD ?? 3);
 const NTFY_TOPIC = process.env.NTFY_TOPIC;
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
-const TIMMAR_FRAMAT = 36;
+const HOURS_AHEAD = 36;
 
-// Saknade koordinater är inte ett fel utan en okonfigurerad bevakning. Ett
-// nattligt schemalagt jobb som kraschar varje dygn blir bara brus i Actions-
-// loggen (och mejl om misslyckade körningar), så vi hoppar över tyst istället.
+// Missing coordinates are not an error, just an unconfigured watch. A
+// nightly scheduled job that fails every day is just noise in the Actions
+// log (and emails about failed runs), so skip quietly instead.
 if (!LAT || !LON) {
-  console.log("Hoppar över: GEO_LAT och GEO_LON är inte satta som repo-secrets.");
-  console.log("Sätt dem under Settings → Secrets and variables → Actions för att slå på frostvarningen,");
-  console.log("t.ex. GEO_LAT=59.85 och GEO_LON=17.63.");
+  console.log("Skipping: GEO_LAT and GEO_LON are not set as repo secrets.");
+  console.log("Set them under Settings -> Secrets and variables -> Actions to enable the frost watch,");
+  console.log("e.g. GEO_LAT=59.85 and GEO_LON=17.63.");
   process.exit(0);
 }
 
-// SMHI stängde av gamla pmp3g-API:t 31 mars 2026 – snow1g ersatte det, med
-// ett annat svarsformat ("time" istället för "validTime", platt "data"-
-// objekt istället för en parameters-array).
+// SMHI retired the old pmp3g API on 2026-03-31; snow1g replaced it, with a
+// different response shape ("time" instead of "validTime", a flat "data"
+// object instead of a parameters array).
 const url = `https://opendata-download-metfcst.smhi.se/api/category/snow1g/version/1/geotype/point/lon/${LON}/lat/${LAT}/data.json`;
 const res = await fetch(url, { headers: { "User-Agent": "growarr (github.com/mathiasmholm/growarr)" } });
 if (!res.ok) {
-  console.error(`SMHI svarade ${res.status}`);
+  console.error(`SMHI responded ${res.status}`);
   process.exit(1);
 }
 const data = await res.json();
-const nu = Date.now();
-const kommande = data.timeSeries
+const now = Date.now();
+const upcoming = data.timeSeries
   .map((t) => ({
-    tid: new Date(t.time),
+    time: new Date(t.time),
     temp: t.data?.air_temperature,
   }))
-  .filter((p) => p.temp != null && p.tid.getTime() >= nu && p.tid.getTime() <= nu + TIMMAR_FRAMAT * 3600 * 1000);
+  .filter((p) => p.temp != null && p.time.getTime() >= now && p.time.getTime() <= now + HOURS_AHEAD * 3600 * 1000);
 
-if (!kommande.length) {
-  console.log("Ingen prognosdata för det kommande dygnet – hoppar över.");
+if (!upcoming.length) {
+  console.log("No forecast data for the coming day, skipping.");
   process.exit(0);
 }
 
-const lagst = kommande.reduce((a, b) => (b.temp < a.temp ? b : a));
-console.log(`Lägsta förväntade temperatur kommande ${TIMMAR_FRAMAT}h: ${lagst.temp}°C (${lagst.tid.toISOString()})`);
+const lowest = upcoming.reduce((a, b) => (b.temp < a.temp ? b : a));
+console.log(`Lowest expected temperature over the next ${HOURS_AHEAD}h: ${lowest.temp}°C (${lowest.time.toISOString()})`);
 
-if (lagst.temp > TROSKEL) {
-  console.log(`Ingen frostrisk (tröskel ${TROSKEL}°C) – skickar ingen notis.`);
+if (lowest.temp > THRESHOLD) {
+  console.log(`No frost risk (threshold ${THRESHOLD}°C), sending no notification.`);
   process.exit(0);
 }
 
-const tidText = lagst.tid.toLocaleString("sv-SE", { weekday: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Stockholm" });
-const titel = "❄️ Frostrisk i trädgården";
-const meddelande = `Ner mot ${lagst.temp}°C ${tidText}. Täck ömtåliga plantor i tid.`;
+// Notification content stays in Swedish, same as the rest of the app's
+// user-facing text: this is a push notification read by the household, not
+// something a repo visitor sees.
+const timeText = lowest.time.toLocaleString("sv-SE", { weekday: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Stockholm" });
+const title = "❄️ Frostrisk i trädgården";
+const message = `Ner mot ${lowest.temp}°C ${timeText}. Täck ömtåliga plantor i tid.`;
 
 if (!NTFY_TOPIC && !WEBHOOK_URL) {
-  console.log(`[TORRKÖRNING – ingen NTFY_TOPIC/WEBHOOK_URL satt] ${titel}: ${meddelande}`);
+  console.log(`[DRY RUN - no NTFY_TOPIC/WEBHOOK_URL set] ${title}: ${message}`);
   process.exit(0);
 }
 
 if (NTFY_TOPIC) {
   const res2 = await fetch("https://ntfy.sh", {
     method: "POST",
-    body: JSON.stringify({ topic: NTFY_TOPIC, title: titel, message: meddelande, priority: 4 }),
+    body: JSON.stringify({ topic: NTFY_TOPIC, title, message, priority: 4 }),
   });
-  if (!res2.ok) console.warn(`ntfy svarade ${res2.status}: ${(await res2.text()).slice(0, 200)}`);
-  else console.log("Frostvarning skickad via ntfy.");
+  if (!res2.ok) console.warn(`ntfy responded ${res2.status}: ${(await res2.text()).slice(0, 200)}`);
+  else console.log("Frost warning sent via ntfy.");
 }
 
-// Skickas även till en Home Assistant-webhook om satt, samma dubbla mönster
-// som Bostadsvakts notify.js – en HA-automation kan göra vad ni vill med den
-// (visa på en skärm, säga den högt osv) utöver ntfy-pushen.
+// Also sent to a Home Assistant webhook if set, so an HA automation can do
+// whatever it likes with it (show it on a screen, read it aloud, etc.) on
+// top of the ntfy push.
 if (WEBHOOK_URL) {
   try {
     const res3 = await fetch(WEBHOOK_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json", "User-Agent": "growarr-bot/1.0 (+github.com/mathiasmholm/growarr)" },
-      body: JSON.stringify({ title: titel, message: meddelande }),
+      body: JSON.stringify({ title, message }),
     });
-    if (!res3.ok) console.warn(`HA-webhook svarade ${res3.status}`);
-    else console.log("Frostvarning skickad via HA-webhook.");
+    if (!res3.ok) console.warn(`HA webhook responded ${res3.status}`);
+    else console.log("Frost warning sent via HA webhook.");
   } catch (err) {
-    console.warn(`HA-webhook nåddes inte: ${err.message}`);
+    console.warn(`HA webhook was unreachable: ${err.message}`);
   }
 }

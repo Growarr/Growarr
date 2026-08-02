@@ -79,7 +79,7 @@ and updates roll out on their own.
 | `GEO_LAT`, `GEO_LON` | For weather & sun map | Your garden's coordinates |
 | `NTFY_TOPIC` | No | Push notifications via [ntfy.sh](https://ntfy.sh) (can also be set later in the UI) |
 | `WEBHOOK_URL` | No | Forward notifications to a Home Assistant webhook instead/as well |
-| `ANTHROPIC_API_KEY` | No | Unlocks the AI watering insight, photo chat, and smart notifications |
+| `ANTHROPIC_API_KEY` | No | Unlocks Claude's watering insight, photo chat, and notification prioritization |
 
 Everything except `PORT` also has a matching field in Settings, so you can
 skip straight to `docker compose up -d` with a blank `.env` and fill the
@@ -95,7 +95,7 @@ infrastructure, so it needs its own repo secrets:
 
 1. Add secrets **`GEO_LAT`** and **`GEO_LON`**.
 2. Add secret **`NTFY_TOPIC`** and/or **`WEBHOOK_URL`**.
-3. Optional: repo variable **`FROST_TROSKEL`** (°C, default `3`). Margin
+3. Optional: repo variable **`FROST_THRESHOLD`** (°C, default `3`). Margin
    against ground frost, since the forecast is air temperature 2m up.
 4. Run it once by hand from the **Actions** tab, or wait for the nightly
    schedule (18:00 Swedish time).
@@ -140,7 +140,7 @@ own API calls end up in the wrong place.
 | GET | `/api/camera` | Proxy a snapshot from an HA camera entity |
 | GET | `/api/history` | Logged sensor history |
 | GET | `/api/watering` | Claude's watering insight |
-| POST | `/api/chat` | AI chat, with optional photo |
+| POST | `/api/chat` | Chat with Claude, with optional photo |
 | GET / POST | `/api/settings` | Read / save settings |
 | POST | `/api/notifications` | Mark a notification handled |
 | POST | `/api/notifications/ai` | Let Claude prioritize the notification list |

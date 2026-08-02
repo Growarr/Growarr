@@ -1,10 +1,11 @@
-name: Frostvarning
+name: Frost warning
 
-# Kollar SMHI:s prognos en gång per kväll (18:00 svensk tid) för kommande
-# dygns lägsta temperatur, och skickar push via ntfy om frostrisk finns.
+# Checks SMHI's forecast once a night (18:00 Swedish time) for the lowest
+# temperature over the coming day, and sends a push via ntfy if there is a
+# frost risk.
 on:
   schedule:
-    - cron: "0 16 * * *" # 18:00 svensk sommartid / 17:00 vintertid
+    - cron: "0 16 * * *" # 18:00 Swedish summer time / 17:00 winter time
   workflow_dispatch: {}
 
 jobs:
@@ -17,11 +18,11 @@ jobs:
         with:
           node-version: 24
 
-      - name: Kolla frostrisk
+      - name: Check frost risk
         env:
           GEO_LAT: ${{ secrets.GEO_LAT }}
           GEO_LON: ${{ secrets.GEO_LON }}
-          FROST_TROSKEL: ${{ vars.FROST_TROSKEL }}
+          FROST_THRESHOLD: ${{ vars.FROST_THRESHOLD }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
         run: node src/frost.js
