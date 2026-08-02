@@ -1056,19 +1056,19 @@ try {
 <div class="app-shell">
 <nav class="sidebar">
   <div class="brand-mark" title="Growarr"><img src="logo.png" alt="Growarr"></div>
-  <button class="side-btn" id="navDashboardBtn" title="Översikt">
+  <button class="side-btn" id="navDashboardBtn" data-i18n-title="nav_oversikt">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/></svg>
   </button>
-  <button class="side-btn" id="navAnteckningarBtn" title="Anteckningar">
+  <button class="side-btn" id="navAnteckningarBtn" data-i18n-title="nav_anteckningar">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/><path d="M9 13h6M9 17h6"/></svg>
   </button>
-  <button class="side-btn" id="navHistorikBtn" title="Historik">
+  <button class="side-btn" id="navHistorikBtn" data-i18n-title="nav_historik">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-6 3 4 5-8"/></svg>
   </button>
-  <button class="side-btn" id="navSchemaBtn" title="Schema">
+  <button class="side-btn" id="navSchemaBtn" data-i18n-title="nav_schema">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
   </button>
-  <button class="side-btn" id="navInstallningarBtn" title="Inställningar">
+  <button class="side-btn" id="navInstallningarBtn" data-i18n-title="nav_installningar">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
   </button>
 </nav>
@@ -1076,7 +1076,7 @@ try {
 
 <div class="topp-verktyg-fast">
   <div style="position:relative">
-    <button class="notis-btn" id="notisBtn" title="Notiser">
+    <button class="notis-btn" id="notisBtn" data-i18n-title="notiser">
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       <span class="notis-badge" id="notisBadge" style="display:none">0</span>
     </button>
@@ -1088,9 +1088,9 @@ try {
       <div class="notis-lista" id="notisLista"></div>
     </div>
   </div>
-  <button class="skapa-btn" id="skapaBtn" title="Skapa nytt">
+  <button class="skapa-btn" id="skapaBtn" data-i18n-title="skapa_nytt">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-    Skapa nytt
+    <span data-i18n="skapa_nytt">Skapa nytt</span>
   </button>
 </div>
 
@@ -1099,7 +1099,7 @@ try {
   <div class="vy-header">
     <div>
       <p class="app-brand">Growarr</p>
-      <h1 class="vy-titel">Översikt</h1>
+      <h1 class="vy-titel" data-i18n="nav_oversikt">Översikt</h1>
     </div>
   </div>
 
@@ -1112,25 +1112,25 @@ try {
           <div class="dagens-vader" id="dagensVader"></div>
         </div>
         <div class="vy-segment" id="vySegment">
-          <button class="vy-segment-btn aktiv" data-vy="oversikt">Översikt</button>
-          <button class="vy-segment-btn" data-vy="zon">Per zon</button>
-          <button class="vy-segment-btn" data-vy="planta">Per planta</button>
-          <button class="vy-segment-btn" data-vy="historik">Historik</button>
+          <button class="vy-segment-btn aktiv" data-vy="oversikt" data-i18n="flik_oversikt">Översikt</button>
+          <button class="vy-segment-btn" data-vy="zon" data-i18n="flik_per_zon">Per zon</button>
+          <button class="vy-segment-btn" data-vy="planta" data-i18n="flik_per_planta">Per planta</button>
+          <button class="vy-segment-btn" data-vy="historik" data-i18n="flik_historik">Historik</button>
         </div>
 
         <div id="vyOversikt">
           <div class="karta-header" style="margin-top:8px">
-            <button class="karta-redigera-btn" id="kompaktBtn" title="Växla till en enkel planritning med former och namn">
+            <button class="karta-redigera-btn" id="kompaktBtn" data-i18n-title="kompakt_hjalp">
               <span id="kompaktBtnIkon"></span>
               <span id="kompaktBtnText">Kompakt</span>
             </button>
-            <button class="karta-redigera-btn karta-sol-btn" id="solBtn" title="Visa sol och skuggor">
+            <button class="karta-redigera-btn karta-sol-btn" id="solBtn" data-i18n-title="sol_hjalp">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>
-              Sol
+              <span data-i18n="sol">Sol</span>
             </button>
             <button class="karta-redigera-btn" id="redigeraLayoutBtn">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-              Redigera layout
+              <span id="redigeraLayoutText" data-i18n="redigera_layout">Redigera layout</span>
             </button>
           </div>
           <div class="karta-flikar" id="kartaFlikar"></div>
@@ -1142,12 +1142,12 @@ try {
           <div class="karta-canvas-wrap">
             <div id="tradgardKarta" class="karta-canvas">
               <div id="kartaScen" class="karta-scen"></div>
-              <div class="karta-tom" id="kartaTom" style="display:none">Inga zoner på den här kartan ännu – klicka på + för att lägga till en (växthus, bädd, odlingslåda …).</div>
+              <div class="karta-tom" id="kartaTom" style="display:none" data-i18n="karta_tom">Inga zoner på den här kartan ännu</div>
               <div class="karta-breadcrumb" id="kartaBreadcrumb" style="display:none"></div>
               <div class="karta-zoom">
-                <button id="zoomUtBtn" title="Zooma ut">−</button>
-                <button class="zoom-niva" id="zoomPassaBtn" title="Anpassa så hela trädgården syns">100%</button>
-                <button id="zoomInBtn" title="Zooma in">+</button>
+                <button id="zoomUtBtn" data-i18n-title="zooma_ut">−</button>
+                <button class="zoom-niva" id="zoomPassaBtn" data-i18n-title="anpassa_vy">100%</button>
+                <button id="zoomInBtn" data-i18n-title="zooma_in">+</button>
               </div>
             </div>
           </div>
@@ -1162,11 +1162,11 @@ try {
       <div class="card detalj-kort" id="detaljKort">
         <div class="sheet-topp" id="sheetTopp">
           <span class="sheet-strec"></span>
-          <h2>Detaljer</h2>
-          <button class="sheet-stang" id="sheetStangBtn" title="Stäng">×</button>
+          <h2 data-i18n="detaljer">Detaljer</h2>
+          <button class="sheet-stang" id="sheetStangBtn" data-i18n-title="stang">×</button>
         </div>
         <div id="detaljPanel" class="detalj-panel">
-          <div class="tom">Klicka på en zon eller planta i kartan ovan för att se och redigera detaljer här.</div>
+          <div class="tom" data-i18n="detalj_tom">Klicka på en zon eller planta i kartan ovan för att se och redigera detaljer här.</div>
         </div>
       </div>
 
@@ -1175,14 +1175,14 @@ try {
 
     <div class="dash-kol">
       <div class="card" style="margin-top:20px">
-        <h2>Väder & bevattning</h2>
-        <div class="vader-rader" id="vaderInnehall">Laddar …</div>
+        <h2 data-i18n="vader_bevattning">Väder & bevattning</h2>
+        <div class="vader-rader" id="vaderInnehall" data-i18n="laddar">Laddar …</div>
         <div class="frost-varning" id="frostVarning"></div>
-        <div class="insikt" id="bevattningInnehall" style="margin-top:16px">Laddar …</div>
+        <div class="insikt" id="bevattningInnehall" style="margin-top:16px" data-i18n="laddar">Laddar …</div>
       </div>
 
       <div class="card">
-        <h2>Historik</h2>
+        <h2 data-i18n="historik">Historik</h2>
         <div id="historikInnehall" class="historik-grid">Laddar …</div>
       </div>
 
@@ -1197,15 +1197,15 @@ try {
   <div class="vy-header">
     <div>
       <p class="app-brand">Growarr</p>
-      <h1 class="vy-titel">Anteckningar</h1>
+      <h1 class="vy-titel" data-i18n="nav_anteckningar">Anteckningar</h1>
     </div>
   </div>
   <div class="card" style="margin-top:20px">
-    <h2>Kalender</h2>
+    <h2 data-i18n="kalender">Kalender</h2>
     <div id="anteckningarKalender"></div>
   </div>
   <div class="card">
-    <h2>Alla anteckningar</h2>
+    <h2 data-i18n="alla_anteckningar">Alla anteckningar</h2>
     <div id="anteckningarInnehall"></div>
   </div>
 </div>
@@ -1214,7 +1214,7 @@ try {
   <div class="vy-header">
     <div>
       <p class="app-brand">Growarr</p>
-      <h1 class="vy-titel">Historik</h1>
+      <h1 class="vy-titel" data-i18n="nav_historik">Historik</h1>
     </div>
   </div>
   <div class="card" style="margin-top:20px">
@@ -1226,7 +1226,7 @@ try {
   <div class="vy-header">
     <div>
       <p class="app-brand">Growarr</p>
-      <h1 class="vy-titel">Schema</h1>
+      <h1 class="vy-titel" data-i18n="nav_schema">Schema</h1>
     </div>
   </div>
   <div class="card" style="margin-top:20px">
@@ -1237,15 +1237,14 @@ try {
 <div class="wrap" id="installningarVy" style="display:none">
 
   <div class="card">
-    <h2>Utseende</h2>
-    <p class="lbl" style="margin-bottom:12px">Följer enhetens ljusa/mörka läge som standard – välj annars själv.</p>
+    <h2 data-i18n="utseende">Utseende</h2>
+    <p class="lbl" style="margin-bottom:12px" data-i18n="tema_hjalp">Följer enhetens ljusa/mörka läge som standard – välj annars själv.</p>
     <div class="vy-segment" id="temaSegment" style="max-width:320px">
-      <button class="vy-segment-btn" data-tema="system">System</button>
-      <button class="vy-segment-btn" data-tema="light">Ljust</button>
-      <button class="vy-segment-btn" data-tema="dark">Mörkt</button>
+      <button class="vy-segment-btn" data-tema="system" data-i18n="system">System</button>
+      <button class="vy-segment-btn" data-tema="light" data-i18n="ljust">Ljust</button>
+      <button class="vy-segment-btn" data-tema="dark" data-i18n="morkt">Mörkt</button>
     </div>
-    <p class="lbl" style="margin:16px 0 12px">Språk – nya funktioner byggs på båda, äldre delar av appen
-      är tills vidare bara på svenska.</p>
+    <p class="lbl" style="margin:16px 0 12px" data-i18n="sprak_hjalp">Appens språk.</p>
     <div class="vy-segment" id="sprakSegment" style="max-width:320px">
       <button class="vy-segment-btn" data-sprak="sv">Svenska</button>
       <button class="vy-segment-btn" data-sprak="en">English</button>
@@ -1253,20 +1252,20 @@ try {
   </div>
 
   <div class="card">
-    <h2>Notiser (skördepåminnelser)</h2>
+    <h2 data-i18n="installningar_notiser">Notiser (skördepåminnelser)</h2>
     <p class="lbl" style="margin-bottom:10px">Skickas när en odling når sin skördemånad. Ntfy-ämnet och webhooken sparas
       här i panelen – ingen SSH eller docker-compose behövs. (Den separata nattliga frostvarningen på GitHub Actions
       har egna secrets och styrs inte härifrån.)</p>
     <div class="lagg-till-zon">
       <div><label class="lbl">Ntfy-ämne</label><input type="text" id="nNtfy" placeholder="t.ex. samma som Bostadsvakt"></div>
       <div><label class="lbl">HA-webhook-URL</label><input type="text" id="nWebhook" placeholder="https://.../api/webhook/..."></div>
-      <button id="nSparaBtn">Spara</button>
+      <button id="nSparaBtn">${t("spara")}</button>
     </div>
     <div class="status" id="nStatus"></div>
   </div>
 
   <div class="card">
-    <h2>Kartans läge i verkligheten (för solkartan)</h2>
+    <h2 data-i18n="kartans_lage">Kartans läge i verkligheten (för solkartan)</h2>
     <p class="lbl" style="margin-bottom:12px">Solkartan räknar ut solens bana från trädgårdens koordinater och ritar
       skuggorna som växthus och lådor kastar. För att skuggorna ska peka åt rätt håll och bli rätt långa behöver den
       veta hur kartan är vriden och hur stor den är i verkligheten.</p>
@@ -1284,21 +1283,21 @@ try {
         </select>
       </div>
       <div><label class="lbl">Kartans bredd i meter</label><input type="number" id="sBredd" min="1" max="500" step="1" value="20"></div>
-      <button id="sSparaBtn">Spara</button>
+      <button id="sSparaBtn">${t("spara")}</button>
     </div>
     <div class="status" id="sStatus"></div>
   </div>
 
   <div class="card">
-    <h2>HA-enheter (jordfuktighet, ventiler m.m. – lägg till när ni har dem)</h2>
+    <h2 data-i18n="ha_enheter">HA-enheter</h2>
     <div id="enheterLista"></div>
     <div class="lagg-till-enhet" style="margin-top:14px">
-      <div><label class="lbl">Sök namn eller entity_id</label>
+      <div><label class="lbl" data-i18n="sok_entitet">Sök namn eller entity_id</label>
         <input type="text" id="eEntityId" list="haEntiteterList" autocomplete="off" placeholder="t.ex. jordfuktighet eller sensor.jord_vaxthus">
         <datalist id="haEntiteterList"></datalist>
         <datalist id="sortForslagList"></datalist>
       </div>
-      <div><label class="lbl">Namn</label><input type="text" id="eNamn" placeholder="fylls i automatiskt, går att ändra"></div>
+      <div><label class="lbl">Namn</label><input type="text" id="eNamn" data-i18n-placeholder="enhet_namn_placeholder" placeholder="fylls i automatiskt, går att ändra"></div>
       <button id="eLaggTillBtn">Lägg till</button>
     </div>
     <p class="lbl" style="margin-top:10px" id="eHint"></p>
@@ -1310,7 +1309,7 @@ try {
 </div>
 </div>
 
-<button class="chatt-knapp" id="chattKnapp" title="Fråga trädgårdsrådgivaren">
+<button class="chatt-knapp" id="chattKnapp" data-i18n-title="fraga_radgivare">
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.9 8.9 0 0 1-3.8-.9L3 21l1.9-5A8.4 8.4 0 0 1 4 11.5 8.4 8.4 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg>
 </button>
 
@@ -1318,7 +1317,7 @@ try {
   <div class="chatt-topp">
     <span style="font-size:1.1rem">🌿</span>
     <span class="titel">Trädgårdsrådgivaren</span>
-    <button class="chatt-ikonknapp" id="chattStangBtn" title="Stäng" style="width:30px;height:30px">×</button>
+    <button class="chatt-ikonknapp" id="chattStangBtn" data-i18n-title="stang" style="width:30px;height:30px">×</button>
   </div>
   <div class="chatt-logg" id="chattLogg">
     <div class="chatt-tom">Fråga vad du vill om odlingen – t.ex. <em>"varför ser den här plantan ut så här?"</em> och bifoga ett foto.
@@ -1328,7 +1327,7 @@ try {
     <div class="chatt-forhandsvisning" id="chattBildForhands">
       <img id="chattBildMini" alt="">
       <span style="flex:1" id="chattBildNamn"></span>
-      <button class="chatt-ikonknapp" id="chattBildTaBort" title="Ta bort bild" style="width:26px;height:26px">×</button>
+      <button class="chatt-ikonknapp" id="chattBildTaBort" data-i18n-title="ta_bort_bild" style="width:26px;height:26px">×</button>
     </div>
     <div class="chatt-input-rad">
       <button class="chatt-ikonknapp" id="chattBildBtn" title="Bifoga foto">
@@ -1346,7 +1345,7 @@ try {
 <div class="sheet-bakgrund" id="sheetBakgrund"></div>
 
 <div class="kamera-lightbox" id="kameraLightbox">
-  <button class="kamera-lightbox-stang" id="kameraLightboxStang" title="Stäng">×</button>
+  <button class="kamera-lightbox-stang" id="kameraLightboxStang" data-i18n-title="stang">×</button>
   <img id="kameraLightboxBild" alt="Kamerabild i fullskärm">
 </div>
 
@@ -1356,77 +1355,77 @@ try {
 
 <div class="modal-bakgrund" id="skapaBakgrund" style="display:none">
   <div class="modal modal-bred">
-    <button class="ta-bort" id="skapaStangBtn" title="Stäng" style="position:absolute; top:16px; right:16px">×</button>
+    <button class="ta-bort" id="skapaStangBtn" data-i18n-title="stang" style="position:absolute; top:16px; right:16px">×</button>
     <h3>Skapa nytt</h3>
-    <div class="modal-sub">Zoner, plantor, kartor och egna block</div>
+    <div class="modal-sub" data-i18n="skapa_sub">Zoner, plantor, kartor och egna block</div>
 
     <div class="skapa-flikar">
-      <button class="skapa-flik aktiv" data-mal="skapaZon">Zon</button>
-      <button class="skapa-flik" data-mal="skapaOdling">Planta</button>
-      <button class="skapa-flik" data-mal="skapaKarta">Karta</button>
-      <button class="skapa-flik" data-mal="skapaBlock">Block</button>
+      <button class="skapa-flik aktiv" data-mal="skapaZon" data-i18n="flik_zon">Zon</button>
+      <button class="skapa-flik" data-mal="skapaOdling" data-i18n="flik_planta">Planta</button>
+      <button class="skapa-flik" data-mal="skapaKarta" data-i18n="flik_karta">Karta</button>
+      <button class="skapa-flik" data-mal="skapaBlock" data-i18n="flik_block">Block</button>
     </div>
 
     <div class="skapa-panel" id="skapaZon">
-      <label class="lbl">Namn</label><input type="text" id="zNamn" placeholder="t.ex. Stora växthuset">
+      <label class="lbl">Namn</label><input type="text" id="zNamn" data-i18n-placeholder="zon_namn_placeholder" placeholder="t.ex. Stora växthuset">
       <label class="lbl" style="margin-top:12px">Typ</label>
       <select id="zTyp">
-        <option value="vaxthus">Växthus</option>
-        <option value="utomhus">Utomhusbädd</option>
-        <option value="inomhus">Inomhus / krukor</option>
-        <option value="odlingslada">Odlingslåda</option>
-        <option value="annat">Annat</option>
+        <option value="vaxthus" data-i18n="typ_vaxthus">Växthus</option>
+        <option value="utomhus" data-i18n="typ_utomhus">Utomhusbädd</option>
+        <option value="inomhus" data-i18n="typ_inomhus">Inomhus / krukor</option>
+        <option value="odlingslada" data-i18n="typ_odlingslada">Odlingslåda</option>
+        <option value="annat" data-i18n="typ_annat">Annat</option>
       </select>
       <label class="lbl" style="margin-top:12px">Placering</label>
-      <select id="zForalder"><option value="">Fristående på kartan</option></select>
+      <select id="zForalder"><option value="" data-i18n="fristaende">Fristående på kartan</option></select>
       <p class="lbl" style="margin-top:10px">Välj en zon här för att lägga den nya som en <strong>sektion inuti</strong> den –
         t.ex. flera odlingslådor och bänkar inne i ett växthus. Fristående zoner placeras fritt på kartan.</p>
-      <button id="zLaggTillBtn" style="margin-top:12px">Lägg till zon</button>
+      <button id="zLaggTillBtn" style="margin-top:12px" data-i18n="lagg_till_zon">Lägg till zon</button>
       <div class="status" id="zStatus"></div>
     </div>
 
     <div class="skapa-panel" id="skapaOdling" style="display:none">
       <div class="skapa-rad">
-        <div><label class="lbl">Namn</label><input type="text" id="oNamn" list="sortForslagList" autocomplete="off" placeholder="t.ex. Tomater"></div>
-        <div><label class="lbl">Zon</label><select id="oZon"><option value="">Ingen zon</option></select></div>
+        <div><label class="lbl">Namn</label><input type="text" id="oNamn" list="sortForslagList" autocomplete="off" data-i18n-placeholder="planta_namn_placeholder" placeholder="t.ex. Tomater"></div>
+        <div><label class="lbl">${t("zon")}</label><select id="oZon"><option value="" data-i18n="ingen_zon">Ingen zon</option></select></div>
       </div>
       <div class="skapa-rad" style="margin-top:12px">
-        <div><label class="lbl">Antal (st)</label><input type="number" id="oAntal" min="1" max="200" value="1"></div>
-        <div><label class="lbl">På kartan</label>
+        <div><label class="lbl">${t("antal_st")}</label><input type="number" id="oAntal" min="1" max="200" value="1"></div>
+        <div><label class="lbl">${t("pa_kartan")}</label>
           <select id="oLayout">
-            <option value="klunga">Samlade på en plats</option>
-            <option value="fyll">Fyll hela ytan</option>
+            <option value="klunga">${t("samlade")}</option>
+            <option value="fyll">${t("fyller_ytan")}</option>
           </select>
         </div>
       </div>
       <div class="skapa-rad" style="margin-top:12px">
-        <div><label class="lbl">Planterad</label><input type="date" id="oPlanterad"></div>
-        <div><label class="lbl">Skördemånad</label><input type="month" id="oSkordManad"></div>
+        <div><label class="lbl">${t("planterad")}</label><input type="date" id="oPlanterad"></div>
+        <div><label class="lbl">${t("skordemanad")}</label><input type="month" id="oSkordManad"></div>
       </div>
       <div class="skapa-rad" style="margin-top:12px">
-        <div><label class="lbl">Skördefönster (fritext)</label><input type="text" id="oSkord" placeholder="t.ex. aug–sep"></div>
-        <div><label class="lbl">Anteckning</label><input type="text" id="oAnteckning" placeholder="valfritt"></div>
+        <div><label class="lbl">${t("skordefonster")}</label><input type="text" id="oSkord" placeholder="t.ex. aug–sep"></div>
+        <div><label class="lbl">${t("anteckning")}</label><input type="text" id="oAnteckning" placeholder="valfritt"></div>
       </div>
-      <button id="oLaggTillBtn" style="margin-top:14px">Lägg till planta</button>
+      <button id="oLaggTillBtn" style="margin-top:14px"data-i18n="lagg_till_planta">Lägg till planta</button>
       <div class="status" id="oStatus"></div>
     </div>
 
     <div class="skapa-panel" id="skapaKarta" style="display:none">
-      <label class="lbl">Namn på ny karta</label>
-      <input type="text" id="kNamn" placeholder="t.ex. Baksidan">
+      <label class="lbl" data-i18n="karta_namn">Namn på ny karta</label>
+      <input type="text" id="kNamn" data-i18n-placeholder="karta_namn_placeholder" placeholder="t.ex. Baksidan">
       <p class="lbl" style="margin-top:10px">Flera kartor låter er dela upp trädgården, t.ex. "Framsidan",
         "Baksidan" och "Växthuset". Ni växlar mellan dem med flikarna ovanför kartan.</p>
-      <button id="kLaggTillBtn" style="margin-top:12px">Lägg till karta</button>
+      <button id="kLaggTillBtn" style="margin-top:12px" data-i18n="lagg_till_karta">Lägg till karta</button>
       <div class="status" id="kStatus"></div>
     </div>
 
     <div class="skapa-panel" id="skapaBlock" style="display:none">
       <div class="skapa-rad">
-        <div><label class="lbl">Rubrik</label><input type="text" id="wTitel" placeholder="t.ex. Växthusklimat"></div>
+        <div><label class="lbl" data-i18n="rubrik">Rubrik</label><input type="text" id="wTitel" data-i18n-placeholder="block_titel_placeholder" placeholder="t.ex. Växthusklimat"></div>
         <div><label class="lbl">Typ</label>
           <select id="wTyp">
-            <option value="entiteter">Entiteter</option>
-            <option value="kamera">Kamera</option>
+            <option value="entiteter" data-i18n="block_entiteter">Entiteter</option>
+            <option value="kamera" data-i18n="block_kamera">Kamera</option>
           </select>
         </div>
       </div>
@@ -1532,8 +1531,177 @@ let sprak = "sv"; // sätts riktigt av tillampaSprak() vid start, se längre ner
 // rad här per ny sträng och skriv t("nyckel") i HTML-byggaren istället för
 // den svenska texten direkt - äldre, oöversatt text rörs inte.
 const SPRAK_TEXT = {
-  sv: {},
-  en: {},
+  sv: {
+    // Navigation and view titles
+    nav_oversikt: "Översikt", nav_anteckningar: "Anteckningar", nav_historik: "Historik",
+    nav_schema: "Schema", nav_installningar: "Inställningar",
+    skapa_nytt: "Skapa nytt", notiser: "Notiser", stang: "Stäng",
+    // Map card
+    tradgardskarta: "Trädgårdskarta", zoner: "Zoner", plantor: "Plantor",
+    flik_oversikt: "Översikt", flik_per_zon: "Per zon", flik_per_planta: "Per planta", flik_historik: "Historik",
+    kompakt: "Kompakt", karta: "Karta", sol: "Sol",
+    redigera_layout: "Redigera layout", klar_las_positioner: "Klar, lås positionerna",
+    zooma_ut: "Zooma ut", zooma_in: "Zooma in", anpassa_vy: "Anpassa så hela trädgården syns",
+    kompakt_hjalp: "Växla till en enkel planritning med former och namn",
+    sol_hjalp: "Visa sol och skuggor",
+    karta_tom: "Inga zoner på den här kartan ännu – använd Skapa nytt för att lägga till en (växthus, bädd, odlingslåda …).",
+    ny_karta: "+ Ny karta",
+    // Detail panel
+    detaljer: "Detaljer", detalj_tom: "Klicka på en zon eller planta i kartan ovan för att se och redigera detaljer här.",
+    kopplade_entiteter: "Kopplade entiteter", inga_entiteter: "Inga entiteter kopplade.",
+    koppla: "Koppla", koppla_bort: "Koppla bort",
+    plantor_i_zonen: "Plantor i zonen", inga_plantor: "Inga plantor här än.",
+    lagg_till_planta: "Lägg till planta", planta_placeholder: "Skriv eller välj en sort, t.ex. Gurkor",
+    antal_st: "Antal (st)", fyll_hela_ytan: "Fyll hela ytan med sorten",
+    skriv_namn_ovan: "Skriv ett namn ovan",
+    sektioner_i_zonen: "Sektioner inuti zonen",
+    inga_sektioner: "Inga sektioner – t.ex. odlingslådor eller bänkar inne i zonen.",
+    ny_sektion_placeholder: "Ny sektion, t.ex. Odlingslåda 1",
+    lagg_till: "Lägg till", spara: "Spara", avmarkera: "Avmarkera", ta_bort: "Ta bort",
+    hojd_over_marken: "Höjd över marken (m) – styr hur lång skugga zonen kastar i solkartan",
+    jord: "Jord", jord_placeholder_zon: "t.ex. näringsrik potatisjord + kompost",
+    jord_placeholder_planta: "t.ex. kruka med kaktusjord",
+    anteckning: "Anteckning", anteckning_placeholder: "fritt att skriva",
+    qr_etikett: "QR-etikett", qr_hjalp: "Skriv ut en QR-etikett för lådan",
+    pa_kartan: "På kartan", samlade: "Samlade på en plats", fyller_ytan: "Fyll hela ytan",
+    planterad: "Planterad", skordemanad: "Skördemånad", skordefonster: "Skördefönster (fritext)",
+    redigera_for_ta_bort: "Slå på Redigera ovanför kartan för att kunna ta bort plantor.",
+    // Weather and watering
+    vader_bevattning: "Väder & bevattning", laddar: "Laddar …", torrt: "torrt",
+    // History
+    historik: "Historik", per_timme: "Per timme", per_dag: "Per dag",
+    historik_tom: "Koppla en HA-entitet till en zon eller odling (klicka på den i Trädgårdskartan) för att se historik här.",
+    samlar_data: "Samlar data … kolla tillbaka om ett tag.",
+    global_historik_tom: "Inga entiteter kopplade till några zoner eller plantor än – koppla en under en zons eller plantas detaljer på Översikt.",
+    // Notes
+    kalender: "Kalender", alla_anteckningar: "Alla anteckningar",
+    anteckningar_tom: "Inga anteckningar än – skriv en fri text på en planta i dess detaljpanel så samlas den här.",
+    skord_denna_manad: "Skörd denna månad", inget_planterat_dagen: "Inget planterat den här dagen.", inget_planterat: "Inget planterat än", planterat: "st planterat",
+    foreg_manad: "Föregående månad", nasta_manad: "Nästa månad",
+    // Schedule
+    nytt_schema: "Nytt schema", inga_scheman: "Inga scheman ännu – lägg till ett nedan.",
+    zon: "Zon", veckodagar: "Veckodagar", lagg_till_schema: "Lägg till schema",
+    idag: "Idag", ta_bort_schema: "Ta bort schema",
+    forslag_fran_ai: "✨ Förslag från AI", letar_monster: "Letar efter mönster i din trädgård …",
+    avfarda_forslag: "Avfärda förslaget", lagg_till_schemat: "Lägg till schemat",
+    schema_zon_saknas: "Lägg till en zon på Översikt först.",
+    // Notification center
+    inga_notiser: "Inga uppgifter just nu – bra jobbat.",
+    prioriterat_av_ai: "✨ Prioriterat av AI",
+    markera_klar: "Markera som klar", avvisa: "Avvisa",
+    // Settings
+    utseende: "Utseende", system: "System", ljust: "Ljust", morkt: "Mörkt",
+    tema_hjalp: "Följer enhetens ljusa/mörka läge som standard – välj annars själv.",
+    sprak: "Språk", svenska: "Svenska", engelska: "English",
+    // Validation and status
+    namn_kravs: "Namn krävs.", kunde_inte_spara: "Kunde inte spara: ",
+    valj_zon: "Välj en zon.", valj_veckodag: "Välj minst en veckodag.",
+    // Create-new modal
+    skapa_sub: "Zoner, plantor, kartor och egna block",
+    flik_zon: "Zon", flik_planta: "Planta", flik_karta: "Karta", flik_block: "Block",
+    namn: "Namn", typ: "Typ", placering: "Placering",
+    zon_namn_placeholder: "t.ex. Stora växthuset",
+    typ_vaxthus: "Växthus", typ_utomhus: "Utomhusbädd", typ_inomhus: "Inomhus / krukor",
+    typ_odlingslada: "Odlingslåda", typ_annat: "Annat",
+    fristaende: "Fristående på kartan",
+    placering_hjalp: "Välj en zon här för att lägga den nya som en sektion inuti den, t.ex. flera odlingslådor och bänkar inne i ett växthus.",
+    lagg_till_zon: "Lägg till zon",
+    planta_namn_placeholder: "t.ex. Tomater", ingen_zon: "Ingen zon",
+    karta_namn: "Namn på ny karta", karta_namn_placeholder: "t.ex. Baksidan",
+    karta_hjalp: "Flera kartor låter er dela upp trädgården, t.ex. Framsidan, Baksidan och Växthuset. Ni växlar mellan dem med flikarna ovanför kartan.",
+    lagg_till_karta: "Lägg till karta",
+    rubrik: "Rubrik", block_titel_placeholder: "t.ex. Växthusklimat",
+    block_entiteter: "Entiteter", block_kamera: "Kamera",
+    lagg_till_block: "Lägg till block",
+    installningar_notiser: "Notiser (skördepåminnelser)",
+    ntfy_amne: "Ntfy-ämne", webhook_url: "Webhook-URL",
+    kartans_lage: "Kartans läge i verkligheten (för solkartan)",
+    ha_enheter: "HA-enheter (jordfuktighet, ventiler m.m.)",
+    sok_entitet: "Sök namn eller entity_id",
+    enhet_namn_placeholder: "fylls i automatiskt, går att ändra",
+    sprak_hjalp: "Appens språk. Svenska är standard; delar som ännu inte översatts visas på svenska.",
+    fraga_radgivare: "Fråga trädgårdsrådgivaren", ta_bort_bild: "Ta bort bild",
+  },
+  en: {
+    nav_oversikt: "Overview", nav_anteckningar: "Notes", nav_historik: "History",
+    nav_schema: "Schedule", nav_installningar: "Settings",
+    skapa_nytt: "Create new", notiser: "Notifications", stang: "Close",
+    tradgardskarta: "Garden map", zoner: "Zones", plantor: "Plants",
+    flik_oversikt: "Overview", flik_per_zon: "By zone", flik_per_planta: "By plant", flik_historik: "History",
+    kompakt: "Compact", karta: "Map", sol: "Sun",
+    redigera_layout: "Edit layout", klar_las_positioner: "Done, lock positions",
+    zooma_ut: "Zoom out", zooma_in: "Zoom in", anpassa_vy: "Fit the whole garden in view",
+    kompakt_hjalp: "Switch to a simple site plan with shapes and names",
+    sol_hjalp: "Show sun and shadows",
+    karta_tom: "No zones on this map yet. Use Create new to add one (greenhouse, bed, raised bed …).",
+    ny_karta: "+ New map",
+    detaljer: "Details", detalj_tom: "Click a zone or plant on the map above to view and edit its details here.",
+    kopplade_entiteter: "Linked entities", inga_entiteter: "No entities linked.",
+    koppla: "Link", koppla_bort: "Unlink",
+    plantor_i_zonen: "Plants in this zone", inga_plantor: "Nothing planted here yet.",
+    lagg_till_planta: "Add a plant", planta_placeholder: "Type or pick a variety, e.g. Cucumbers",
+    antal_st: "Quantity", fyll_hela_ytan: "Fill the whole area with this variety",
+    skriv_namn_ovan: "Enter a name above",
+    sektioner_i_zonen: "Sections inside this zone",
+    inga_sektioner: "No sections. These are things like raised beds or benches inside the zone.",
+    ny_sektion_placeholder: "New section, e.g. Raised bed 1",
+    lagg_till: "Add", spara: "Save", avmarkera: "Deselect", ta_bort: "Delete",
+    hojd_over_marken: "Height above ground (m), sets how long a shadow the zone casts on the sun map",
+    jord: "Soil", jord_placeholder_zon: "e.g. rich potting soil + compost",
+    jord_placeholder_planta: "e.g. pot with cactus soil",
+    anteckning: "Note", anteckning_placeholder: "write anything",
+    qr_etikett: "QR label", qr_hjalp: "Print a QR label for this bed",
+    pa_kartan: "On the map", samlade: "Grouped in one spot", fyller_ytan: "Fill the whole area",
+    planterad: "Planted", skordemanad: "Harvest month", skordefonster: "Harvest window (free text)",
+    redigera_for_ta_bort: "Turn on Edit above the map to remove plants.",
+    vader_bevattning: "Weather & watering", laddar: "Loading …", torrt: "dry",
+    historik: "History", per_timme: "Hourly", per_dag: "Daily",
+    historik_tom: "Link a Home Assistant entity to a zone or planting (click it on the garden map) to see history here.",
+    samlar_data: "Collecting data … check back in a while.",
+    global_historik_tom: "No entities linked to any zone or plant yet. Link one under a zone's or plant's details on Overview.",
+    kalender: "Calendar", alla_anteckningar: "All notes",
+    anteckningar_tom: "No notes yet. Write free text on a plant in its detail panel and it shows up here.",
+    skord_denna_manad: "Harvest this month", inget_planterat_dagen: "Nothing planted on this day.", inget_planterat: "Nothing planted yet", planterat: "planted",
+    foreg_manad: "Previous month", nasta_manad: "Next month",
+    nytt_schema: "New schedule", inga_scheman: "No schedules yet. Add one below.",
+    zon: "Zone", veckodagar: "Days of the week", lagg_till_schema: "Add schedule",
+    idag: "Today", ta_bort_schema: "Delete schedule",
+    forslag_fran_ai: "✨ Suggested by AI", letar_monster: "Looking for patterns in your garden …",
+    avfarda_forslag: "Dismiss suggestion", lagg_till_schemat: "Add this schedule",
+    schema_zon_saknas: "Add a zone on Overview first.",
+    inga_notiser: "Nothing needs attention right now. Nice work.",
+    prioriterat_av_ai: "✨ Prioritized by AI",
+    markera_klar: "Mark as done", avvisa: "Dismiss",
+    utseende: "Appearance", system: "System", ljust: "Light", morkt: "Dark",
+    tema_hjalp: "Follows your device's light/dark setting by default, or pick one yourself.",
+    sprak: "Language", svenska: "Svenska", engelska: "English",
+    namn_kravs: "A name is required.", kunde_inte_spara: "Could not save: ",
+    valj_zon: "Pick a zone.", valj_veckodag: "Pick at least one day.",
+    skapa_sub: "Zones, plants, maps and custom blocks",
+    flik_zon: "Zone", flik_planta: "Plant", flik_karta: "Map", flik_block: "Block",
+    namn: "Name", typ: "Type", placering: "Placement",
+    zon_namn_placeholder: "e.g. The big greenhouse",
+    typ_vaxthus: "Greenhouse", typ_utomhus: "Outdoor bed", typ_inomhus: "Indoors / pots",
+    typ_odlingslada: "Raised bed", typ_annat: "Other",
+    fristaende: "Free-standing on the map",
+    placering_hjalp: "Pick a zone here to nest the new one inside it as a section, e.g. several raised beds and benches inside a greenhouse.",
+    lagg_till_zon: "Add zone",
+    planta_namn_placeholder: "e.g. Tomatoes", ingen_zon: "No zone",
+    karta_namn: "Name of the new map", karta_namn_placeholder: "e.g. Back garden",
+    karta_hjalp: "Several maps let you split the garden up, e.g. Front, Back and Greenhouse. Switch between them with the tabs above the map.",
+    lagg_till_karta: "Add map",
+    rubrik: "Heading", block_titel_placeholder: "e.g. Greenhouse climate",
+    block_entiteter: "Entities", block_kamera: "Camera",
+    lagg_till_block: "Add block",
+    installningar_notiser: "Notifications (harvest reminders)",
+    ntfy_amne: "Ntfy topic", webhook_url: "Webhook URL",
+    kartans_lage: "The map's real-world orientation (for the sun map)",
+    ha_enheter: "Home Assistant entities (soil moisture, valves and so on)",
+    sok_entitet: "Search by name or entity_id",
+    enhet_namn_placeholder: "filled in automatically, editable",
+    sprak_hjalp: "The app's language. Swedish is the default; anything not translated yet falls back to Swedish.",
+    fraga_radgivare: "Ask the garden adviser", ta_bort_bild: "Remove image",
+  },
 };
 function t(nyckel) {
   return SPRAK_TEXT[sprak]?.[nyckel] ?? SPRAK_TEXT.sv[nyckel] ?? nyckel;
@@ -1745,11 +1913,11 @@ function zonAlternativ() {
 }
 function uppdateraZonVal() {
   const val = $("oZon").value;
-  $("oZon").innerHTML = '<option value="">Ingen zon</option>' + zonAlternativ();
+  $("oZon").innerHTML = '<option value="" data-i18n="ingen_zon">Ingen zon</option>' + zonAlternativ();
   if (zoner.some((z) => z.id === val)) $("oZon").value = val;
   // Samma lista styr var en ny zon ska placeras (fristående eller som sektion)
   const fVal = $("zForalder").value;
-  $("zForalder").innerHTML = '<option value="">Fristående på kartan</option>' + zonAlternativ();
+  $("zForalder").innerHTML = '<option value="" data-i18n="fristaende">Fristående på kartan</option>' + zonAlternativ();
   if (zoner.some((z) => z.id === fVal)) $("zForalder").value = fVal;
 }
 function entiteterFor(idLista) {
@@ -1979,7 +2147,7 @@ function renderaKarta() {
       }
       const enhetBadges = entiteterFor(z.enhetIds).filter((e) => !e.fel)
         .map((e) => `<span class="zon-enhet">${ikonForEnhet(e.enhet)} ${esc(e.state)}${e.enhet ? " " + esc(e.enhet) : ""}</span>`).join("");
-      const tomText = sektioner.length ? "" : '<span class="zon-tom">Inget planterat än</span>';
+      const tomText = sektioner.length ? "" : `<span class="zon-tom">${t("inget_planterat")}</span>`;
       const fokus = z.id === fokusZonId;
       return `<div class="zon-kort zon-kort-canvas${vald ? " vald" : ""}${fokus ? " fokus" : ""}" data-id="${z.id}"
           style="left:${x * 100}%; top:${y * 100}%; width:${b}px">
@@ -2992,7 +3160,7 @@ function renderaNotiser() {
         <button class="notis-avvisa" data-id="${esc(n.id)}" title="Avvisa">×</button>
       </div>
     </div>`).join("")
-    : '<div class="tom" style="padding:20px 4px">Inga uppgifter just nu – bra jobbat.</div>';
+    : `<div class="tom" style="padding:20px 4px">${t("inga_notiser")}</div>`;
 
   // Skicka kandidaterna till Claude i bakgrunden om listan skiljer sig från
   // det vi redan har (eller väntar på). Panelen visar redan de vanliga,
@@ -3041,7 +3209,7 @@ document.addEventListener("click", (e) => {
 });
 
 function sparkline(punkter) {
-  if (punkter.length < 2) return '<div class="tom" style="padding:18px 0">Samlar data … kolla tillbaka om ett tag.</div>';
+  if (punkter.length < 2) return `<div class="tom" style="padding:18px 0">${t("samlar_data")}</div>`;
   const varden = punkter.map((p) => p.varde);
   const min = Math.min(...varden), max = Math.max(...varden);
   const spann = (max - min) || 1;
@@ -3077,7 +3245,7 @@ function historikTrend(punkter) {
 // "Historik"-fliken i trädgårdskarte-kortet – samma data, bara olika plats.
 function historikGridHtml() {
   const mal = historikMal();
-  if (!mal.length) return '<div class="tom">Koppla en HA-entitet till en zon eller odling (klicka på den i Trädgårdskartan) för att se historik här.</div>';
+  if (!mal.length) return `<div class="tom">${t("historik_tom")}</div>`;
   return mal.map((m) => {
     const punkter = historik.filter((p) => p.enhetId === m.enhetId).sort((a, b) => new Date(a.tid) - new Date(b.tid));
     const enhetText = m.enhet.enhet ? ` ${m.enhet.enhet}` : "";
@@ -3109,11 +3277,11 @@ function renderaHistorik() {
 
 // ---- Segmentkontrollen ovanför trädgårdskartan: Översikt / Per zon /
 // Per planta / Historik. Rent vyval – ingen egen data, bara vad som visas. ----
-const VY_TITLAR = { oversikt: "Trädgårdskarta", zon: "Zoner", planta: "Plantor", historik: "Historik" };
+const VY_TITLAR = () => ({ oversikt: t("tradgardskarta"), zon: t("zoner"), planta: t("plantor"), historik: t("historik") });
 function bytVy(ny) {
   vyAktiv = ny;
   document.querySelectorAll(".vy-segment-btn").forEach((b) => b.classList.toggle("aktiv", b.dataset.vy === ny));
-  $("kartaKortTitel").textContent = VY_TITLAR[ny] ?? "Trädgårdskarta";
+  $("kartaKortTitel").textContent = VY_TITLAR()[ny] ?? t("tradgardskarta");
   $("vyOversikt").style.display = ny === "oversikt" ? "" : "none";
   $("vyPerZon").style.display = ny === "zon" ? "" : "none";
   $("vyPerPlanta").style.display = ny === "planta" ? "" : "none";
@@ -3146,7 +3314,7 @@ function renderaPerZon() {
       <div class="ikon">${info.ikon}</div>
       <div class="namn">${esc(z.namn)}</div>
       <div class="sub">${foralder ? `Sektion i ${esc(foralder.namn)}` : esc(info.namn)}</div>
-      ${antal ? `<div class="antal">${antal} st planterat</div>` : '<div class="antal tom-text">Inget planterat än</div>'}
+      ${antal ? `<div class="antal">${antal} ${t("planterat")}</div>` : `<div class="antal tom-text">${t("inget_planterat")}</div>`}
       ${entiteter.length ? `<div class="entitet-rad">${entiteter.map((e) =>
         `<span>${ikonForEnhet(e.enhet)} ${esc(e.state)}${e.enhet ? esc(e.enhet) : ""}</span>`).join("")}</div>` : ""}
     </div>`;
@@ -3520,7 +3688,7 @@ function kopplaEntiteterHtml(idLista) {
     if (e.fel) return `<div class="entitet-rad-kompakt fel">
       <span class="ikon">⚠️</span>
       <div class="info"><div class="namn">${esc(e.namn)}</div><div class="statusrad">${esc(e.fel)}</div></div>
-      <button class="ta-bort-liten modal-enhet-ta-bort" data-id="${e.id}" title="Koppla bort">×</button>
+      <button class="ta-bort-liten modal-enhet-ta-bort" data-id="${e.id}" title="${t("koppla_bort")}">×</button>
     </div>`;
     // Kameror har inget mätvärde att visa - hela raden blir i stället en
     // knapp som fäller ut en ögonblicksbild under listan (se
@@ -3531,7 +3699,7 @@ function kopplaEntiteterHtml(idLista) {
       return `<div class="entitet-rad-kompakt kamera-tile${oppen ? " oppen" : ""}" data-kamera-tile="${esc(e.id)}">
         <span class="ikon">📷</span>
         <div class="info"><div class="namn">${esc(e.namn)}</div><div class="statusrad">${oppen ? "Dölj bild" : "Visa bild"}</div></div>
-        <button class="ta-bort-liten modal-enhet-ta-bort" data-id="${e.id}" title="Koppla bort">×</button>
+        <button class="ta-bort-liten modal-enhet-ta-bort" data-id="${e.id}" title="${t("koppla_bort")}">×</button>
       </div>`;
     }
     const status = metrikStatus(e.enhet, e.state);
@@ -3541,7 +3709,7 @@ function kopplaEntiteterHtml(idLista) {
         <div class="namn">${esc(e.namn)}</div>
         <div class="statusrad">${esc(e.state)}${e.enhet ? esc(e.enhet) : ""}${status.text ? ` · ${esc(status.text)}` : ""}</div>
       </div>
-      <button class="ta-bort-liten modal-enhet-ta-bort" data-id="${e.id}" title="Koppla bort">×</button>
+      <button class="ta-bort-liten modal-enhet-ta-bort" data-id="${e.id}" title="${t("koppla_bort")}">×</button>
     </div>`;
   }).join("");
   const oppenKamera = kopplade.find((e) => e.id === oppenKameraTile && (e.entityId ?? "").startsWith("camera."));
@@ -3558,13 +3726,13 @@ function kopplaEntiteterHtml(idLista) {
       </div>
     </div>` : "";
   return `<div class="modal-entiteter">
-    <label class="lbl">Kopplade entiteter</label>
-    ${kopplade.length ? `<div class="entitet-lista">${tiles}</div>` : '<div class="tom">Inga entiteter kopplade.</div>'}
+    <label class="lbl">${t("kopplade_entiteter")}</label>
+    ${kopplade.length ? `<div class="entitet-lista">${tiles}</div>` : `<div class="tom">${t("inga_entiteter")}</div>`}
     ${forhandsvisning}
     ${lediga.length ? `
     <div class="modal-lagg-entitet">
       <select id="mEnhetVal">${lediga.map((e) => `<option value="${esc(e.id)}">${esc(e.namn)}</option>`).join("")}</select>
-      <button id="mEnhetLaggTillBtn">Koppla</button>
+      <button id="mEnhetLaggTillBtn">${t("koppla")}</button>
     </div>` : ""}
   </div>`;
 }
@@ -3588,7 +3756,7 @@ function renderaModal() {
     try { kod = qrSvg(url, 6); }
     catch (err) { kod = `<div class="status err">Kunde inte skapa QR-kod: ${esc(err.message)}</div>`; }
     $("modalInnehall").innerHTML = `
-      <button class="ta-bort qr-dolj-vid-utskrift" id="modalStangBtn" title="Stäng" style="position:absolute; top:16px; right:16px">×</button>
+      <button class="ta-bort qr-dolj-vid-utskrift" id="modalStangBtn" data-i18n-title="stang" style="position:absolute; top:16px; right:16px">×</button>
       <div class="qr-etikett">
         ${kod}
         <div class="qr-namn">${esc(z.namn)}</div>
@@ -3669,24 +3837,24 @@ document.addEventListener("keydown", (e) => {
 function zonSektionerHtml(z) {
   const lista = zoner.filter((s) => s.foralderId === z.id);
   return `<div class="modal-entiteter">
-    <label class="lbl">Sektioner inuti zonen</label>
+    <label class="lbl">${t("sektioner_i_zonen")}</label>
     ${lista.length ? `<div class="plant-lista">${lista.map((s) => `
       <div class="plant-rad">
         <span class="plant-ikon">${(ZON_TYPER[s.typ] ?? ZON_TYPER.annat).ikon}</span>
         <span class="namn">${esc(s.namn)}</span>
         <span class="varde">${esc((ZON_TYPER[s.typ] ?? ZON_TYPER.annat).namn)}</span>
         ${redigerarLayout ? `<button class="ta-bort sektion-ta-bort" data-id="${esc(s.id)}" title="Ta bort sektion" style="position:static">×</button>` : ""}
-      </div>`).join("")}</div>` : '<div class="tom">Inga sektioner – t.ex. odlingslådor eller bänkar inne i zonen.</div>'}
+      </div>`).join("")}</div>` : `<div class="tom">${t("inga_sektioner")}</div>`}
     <div class="modal-lagg-entitet">
-      <input type="text" id="zNySektion" placeholder="Ny sektion, t.ex. Odlingslåda 1">
+      <input type="text" id="zNySektion" placeholder="${t("ny_sektion_placeholder")}">
       <select id="zNySektionTyp" style="max-width:140px">
-        <option value="odlingslada">Odlingslåda</option>
+        <option value="odlingslada" data-i18n="typ_odlingslada">Odlingslåda</option>
         <option value="utomhus">Bädd</option>
         <option value="inomhus">Krukor</option>
-        <option value="vaxthus">Växthus</option>
-        <option value="annat">Annat</option>
+        <option value="vaxthus" data-i18n="typ_vaxthus">Växthus</option>
+        <option value="annat" data-i18n="typ_annat">Annat</option>
       </select>
-      <button id="zNySektionBtn">Lägg till</button>
+      <button id="zNySektionBtn">${t("lagg_till")}</button>
     </div>
   </div>`;
 }
@@ -3699,29 +3867,29 @@ function zonPlantorHtml(z) {
   const lista = odlingar.filter((o) => o.zonId === z.id);
   const totalt = lista.reduce((s, o) => s + antalFor(o), 0);
   return `<div class="modal-entiteter">
-    <label class="lbl">Plantor i zonen${totalt ? ` (${totalt} st)` : ""}</label>
+    <label class="lbl">${t("plantor_i_zonen")}${totalt ? ` (${totalt})` : ""}</label>
     ${lista.length ? `<div class="plant-lista">${lista.map((o) => `
       <div class="plant-rad plant-rad-klickbar" data-id="${esc(o.id)}">
         <span class="plant-ikon">${ikonForVaxt(o.namn)}</span>
         <span class="namn">${esc(o.namn)}</span>
         <span class="varde">${antalFor(o)} st${layoutFor(o) === "fyll" ? " · fyller ytan" : ""}${o.skordManad ? ` · ${esc(manadNamn(o.skordManad))}` : ""}</span>
         ${redigerarLayout ? `<button class="ta-bort odling-ta-bort" data-id="${esc(o.id)}" title="Ta bort planta" style="position:static">×</button>` : ""}
-      </div>`).join("")}</div>` : '<div class="tom">Inga plantor här än.</div>'}
-    <label class="lbl" style="margin-top:18px">Lägg till planta</label>
+      </div>`).join("")}</div>` : `<div class="tom">${t("inga_plantor")}</div>`}
+    <label class="lbl" style="margin-top:18px">${t("lagg_till_planta")}</label>
     <input type="text" id="zNyPlanta" list="sortForslagList" autocomplete="off"
-      placeholder="Skriv eller välj en sort, t.ex. Gurkor">
+      placeholder="${t("planta_placeholder")}">
     <div class="antal-rad">
-      <span class="lbl">Antal (st)</span>
+      <span class="lbl">${t("antal_st")}</span>
       <button class="antal-btn" id="antalNer" title="Färre">−</button>
-      <input type="number" id="zNyPlantaAntal" min="1" max="200" value="1" title="Antal (st)">
+      <input type="number" id="zNyPlantaAntal" min="1" max="200" value="1" title="${t("antal_st")}">
       <button class="antal-btn" id="antalUpp" title="Fler">+</button>
     </div>
     <label class="kryss-rad">
       <input type="checkbox" id="zNyPlantaFyll">
-      Fyll hela ytan med sorten
+      ${t("fyll_hela_ytan")}
     </label>
-    <button id="zNyPlantaBtn" class="lagg-till-stor" disabled>Skriv ett namn ovan</button>
-    ${redigerarLayout ? "" : '<p class="lbl" style="margin-top:8px">Slå på <strong>Redigera</strong> ovanför kartan för att kunna ta bort plantor.</p>'}
+    <button id="zNyPlantaBtn" class="lagg-till-stor" disabled>${t("skriv_namn_ovan")}</button>
+    ${redigerarLayout ? "" : `<p class="lbl" style="margin-top:8px">${t("redigera_for_ta_bort")}</p>`}
   </div>`;
 }
 // Fyller <datalist> med förslag (egna sorter, vanligast först + vanliga
@@ -3757,7 +3925,7 @@ function uppdateraSnabbknapp() {
   const namn = ($("zNyPlanta")?.value ?? "").trim();
   const antal = Number($("zNyPlantaAntal")?.value) || 1;
   btn.disabled = !namn;
-  btn.textContent = namn ? `Lägg till ${antal} × ${namn}` : "Skriv ett namn ovan";
+  btn.textContent = namn ? `${t("lagg_till")} ${antal} × ${namn}` : t("skriv_namn_ovan");
 }
 function stegaAntal(steg) {
   const falt = $("zNyPlantaAntal");
@@ -3842,7 +4010,7 @@ function historikGraf(mal) {
   if (!grafbara.length) {
     historikGrafData = null;
     return `${rubrikRad}<div class="historik-legend">${legend}</div>
-      <div class="tom" style="padding:18px 0">Samlar data … kolla tillbaka om ett tag.</div>`;
+      <div class="tom" style="padding:18px 0">${t("samlar_data")}</div>`;
   }
   const allaTider = grafbara.flatMap((s) => s.punkter.map((p) => new Date(p.tid).getTime()));
   const tMin = Math.min(...allaTider), tMax = Math.max(...allaTider), tSpann = (tMax - tMin) || 1;
@@ -3995,7 +4163,7 @@ function renderaDetaljPanel() {
     // Stäng arket också – annars blir det stående tomt om det man tittade på
     // just raderades.
     visaSheet(false);
-    $("detaljPanel").innerHTML = '<div class="tom">Klicka på en zon eller planta i kartan ovan för att se och redigera detaljer här.</div>';
+    $("detaljPanel").innerHTML = '<div class="tom" data-i18n="detalj_tom">Klicka på en zon eller planta i kartan ovan för att se och redigera detaljer här.</div>';
     return;
   }
   const { typ, id } = valtMal;
@@ -4010,11 +4178,11 @@ function renderaDetaljPanel() {
           const f = z.foralderId ? zoner.find((x) => x.id === z.foralderId) : null;
           return f ? ` · sektion i ${esc(f.namn)}` : "";
         })()}${snabblasningHtml(z.enhetIds)}</div></div>
-        <button class="tillbaka-zon-btn" id="mQrBtn" data-id="${esc(z.id)}" title="Skriv ut en QR-etikett för lådan">
+        <button class="tillbaka-zon-btn" id="mQrBtn" data-id="${esc(z.id)}" title="${t("qr_hjalp")}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
             <rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20v.01"/>
-          </svg><span>QR-etikett</span>
+          </svg><span>${t("qr_etikett")}</span>
         </button>
       </div>
       ${kopplaEntiteterHtml(z.enhetIds)}
@@ -4023,15 +4191,15 @@ function renderaDetaljPanel() {
       ${zonPlantorHtml(z)}
       ${zonSektionerHtml(z)}
       <div class="modal-entiteter">
-        <label class="lbl">Detaljer</label>
+        <label class="lbl">${t("detaljer")}</label>
         ${z.foralderId ? "" : `<div class="falt" style="margin-top:12px">
-          <label class="lbl">Höjd över marken (m) – styr hur lång skugga zonen kastar i solkartan</label>
+          <label class="lbl">${t("hojd_over_marken")}</label>
           <input type="number" id="mHojdM" min="0" max="20" step="0.1" value="${hojdMFor(z)}">
           ${solTimmarText(z)}
         </div>`}
-        <div class="falt" style="margin-top:12px"><label class="lbl">Jord</label><input type="text" id="mJord" placeholder="t.ex. näringsrik potatisjord + kompost" value="${esc(z.jord ?? "")}"></div>
-        <div class="falt"><label class="lbl">Anteckning</label><textarea id="mAnteckning" placeholder="fritt att skriva">${esc(z.anteckning ?? "")}</textarea></div>
-        <button id="mSparaBtn">Spara</button>
+        <div class="falt" style="margin-top:12px"><label class="lbl">${t("jord")}</label><input type="text" id="mJord" placeholder="${t("jord_placeholder_zon")}" value="${esc(z.jord ?? "")}"></div>
+        <div class="falt"><label class="lbl">${t("anteckning")}</label><textarea id="mAnteckning" placeholder="${t("anteckning_placeholder")}">${esc(z.anteckning ?? "")}</textarea></div>
+        <button id="mSparaBtn">${t("spara")}</button>
         <div class="status" id="mStatus"></div>
       </div>`;
   } else {
@@ -4044,27 +4212,27 @@ function renderaDetaljPanel() {
         <div><h3>${esc(o.namn)}</h3><div class="modal-sub">${antalFor(o)} st${zon ? ` · ${esc(zon.namn)}` : " · okategoriserat"}${snabblasningHtml(o.enhetIds)}</div></div>
         ${zon
           ? `<button class="tillbaka-zon-btn" id="dTillbakaZonBtn" data-zon-id="${esc(zon.id)}" title="Tillbaka till ${esc(zon.namn)}">${IKON_TILLBAKA}<span>${esc(zon.namn)}</span></button>`
-          : `<button class="tillbaka-btn" id="dAvmarkeraBtn">Avmarkera</button>`}
+          : `<button class="tillbaka-btn" id="dAvmarkeraBtn">${t("avmarkera")}</button>`}
       </div>
       ${kopplaEntiteterHtml(o.enhetIds)}
       ${detaljHistorikHtml(o.enhetIds)}
       <div class="modal-entiteter">
-        <label class="lbl">Detaljer</label>
+        <label class="lbl">${t("detaljer")}</label>
         <div class="skapa-rad" style="margin-top:12px">
-          <div><label class="lbl">Antal (st)</label><input type="number" id="mAntal" min="1" max="200" value="${antalFor(o)}"></div>
-          <div><label class="lbl">På kartan</label>
+          <div><label class="lbl">${t("antal_st")}</label><input type="number" id="mAntal" min="1" max="200" value="${antalFor(o)}"></div>
+          <div><label class="lbl">${t("pa_kartan")}</label>
             <select id="mLayout">
-              <option value="klunga"${layoutFor(o) === "klunga" ? " selected" : ""}>Samlade på en plats</option>
-              <option value="fyll"${layoutFor(o) === "fyll" ? " selected" : ""}>Fyll hela ytan</option>
+              <option value="klunga"${layoutFor(o) === "klunga" ? " selected" : ""}>${t("samlade")}</option>
+              <option value="fyll"${layoutFor(o) === "fyll" ? " selected" : ""}>${t("fyller_ytan")}</option>
             </select>
           </div>
         </div>
-        <div class="falt" style="margin-top:14px"><label class="lbl">Planterad</label><input type="date" id="mPlanterad" value="${esc(o.planterad ?? "")}"></div>
-        <div class="falt"><label class="lbl">Skördemånad</label><input type="month" id="mSkordManad" value="${esc(o.skordManad ?? "")}"></div>
-        <div class="falt"><label class="lbl">Skördefönster (fritext)</label><input type="text" id="mSkordFonster" value="${esc(o.skordFonster ?? "")}"></div>
-        <div class="falt"><label class="lbl">Jord</label><input type="text" id="mJord" placeholder="t.ex. kruka med kaktusjord" value="${esc(o.jord ?? "")}"></div>
-        <div class="falt"><label class="lbl">Anteckning</label><textarea id="mAnteckning" placeholder="fritt att skriva">${esc(o.anteckning ?? "")}</textarea></div>
-        <button id="mSparaBtn">Spara</button>
+        <div class="falt" style="margin-top:14px"><label class="lbl">${t("planterad")}</label><input type="date" id="mPlanterad" value="${esc(o.planterad ?? "")}"></div>
+        <div class="falt"><label class="lbl">${t("skordemanad")}</label><input type="month" id="mSkordManad" value="${esc(o.skordManad ?? "")}"></div>
+        <div class="falt"><label class="lbl">${t("skordefonster")}</label><input type="text" id="mSkordFonster" value="${esc(o.skordFonster ?? "")}"></div>
+        <div class="falt"><label class="lbl">${t("jord")}</label><input type="text" id="mJord" placeholder="${t("jord_placeholder_planta")}" value="${esc(o.jord ?? "")}"></div>
+        <div class="falt"><label class="lbl">${t("anteckning")}</label><textarea id="mAnteckning" placeholder="${t("anteckning_placeholder")}">${esc(o.anteckning ?? "")}</textarea></div>
+        <button id="mSparaBtn">${t("spara")}</button>
         <div class="status" id="mStatus"></div>
       </div>`;
   }
@@ -4480,12 +4648,32 @@ $("temaSegment").addEventListener("click", (e) => {
 const SPRAK_NYCKEL = "growarr-sprak";
 function lasSprak() { try { return localStorage.getItem(SPRAK_NYCKEL); } catch { return null; } }
 function sparaSprak(val) { try { localStorage.setItem(SPRAK_NYCKEL, val); } catch { /* strunta i det, gäller bara den här sessionen då */ } }
+// Static markup carries data-i18n / data-i18n-placeholder / data-i18n-title
+// attributes; this walks them and fills in the current language. Strings
+// built inside JS templates call t() directly instead.
+function oversattStatiskMarkup() {
+  for (const el of document.querySelectorAll("[data-i18n]")) el.textContent = t(el.dataset.i18n);
+  for (const el of document.querySelectorAll("[data-i18n-placeholder]")) el.placeholder = t(el.dataset.i18nPlaceholder);
+  for (const el of document.querySelectorAll("[data-i18n-title]")) el.title = t(el.dataset.i18nTitle);
+  document.documentElement.lang = sprak;
+}
 function tillampaSprak(val) {
   sprak = val === "en" ? "en" : "sv";
   for (const b of $("sprakSegment").children) b.classList.toggle("aktiv", b.dataset.sprak === sprak);
-  // Inget använder t() ännu, så inget att rita om än - lägg till en
-  // omritning här (t.ex. renderaKarta()/renderaNotiser()) den dagen en
-  // vy faktiskt har text som växlar med språket.
+  oversattStatiskMarkup();
+  // Everything rendered from JS has to be rebuilt for the new language.
+  // Guarded because this also runs at startup, before the data has loaded
+  // and before several of these render targets have any content.
+  try {
+    tillampaKompaktUI();
+    bytVy(vyAktiv); // retitles the map card and rebuilds the active tab
+    renderaKarta();
+    renderaDetaljPanel();
+    renderaNotiser();
+    renderaHistorik();
+    if (senasteVader) renderaVader(senasteVader);
+    visaVy();
+  } catch { /* startup: not everything exists yet, the static markup above is done */ }
 }
 tillampaSprak(lasSprak() ?? "sv");
 $("sprakSegment").addEventListener("click", (e) => {
@@ -4498,7 +4686,7 @@ $("sprakSegment").addEventListener("click", (e) => {
 // ---- Kompakt kartläge: prickar + namn i stället för fulla kort ----
 function tillampaKompaktUI() {
   $("kompaktBtn").classList.toggle("aktiv", kompaktLage);
-  $("kompaktBtnText").textContent = kompaktLage ? "Karta" : "Kompakt";
+  $("kompaktBtnText").textContent = kompaktLage ? t("karta") : t("kompakt");
   $("kompaktBtnIkon").innerHTML = kompaktLage ? IKON_KARTA : IKON_LISTA;
   $("tradgardKarta").classList.toggle("kompakt", kompaktLage);
 }
@@ -4515,7 +4703,7 @@ $("redigeraLayoutBtn").addEventListener("click", () => {
   redigerarLayout = !redigerarLayout;
   const btn = $("redigeraLayoutBtn");
   btn.classList.toggle("aktiv", redigerarLayout);
-  btn.lastChild.textContent = redigerarLayout ? " Klar, lås positionerna" : " Redigera layout";
+  $("redigeraLayoutText").textContent = redigerarLayout ? t("klar_las_positioner") : t("redigera_layout");
   $("tradgardKarta").classList.toggle("redigerar", redigerarLayout);
   renderaKarta();
   renderaDetaljPanel(); // ta bort-knapparna på plantor styrs av redigeringsläget
@@ -4639,7 +4827,7 @@ function datumText(d) {
 function anteckningarListaHtml() {
   const poster = odlingar.filter((o) => (o.anteckning ?? "").trim())
     .sort((a, b) => (b.planterad ?? "").localeCompare(a.planterad ?? ""));
-  if (!poster.length) return '<div class="tom">Inga anteckningar än – skriv en fri text på en planta i dess detaljpanel så samlas den här.</div>';
+  if (!poster.length) return `<div class="tom">${t("anteckningar_tom")}</div>`;
   return `<div class="anteckning-lista">${poster.map((o) => {
     const zon = zoner.find((z) => z.id === o.zonId);
     return `<div class="anteckning-kort" data-id="${esc(o.id)}">
@@ -4687,14 +4875,14 @@ function anteckningarKalenderHtml() {
   const valdaPoster = anteckningarValdDag ? (planteradePerDag.get(anteckningarValdDag) ?? []) : [];
   return `
     <div class="kalender-huvud">
-      <button class="kalender-nav" id="kalenderForegBtn" title="Föregående månad">‹</button>
+      <button class="kalender-nav" id="kalenderForegBtn" title="${t("foreg_manad")}">‹</button>
       <span class="kalender-manad">${manadText.charAt(0).toUpperCase() + manadText.slice(1)}</span>
-      <button class="kalender-nav" id="kalenderNastaBtn" title="Nästa månad">›</button>
+      <button class="kalender-nav" id="kalenderNastaBtn" title="${t("nasta_manad")}">›</button>
     </div>
     <div class="kalender-veckodagar">${["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"].map((d) => `<span>${d}</span>`).join("")}</div>
     <div class="kalender-grid">${celler}</div>
     ${skordDennaManad.length ? `<div class="kalender-skord">
-      <div class="lbl">Skörd denna månad</div>
+      <div class="lbl">${t("skord_denna_manad")}</div>
       <div class="skord-chips">${skordDennaManad.map((o) => `<span class="skord-chip">${ikonForVaxt(o.namn)} ${esc(o.namn)}</span>`).join("")}</div>
     </div>` : ""}
     ${anteckningarValdDag ? `<div class="kalender-dagdetalj">
@@ -4706,7 +4894,7 @@ function anteckningarKalenderHtml() {
           <span class="namn">${esc(o.namn)}</span>
           <span class="varde">${zon ? esc(zon.namn) : "okategoriserat"}</span>
         </div>`;
-      }).join("") : '<div class="tom">Inget planterat den här dagen.</div>'}
+      }).join("") : `<div class="tom">${t("inget_planterat_dagen")}</div>`}
     </div>` : ""}`;
 }
 function renderaAnteckningar() {
@@ -4746,7 +4934,7 @@ function historikMal_alla() {
 function renderaGlobalHistorik() {
   const alla = historikMal_alla();
   if (!alla.length) {
-    $("globalHistorikInnehall").innerHTML = '<div class="tom">Inga entiteter kopplade till några zoner eller plantor än – koppla en under en zons eller plantas detaljer på Översikt.</div>';
+    $("globalHistorikInnehall").innerHTML = `<div class="tom">${t("global_historik_tom")}</div>`;
     return;
   }
   if (!globalHistorikValdMal || !alla.some((a) => `${a.typ}:${a.id}` === globalHistorikValdMal)) {
@@ -4769,7 +4957,7 @@ function renderaGlobalHistorik() {
 // samma scheman driva den utan att UI:t behöver ändras.
 const VECKODAGAR_NAMN = ["Sön", "Mån", "Tis", "Ons", "Tor", "Fre", "Lör"]; // matchar Date.getDay()
 function schemaListaHtml() {
-  if (!scheman.length) return '<div class="tom">Inga scheman ännu – lägg till ett nedan.</div>';
+  if (!scheman.length) return `<div class="tom">${t("inga_scheman")}</div>`;
   const idagVeckodag = new Date().getDay();
   return `<div class="schema-lista">${scheman.map((s) => {
     const zon = zoner.find((z) => z.id === s.zonId);
@@ -4780,27 +4968,27 @@ function schemaListaHtml() {
         <div class="namn">${esc(zon?.namn ?? "Okänd zon")}</div>
         <div class="dagar">${s.veckodagar.map((d) => VECKODAGAR_NAMN[d]).join(", ")}</div>
       </div>
-      ${idagSchemalagd ? `<span class="schema-idag">Idag</span>` : ""}
-      <button class="ta-bort-liten schema-ta-bort" data-id="${esc(s.id)}" title="Ta bort schema">×</button>
+      ${idagSchemalagd ? `<span class="schema-idag">${t("idag")}</span>` : ""}
+      <button class="ta-bort-liten schema-ta-bort" data-id="${esc(s.id)}" title="${t("ta_bort_schema")}">×</button>
     </div>`;
   }).join("")}</div>`;
 }
 function schemaFormularHtml() {
   const fristaende = zoner.filter((z) => !z.foralderId);
-  if (!fristaende.length) return '<div class="modal-entiteter"><label class="lbl">Nytt schema</label><div class="tom">Lägg till en zon på Översikt först.</div></div>';
+  if (!fristaende.length) return `<div class="modal-entiteter"><label class="lbl">${t("nytt_schema")}</label><div class="tom">${t("schema_zon_saknas")}</div></div>`;
   return `<div class="modal-entiteter">
-    <label class="lbl">Nytt schema</label>
+    <label class="lbl">${t("nytt_schema")}</label>
     <div class="falt" style="margin-top:12px">
-      <label class="lbl">Zon</label>
+      <label class="lbl">${t("zon")}</label>
       <select id="schemaZonVal">${fristaende.map((z) => `<option value="${esc(z.id)}">${esc(z.namn)}</option>`).join("")}</select>
     </div>
     <div class="falt">
-      <label class="lbl">Veckodagar</label>
+      <label class="lbl">${t("veckodagar")}</label>
       <div class="schema-dagval">
         ${[1, 2, 3, 4, 5, 6, 0].map((d) => `<button type="button" class="schema-dag-btn" data-dag="${d}">${VECKODAGAR_NAMN[d]}</button>`).join("")}
       </div>
     </div>
-    <button id="schemaLaggTillBtn">Lägg till schema</button>
+    <button id="schemaLaggTillBtn">${t("lagg_till_schema")}</button>
     <div class="status" id="schemaStatus"></div>
   </div>`;
 }
@@ -4828,12 +5016,12 @@ async function laddaSchemaForslag() {
 function schemaForslagHtml() {
   const synliga = schemaForslag.filter((f) => !schemaForslagAvfardade.has(forslagNyckel(f)));
   if (schemaForslagLaddar) {
-    return `<div class="modal-entiteter"><label class="lbl">✨ Förslag från AI</label>
-      <div class="tom">Letar efter mönster i din trädgård …</div></div>`;
+    return `<div class="modal-entiteter"><label class="lbl">${t("forslag_fran_ai")}</label>
+      <div class="tom">${t("letar_monster")}</div></div>`;
   }
   if (!synliga.length) return "";
   return `<div class="modal-entiteter">
-    <label class="lbl">✨ Förslag från AI</label>
+    <label class="lbl">${t("forslag_fran_ai")}</label>
     <div class="schema-lista" style="margin-top:12px; margin-bottom:0">
       ${synliga.map((f) => `<div class="schema-rad forslag" data-nyckel="${esc(forslagNyckel(f))}">
         <span class="ikon">✨</span>
@@ -4842,8 +5030,8 @@ function schemaForslagHtml() {
           <div class="dagar">${f.veckodagar.map((d) => VECKODAGAR_NAMN[d]).join(", ")}</div>
           ${f.motivering ? `<div class="motivering">${esc(f.motivering)}</div>` : ""}
         </div>
-        <button class="forslag-lagg-till" data-nyckel="${esc(forslagNyckel(f))}" title="Lägg till schemat">Lägg till</button>
-        <button class="ta-bort-liten forslag-avfarda" data-nyckel="${esc(forslagNyckel(f))}" title="Avfärda förslaget">×</button>
+        <button class="forslag-lagg-till" data-nyckel="${esc(forslagNyckel(f))}" title="${t("lagg_till_schemat")}">${t("lagg_till")}</button>
+        <button class="ta-bort-liten forslag-avfarda" data-nyckel="${esc(forslagNyckel(f))}" title="${t("avfarda_forslag")}">×</button>
       </div>`).join("")}
     </div>
   </div>`;
