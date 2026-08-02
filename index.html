@@ -736,9 +736,13 @@ try {
     font-family:inherit; resize:vertical; }
   .modal textarea:focus, .detalj-panel textarea:focus { outline:none; border-color:var(--accent);
     box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
-  .modal-entiteter { margin-top:22px; padding-top:18px; border-top:1px solid var(--border); }
-  .modal-lagg-entitet { display:flex; gap:8px; margin-top:14px; }
-  .modal-lagg-entitet select, .modal-lagg-entitet input { flex:1; }
+  /* Egna kort i stället för löpande text med bara en linje mellan
+     avsnitten – lättare att se var "Kopplade entiteter" slutar och
+     "Plantor i zonen" börjar när det faktiskt är en egen ruta. */
+  .modal-entiteter { margin-top:14px; padding:16px; border-radius:var(--r-sm);
+    background:var(--surface2); border:1px solid var(--border); }
+  .modal-lagg-entitet { display:flex; flex-direction:column; gap:8px; margin-top:14px; }
+  .modal-lagg-entitet select, .modal-lagg-entitet input { width:100%; }
   /* Snabbtillägg av plantor – ett vanligt textfält med förslag (<datalist>,
      samma mönster som HA-entitetssökningen) i stället för en vägg av
      tryckknappar: fritext går alltid, men man ser ändå att det finns en
@@ -922,11 +926,6 @@ try {
     .karta-canvas { aspect-ratio:4/5; min-height:min(58vh, 440px); }
     .karta-zoom { top:8px; right:8px; }
     .karta-flikar { gap:6px; margin-bottom:10px; }
-    /* Fält + rullgardin + knapp på en rad blir obrukbart smalt på en telefon */
-    .modal-lagg-entitet { flex-wrap:wrap; }
-    .modal-lagg-entitet input { flex:1 1 100%; } /* egen rad – annars klipps texten */
-    .modal-lagg-entitet select { flex:1 1 auto; min-width:0; max-width:none !important; }
-    .modal-lagg-entitet button { flex:0 0 auto; }
     .dash-grid { gap:14px; }
     .metrik-grid { grid-template-columns:repeat(auto-fill,minmax(128px,1fr)); }
     .historik-grid, .karta-grid, .grid-kort { grid-template-columns:1fr; }
@@ -2221,11 +2220,18 @@ function zoomaTillZon(zonId) {
   kartaPanY = (fh - hojd * kartaZoom) / 2 - y1 * kartaZoom;
   tillampaZoom();
 }
+// Kameran rör sig först, detaljpanelen glider upp en liten stund senare i
+// stället för att båda smälla upp i exakt samma ögonblick – känns mer som
+// en avsiktlig sekvens (kameran fokuserar, sen kommer detaljerna) än att
+// allt poppar upp på en gång.
+let fokusSheetTimer = null;
 function fokuseraZon(zonId) {
   if (redigerarLayout) return;
   fokusZonId = zonId;
-  valjMal("zon", zonId); // renderar om kartan åt oss också
+  renderaKarta();
   animeraKartaTransform(() => zoomaTillZon(zonId));
+  clearTimeout(fokusSheetTimer);
+  fokusSheetTimer = setTimeout(() => valjMal("zon", zonId), 220);
 }
 function stangFokusZon() {
   fokusZonId = null;
@@ -3889,15 +3895,18 @@ function renderaDetaljPanel() {
       ${detaljHistorikHtml(z.enhetIds)}
       ${zonPlantorHtml(z)}
       ${zonSektionerHtml(z)}
-      ${z.foralderId ? "" : `<div class="falt">
-        <label class="lbl">Höjd över marken (m) – styr hur lång skugga zonen kastar i solkartan</label>
-        <input type="number" id="mHojdM" min="0" max="20" step="0.1" value="${hojdMFor(z)}">
-        ${solTimmarText(z)}
-      </div>`}
-      <div class="falt"><label class="lbl">Jord</label><input type="text" id="mJord" placeholder="t.ex. näringsrik potatisjord + kompost" value="${esc(z.jord ?? "")}"></div>
-      <div class="falt"><label class="lbl">Anteckning</label><textarea id="mAnteckning" placeholder="fritt att skriva">${esc(z.anteckning ?? "")}</textarea></div>
-      <button id="mSparaBtn">Spara</button>
-      <div class="status" id="mStatus"></div>`;
+      <div class="modal-entiteter">
+        <label class="lbl">Detaljer</label>
+        ${z.foralderId ? "" : `<div class="falt" style="margin-top:12px">
+          <label class="lbl">Höjd över marken (m) – styr hur lång skugga zonen kastar i solkartan</label>
+          <input type="number" id="mHojdM" min="0" max="20" step="0.1" value="${hojdMFor(z)}">
+          ${solTimmarText(z)}
+        </div>`}
+        <div class="falt" style="margin-top:12px"><label class="lbl">Jord</label><input type="text" id="mJord" placeholder="t.ex. näringsrik potatisjord + kompost" value="${esc(z.jord ?? "")}"></div>
+        <div class="falt"><label class="lbl">Anteckning</label><textarea id="mAnteckning" placeholder="fritt att skriva">${esc(z.anteckning ?? "")}</textarea></div>
+        <button id="mSparaBtn">Spara</button>
+        <div class="status" id="mStatus"></div>
+      </div>`;
   } else {
     const o = odlingar.find((x) => x.id === id);
     if (!o) { valtMal = null; return renderaDetaljPanel(); }
@@ -3912,22 +3921,25 @@ function renderaDetaljPanel() {
       </div>
       ${kopplaEntiteterHtml(o.enhetIds)}
       ${detaljHistorikHtml(o.enhetIds)}
-      <div class="skapa-rad">
-        <div><label class="lbl">Antal (st)</label><input type="number" id="mAntal" min="1" max="200" value="${antalFor(o)}"></div>
-        <div><label class="lbl">På kartan</label>
-          <select id="mLayout">
-            <option value="klunga"${layoutFor(o) === "klunga" ? " selected" : ""}>Samlade på en plats</option>
-            <option value="fyll"${layoutFor(o) === "fyll" ? " selected" : ""}>Fyll hela ytan</option>
-          </select>
+      <div class="modal-entiteter">
+        <label class="lbl">Detaljer</label>
+        <div class="skapa-rad" style="margin-top:12px">
+          <div><label class="lbl">Antal (st)</label><input type="number" id="mAntal" min="1" max="200" value="${antalFor(o)}"></div>
+          <div><label class="lbl">På kartan</label>
+            <select id="mLayout">
+              <option value="klunga"${layoutFor(o) === "klunga" ? " selected" : ""}>Samlade på en plats</option>
+              <option value="fyll"${layoutFor(o) === "fyll" ? " selected" : ""}>Fyll hela ytan</option>
+            </select>
+          </div>
         </div>
-      </div>
-      <div class="falt" style="margin-top:14px"><label class="lbl">Planterad</label><input type="date" id="mPlanterad" value="${esc(o.planterad ?? "")}"></div>
-      <div class="falt"><label class="lbl">Skördemånad</label><input type="month" id="mSkordManad" value="${esc(o.skordManad ?? "")}"></div>
-      <div class="falt"><label class="lbl">Skördefönster (fritext)</label><input type="text" id="mSkordFonster" value="${esc(o.skordFonster ?? "")}"></div>
-      <div class="falt"><label class="lbl">Jord</label><input type="text" id="mJord" placeholder="t.ex. kruka med kaktusjord" value="${esc(o.jord ?? "")}"></div>
-      <div class="falt"><label class="lbl">Anteckning</label><textarea id="mAnteckning" placeholder="fritt att skriva">${esc(o.anteckning ?? "")}</textarea></div>
-      <button id="mSparaBtn">Spara</button>
-      <div class="status" id="mStatus"></div>`;
+        <div class="falt" style="margin-top:14px"><label class="lbl">Planterad</label><input type="date" id="mPlanterad" value="${esc(o.planterad ?? "")}"></div>
+        <div class="falt"><label class="lbl">Skördemånad</label><input type="month" id="mSkordManad" value="${esc(o.skordManad ?? "")}"></div>
+        <div class="falt"><label class="lbl">Skördefönster (fritext)</label><input type="text" id="mSkordFonster" value="${esc(o.skordFonster ?? "")}"></div>
+        <div class="falt"><label class="lbl">Jord</label><input type="text" id="mJord" placeholder="t.ex. kruka med kaktusjord" value="${esc(o.jord ?? "")}"></div>
+        <div class="falt"><label class="lbl">Anteckning</label><textarea id="mAnteckning" placeholder="fritt att skriva">${esc(o.anteckning ?? "")}</textarea></div>
+        <button id="mSparaBtn">Spara</button>
+        <div class="status" id="mStatus"></div>
+      </div>`;
   }
   historikGrafAnimera();
 }
