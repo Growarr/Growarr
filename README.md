@@ -123,24 +123,30 @@ own API calls end up in the wrong place.
 
 | Method | Path | Does |
 |---|---|---|
-| GET | `/api/vader` | 5-day forecast + coordinates |
-| GET / POST | `/api/odlingar` | List / add plantings |
-| POST | `/api/odlingar/uppdatera` | Update a planting |
-| POST | `/api/odlingar/ta-bort` | Delete a planting |
-| POST | `/api/zoner` | Add a zone (greenhouse, bed, pot…) |
-| POST | `/api/zoner/uppdatera` | Update a zone's position, size, height, soil |
-| POST | `/api/zoner/ta-bort` | Delete a zone |
-| POST | `/api/kartor` | Add a garden map (tab) |
-| POST | `/api/kartor/ta-bort` | Delete a map |
+| GET | `/api/weather` | 5-day forecast + coordinates |
+| GET / POST | `/api/plantings` | List / add plantings |
+| POST | `/api/plantings/update` | Update a planting |
+| POST | `/api/plantings/delete` | Delete a planting |
+| POST | `/api/zones` | Add a zone (greenhouse, bed, pot…) |
+| POST | `/api/zones/update` | Update a zone's position, size, height, soil |
+| POST | `/api/zones/delete` | Delete a zone |
+| POST | `/api/maps` | Add a garden map (tab) |
+| POST | `/api/maps/delete` | Delete a map |
 | GET / POST | `/api/widgets` | List / add custom dashboard blocks |
-| GET | `/api/enheter/status` | Current state of watched HA entities |
-| GET | `/api/ha-entiteter` | Full HA entity list, for autocomplete |
-| GET | `/api/historik` | Logged sensor history |
-| GET | `/api/bevattning` | Claude's watering insight |
-| POST | `/api/chatt` | AI chat, with optional photo |
-| GET / POST | `/api/installningar` | Read / save settings |
-| POST | `/api/notiser` | Mark a notification handled |
-| POST | `/api/notiser/ai` | Let Claude prioritize the notification list |
+| GET | `/api/devices/status` | Current state of watched HA entities |
+| POST | `/api/devices` | Watch a new HA entity |
+| POST | `/api/devices/delete` | Stop watching an entity |
+| GET | `/api/ha-entities` | Full HA entity list, for autocomplete |
+| GET | `/api/camera` | Proxy a snapshot from an HA camera entity |
+| GET | `/api/history` | Logged sensor history |
+| GET | `/api/watering` | Claude's watering insight |
+| POST | `/api/chat` | AI chat, with optional photo |
+| GET / POST | `/api/settings` | Read / save settings |
+| POST | `/api/notifications` | Mark a notification handled |
+| POST | `/api/notifications/ai` | Let Claude prioritize the notification list |
+| POST | `/api/schedules` | Add a watering schedule |
+| POST | `/api/schedules/delete` | Delete a watering schedule |
+| GET | `/api/schedules/suggestions` | Claude's suggested schedules, based on sensor history |
 
 </details>
 

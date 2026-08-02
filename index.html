@@ -1568,7 +1568,7 @@ function esc(s) { return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp
 
 async function laddaVader() {
   try {
-    const res = await fetch(`${BAS}api/vader`, { cache: "no-store" });
+    const res = await fetch(`${BAS}api/weather`, { cache: "no-store" });
     const data = await res.json();
     senasteVader = data;
     if (Number.isFinite(data.lat) && Number.isFinite(data.lon)) { geoLat = data.lat; geoLon = data.lon; }
@@ -1679,7 +1679,7 @@ function bevattningHeuristik(data) {
 // ovan om ANTHROPIC_API_KEY inte är satt eller anropet misslyckas.
 async function laddaBevattning() {
   try {
-    const res = await fetch(`${BAS}api/bevattning`, { cache: "no-store" });
+    const res = await fetch(`${BAS}api/watering`, { cache: "no-store" });
     const data = await res.json();
     if (data.text) {
       const kl = new Date(data.tid).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
@@ -1692,7 +1692,7 @@ async function laddaBevattning() {
 
 async function laddaOdlingar() {
   try {
-    const res = await fetch(`${BAS}api/odlingar`, { cache: "no-store" });
+    const res = await fetch(`${BAS}api/plantings`, { cache: "no-store" });
     const data = await res.json();
     odlingar = data.odlingar ?? [];
     zoner = data.zoner ?? [];
@@ -2679,7 +2679,7 @@ $("zLaggTillBtn").addEventListener("click", async () => {
   if (!namn) { st.textContent = "Namn krävs."; st.className = "status err"; return; }
   $("zLaggTillBtn").disabled = true; st.textContent = ""; st.className = "status";
   try {
-    await fetch(`${BAS}api/zoner`, {
+    await fetch(`${BAS}api/zones`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ namn, typ: $("zTyp").value, kartaId: aktivKartaId, foralderId: $("zForalder").value }),
     });
@@ -2695,7 +2695,7 @@ $("oLaggTillBtn").addEventListener("click", async () => {
   if (!namn) { st.textContent = "Namn krävs."; st.className = "status err"; return; }
   $("oLaggTillBtn").disabled = true; st.textContent = ""; st.className = "status";
   try {
-    await fetch(`${BAS}api/odlingar`, {
+    await fetch(`${BAS}api/plantings`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         namn, zonId: $("oZon").value, planterad: $("oPlanterad").value, antal: $("oAntal").value, layout: $("oLayout").value,
@@ -2711,7 +2711,7 @@ $("oLaggTillBtn").addEventListener("click", async () => {
 
 async function laddaEnheter() {
   try {
-    const res = await fetch(`${BAS}api/enheter/status`, { cache: "no-store" });
+    const res = await fetch(`${BAS}api/devices/status`, { cache: "no-store" });
     const lista = await res.json();
     enheterStatus = lista;
     renderaEnheter(lista);
@@ -2745,7 +2745,7 @@ function renderaEnheter(lista) {
 let haEntiteter = [];
 async function laddaHaEntiteter() {
   try {
-    const res = await fetch(`${BAS}api/ha-entiteter`, { cache: "no-store" });
+    const res = await fetch(`${BAS}api/ha-entities`, { cache: "no-store" });
     haEntiteter = await res.json();
   } catch { haEntiteter = []; }
   $("haEntiteterList").innerHTML = haEntiteter.map((e) => `<option value="${esc(e.entityId)}">${esc(e.namn)}</option>`).join("");
@@ -2777,7 +2777,7 @@ function widgetKortHtml(w, index, antal) {
       const nu = new Date();
       innehall = w.entityId
         ? `<div class="kamera-wrap" data-entity="${esc(w.entityId)}">
-            <img class="widget-kamera" alt="${esc(w.titel)}" src="${BAS}api/kamera?entityId=${encodeURIComponent(w.entityId)}&t=${Date.now()}"
+            <img class="widget-kamera" alt="${esc(w.titel)}" src="${BAS}api/camera?entityId=${encodeURIComponent(w.entityId)}&t=${Date.now()}"
                  onerror="this.closest('.kamera-wrap').classList.add('kamera-fel')">
             <div class="kamera-fel-text">Kunde inte hämta bild – kontrollera entity_id och HA_TOKEN.</div>
             <div class="kamera-kontroller">
@@ -2833,7 +2833,7 @@ async function flyttaWidget(id, steg) {
   if (j < 0 || j >= iKol.length) return;
   [iKol[i], iKol[j]] = [iKol[j], iKol[i]];
   const nyOrdning = kol === "huvud" ? [...iKol, ...andra] : [...andra, ...iKol];
-  await fetch(`${BAS}api/widgets/ordna`, {
+  await fetch(`${BAS}api/widgets/reorder`, {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ids: nyOrdning.map((x) => x.id) }),
   });
@@ -2843,7 +2843,7 @@ async function flyttaWidget(id, steg) {
 // ---- Historik ----
 async function laddaHistorikData() {
   try {
-    const res = await fetch(`${BAS}api/historik`, { cache: "no-store" });
+    const res = await fetch(`${BAS}api/history`, { cache: "no-store" });
     historik = await res.json();
   } catch { historik = []; }
   renderaHistorik();
@@ -2951,7 +2951,7 @@ let notiserAiSenasteNyckel = null; // den senast efterfrågade uppsättningen
 async function hamtaAiForNotiser(nyckel, kandidater) {
   let resultat;
   try {
-    const res = await fetch(`${BAS}api/notiser/ai`, {
+    const res = await fetch(`${BAS}api/notifications/ai`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ kandidater }),
     });
@@ -3021,7 +3021,7 @@ async function hanteraNotis(id, atgard) {
   await new Promise((r) => setTimeout(r, rad ? 220 : 0));
   renderaNotiser();
   try {
-    await fetch(`${BAS}api/notiser`, {
+    await fetch(`${BAS}api/notifications`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, atgard }),
     });
@@ -3460,7 +3460,7 @@ async function sparaZon(id, patch) {
   const z = zoner.find((x) => x.id === id);
   if (!z) return;
   const body = { id, jord: z.jord ?? "", anteckning: z.anteckning ?? "", enhetIds: z.enhetIds ?? [], x: z.x, y: z.y, ...patch };
-  await fetch(`${BAS}api/zoner/uppdatera`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  await fetch(`${BAS}api/zones/update`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   await laddaOdlingar();
   if (valtMal?.typ === "zon" && valtMal.id === id) renderaDetaljPanel();
 }
@@ -3471,7 +3471,7 @@ async function sparaOdling(id, patch) {
     id, planterad: o.planterad ?? "", skordManad: o.skordManad ?? "", skordFonster: o.skordFonster ?? "",
     jord: o.jord ?? "", anteckning: o.anteckning ?? "", enhetIds: o.enhetIds ?? [], ...patch,
   };
-  await fetch(`${BAS}api/odlingar/uppdatera`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  await fetch(`${BAS}api/plantings/update`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   await laddaOdlingar();
   if (valtMal?.typ === "odling" && valtMal.id === id) renderaDetaljPanel();
 }
@@ -3546,7 +3546,7 @@ function kopplaEntiteterHtml(idLista) {
   }).join("");
   const oppenKamera = kopplade.find((e) => e.id === oppenKameraTile && (e.entityId ?? "").startsWith("camera."));
   const forhandsvisning = oppenKamera ? `<div class="kamera-wrap kamera-forhandsvisning" data-entity="${esc(oppenKamera.entityId)}">
-      <img class="widget-kamera" alt="${esc(oppenKamera.namn)}" src="${BAS}api/kamera?entityId=${encodeURIComponent(oppenKamera.entityId)}&t=${Date.now()}"
+      <img class="widget-kamera" alt="${esc(oppenKamera.namn)}" src="${BAS}api/camera?entityId=${encodeURIComponent(oppenKamera.entityId)}&t=${Date.now()}"
            onerror="this.closest('.kamera-wrap').classList.add('kamera-fel')">
       <div class="kamera-fel-text">Kunde inte hämta bild – kontrollera entity_id och HA_TOKEN.</div>
       <div class="kamera-kontroller">
@@ -4077,7 +4077,7 @@ $("eLaggTillBtn").addEventListener("click", async () => {
   if (!entityId) { st.textContent = "Entity ID krävs."; st.className = "status err"; return; }
   $("eLaggTillBtn").disabled = true; st.textContent = ""; st.className = "status";
   try {
-    await fetch(`${BAS}api/enheter`, {
+    await fetch(`${BAS}api/devices`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ entityId, namn: $("eNamn").value.trim() }),
     });
@@ -4091,13 +4091,13 @@ document.addEventListener("click", async (e) => {
   if (nyligenDragen) return; // undvik att en avslutad dragning även tolkas som ett klick som markerar zonen
   const odlingTaBort = e.target.closest(".odling-ta-bort");
   if (odlingTaBort) {
-    await fetch(`${BAS}api/odlingar/ta-bort`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: odlingTaBort.dataset.id }) });
+    await fetch(`${BAS}api/plantings/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: odlingTaBort.dataset.id }) });
     await laddaOdlingar();
     return;
   }
   const enhetTaBort = e.target.closest(".enhet-ta-bort");
   if (enhetTaBort) {
-    await fetch(`${BAS}api/enheter/ta-bort`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: enhetTaBort.dataset.id }) });
+    await fetch(`${BAS}api/devices/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: enhetTaBort.dataset.id }) });
     await laddaEnheter();
     return;
   }
@@ -4115,7 +4115,7 @@ document.addEventListener("click", async (e) => {
   const zonTaBort = e.target.closest(".zon-ta-bort, .sektion-ta-bort");
   if (zonTaBort) {
     if (!confirm("Ta bort zonen? Plantor i den blir okategoriserade, och eventuella sektioner flyttas ut.")) return;
-    await fetch(`${BAS}api/zoner/ta-bort`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: zonTaBort.dataset.id }) });
+    await fetch(`${BAS}api/zones/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: zonTaBort.dataset.id }) });
     await laddaOdlingar();
     return;
   }
@@ -4200,7 +4200,7 @@ document.addEventListener("click", async (e) => {
   if (e.target.closest("#zNySektionBtn") && valtMal?.typ === "zon") {
     const namn = $("zNySektion").value.trim();
     if (!namn) return;
-    await fetch(`${BAS}api/zoner`, {
+    await fetch(`${BAS}api/zones`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ namn, typ: $("zNySektionTyp").value, foralderId: valtMal.id }),
     });
@@ -4216,7 +4216,7 @@ document.addEventListener("click", async (e) => {
   if (e.target.closest("#zNyPlantaBtn") && valtMal?.typ === "zon") {
     const namn = $("zNyPlanta").value.trim();
     if (!namn) return;
-    await fetch(`${BAS}api/odlingar`, {
+    await fetch(`${BAS}api/plantings`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         namn, zonId: valtMal.id, antal: $("zNyPlantaAntal").value,
@@ -4254,7 +4254,7 @@ document.addEventListener("click", async (e) => {
     const f = schemaForslag.find((x) => forslagNyckel(x) === forslagLaggTill.dataset.nyckel);
     if (f) {
       schemaForslagAvfardade.add(forslagNyckel(f)); // ligger nu i listan ovanför i stället
-      await fetch(`${BAS}api/scheman`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ zonId: f.zonId, veckodagar: f.veckodagar }) });
+      await fetch(`${BAS}api/schedules`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ zonId: f.zonId, veckodagar: f.veckodagar }) });
       await laddaOdlingar();
       renderaSchema();
     }
@@ -4268,7 +4268,7 @@ document.addEventListener("click", async (e) => {
   }
   const schemaTaBort = e.target.closest(".schema-ta-bort");
   if (schemaTaBort) {
-    await fetch(`${BAS}api/scheman/ta-bort`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: schemaTaBort.dataset.id }) });
+    await fetch(`${BAS}api/schedules/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: schemaTaBort.dataset.id }) });
     await laddaOdlingar();
     renderaSchema();
     return;
@@ -4282,7 +4282,7 @@ document.addEventListener("click", async (e) => {
     if (!dagar.length) { st.textContent = "Välj minst en veckodag."; st.className = "status err"; return; }
     st.textContent = ""; st.className = "status";
     try {
-      await fetch(`${BAS}api/scheman`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ zonId, veckodagar: dagar }) });
+      await fetch(`${BAS}api/schedules`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ zonId, veckodagar: dagar }) });
       await laddaOdlingar();
       renderaSchema();
     } catch (err) { st.textContent = "Kunde inte spara: " + err.message; st.className = "status err"; }
@@ -4311,7 +4311,7 @@ document.addEventListener("click", async (e) => {
   if (flikTaBort) {
     e.stopPropagation();
     if (!confirm("Ta bort kartan? Zonerna på den flyttas till den första kvarvarande kartan.")) return;
-    await fetch(`${BAS}api/kartor/ta-bort`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: flikTaBort.dataset.id }) });
+    await fetch(`${BAS}api/maps/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: flikTaBort.dataset.id }) });
     await laddaOdlingar();
     return;
   }
@@ -4327,7 +4327,7 @@ document.addEventListener("click", async (e) => {
   // Ta bort ett eget block
   const widgetTaBort = e.target.closest(".widget-ta-bort");
   if (widgetTaBort) {
-    await fetch(`${BAS}api/widgets/ta-bort`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: widgetTaBort.dataset.id }) });
+    await fetch(`${BAS}api/widgets/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: widgetTaBort.dataset.id }) });
     await laddaOdlingar();
     return;
   }
@@ -4340,7 +4340,7 @@ document.addEventListener("click", async (e) => {
     const img = wrap.querySelector(".widget-kamera");
     const knapp = wrap.querySelector(".kamera-uppdatera");
     knapp.classList.add("laddar");
-    img.src = `${BAS}api/kamera?entityId=${encodeURIComponent(wrap.dataset.entity)}&t=${Date.now()}`;
+    img.src = `${BAS}api/camera?entityId=${encodeURIComponent(wrap.dataset.entity)}&t=${Date.now()}`;
     img.onload = img.onerror = () => knapp.classList.remove("laddar");
     wrap.querySelector(".kamera-tid").textContent = `Uppdaterad ${new Date().toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}`;
     return;
@@ -4366,7 +4366,7 @@ document.addEventListener("click", async (e) => {
   if (widgetByt) {
     const w = widgets.find((x) => x.id === widgetByt.dataset.id);
     if (w) {
-      await fetch(`${BAS}api/widgets/uppdatera`, {
+      await fetch(`${BAS}api/widgets/update`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: w.id, kolumn: widgetKolumn(w) === "huvud" ? "sido" : "huvud" }),
       });
@@ -4414,7 +4414,7 @@ $("kLaggTillBtn").addEventListener("click", async () => {
   if (!namn) { st.textContent = "Namn krävs."; st.className = "status err"; return; }
   $("kLaggTillBtn").disabled = true; st.textContent = ""; st.className = "status";
   try {
-    await fetch(`${BAS}api/kartor`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ namn }) });
+    await fetch(`${BAS}api/maps`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ namn }) });
     $("kNamn").value = "";
     await laddaOdlingar();
     st.textContent = "Karta tillagd."; st.className = "status ok";
@@ -4523,7 +4523,7 @@ $("redigeraLayoutBtn").addEventListener("click", () => {
 
 async function laddaInstallningar() {
   try {
-    const res = await fetch(`${BAS}api/installningar`, { cache: "no-store" });
+    const res = await fetch(`${BAS}api/settings`, { cache: "no-store" });
     installningar = await res.json();
     $("nNtfy").value = installningar.ntfyTopic ?? "";
     $("nWebhook").value = installningar.webhookUrl ?? "";
@@ -4536,7 +4536,7 @@ $("sSparaBtn").addEventListener("click", async () => {
   const st = $("sStatus");
   $("sSparaBtn").disabled = true; st.textContent = ""; st.className = "status";
   try {
-    const res = await fetch(`${BAS}api/installningar`, {
+    const res = await fetch(`${BAS}api/settings`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ntfyTopic: $("nNtfy").value.trim(), webhookUrl: $("nWebhook").value.trim(),
@@ -4818,7 +4818,7 @@ async function laddaSchemaForslag() {
   schemaForslagLaddar = true;
   renderaSchema();
   try {
-    const res = await fetch(`${BAS}api/scheman/forslag`, { cache: "no-store" });
+    const res = await fetch(`${BAS}api/schedules/suggestions`, { cache: "no-store" });
     const data = await res.json();
     schemaForslag = data.forslag ?? [];
   } catch { schemaForslag = []; }
@@ -4857,7 +4857,7 @@ $("nSparaBtn").addEventListener("click", async () => {
   const st = $("nStatus");
   $("nSparaBtn").disabled = true; st.textContent = ""; st.className = "status";
   try {
-    await fetch(`${BAS}api/installningar`, {
+    await fetch(`${BAS}api/settings`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ntfyTopic: $("nNtfy").value.trim(), webhookUrl: $("nWebhook").value.trim() }),
     });
@@ -4947,7 +4947,7 @@ async function skickaChatt() {
   chattBild = null; $("chattBildFil").value = ""; visaChattBild();
   chattVantar = true; renderaChatt();
   try {
-    const res = await fetch(`${BAS}api/chatt`, {
+    const res = await fetch(`${BAS}api/chat`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ meddelanden: chattHistorik }),
     });

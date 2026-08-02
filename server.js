@@ -650,10 +650,10 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url, "http://intern");
   const p = url.pathname.replace(/\/+$/, "") || "/";
   try {
-    if (req.method === "GET" && p.endsWith("/api/odlingar")) {
+    if (req.method === "GET" && p.endsWith("/api/plantings")) {
       return skickaJson(res, 200, await lasData());
     }
-    if (req.method === "POST" && p.endsWith("/api/odlingar")) {
+    if (req.method === "POST" && p.endsWith("/api/plantings")) {
       const { namn, planterad, skordFonster, skordManad, anteckning, zonId, antal, layout } = await lasBody(req);
       if (!namn) return skickaJson(res, 400, { fel: "namn saknas" });
       const data = await muteraData((d) => {
@@ -666,7 +666,7 @@ const server = createServer(async (req, res) => {
       });
       return skickaJson(res, 200, data);
     }
-    if (req.method === "POST" && p.endsWith("/api/odlingar/uppdatera")) {
+    if (req.method === "POST" && p.endsWith("/api/plantings/update")) {
       const { id, planterad, skordFonster, skordManad, anteckning, jord, enhetIds, zonId, x, y, antal, layout } = await lasBody(req);
       const data = await muteraData((d) => {
         const o = d.odlingar.find((o2) => o2.id === id);
@@ -684,12 +684,12 @@ const server = createServer(async (req, res) => {
       });
       return skickaJson(res, 200, data);
     }
-    if (req.method === "POST" && p.endsWith("/api/odlingar/ta-bort")) {
+    if (req.method === "POST" && p.endsWith("/api/plantings/delete")) {
       const { id } = await lasBody(req);
       const data = await muteraData((d) => { d.odlingar = d.odlingar.filter((o) => o.id !== id); });
       return skickaJson(res, 200, data);
     }
-    if (req.method === "POST" && p.endsWith("/api/zoner/uppdatera")) {
+    if (req.method === "POST" && p.endsWith("/api/zones/update")) {
       const { id, jord, anteckning, enhetIds, x, y, foralderId, bredd, hojd, hojdM } = await lasBody(req);
       const data = await muteraData((d) => {
         const zon = d.zoner.find((z) => z.id === id);
@@ -720,7 +720,7 @@ const server = createServer(async (req, res) => {
       });
       return skickaJson(res, 200, data);
     }
-    if (req.method === "POST" && p.endsWith("/api/zoner")) {
+    if (req.method === "POST" && p.endsWith("/api/zones")) {
       const { namn, typ, x, y, kartaId, foralderId } = await lasBody(req);
       if (!namn) return skickaJson(res, 400, { fel: "namn saknas" });
       const data = await muteraData((d) => {
@@ -747,13 +747,13 @@ const server = createServer(async (req, res) => {
       });
       return skickaJson(res, 200, data);
     }
-    if (req.method === "POST" && p.endsWith("/api/kartor")) {
+    if (req.method === "POST" && p.endsWith("/api/maps")) {
       const { namn } = await lasBody(req);
       if (!namn) return skickaJson(res, 400, { fel: "namn saknas" });
       const data = await muteraData((d) => { d.kartor.push({ id: randomUUID(), namn }); });
       return skickaJson(res, 200, data);
     }
-    if (req.method === "POST" && p.endsWith("/api/kartor/ta-bort")) {
+    if (req.method === "POST" && p.endsWith("/api/maps/delete")) {
       const { id } = await lasBody(req);
       const data = await muteraData((d) => {
         d.kartor = d.kartor.filter((k) => k.id !== id);
@@ -768,7 +768,7 @@ const server = createServer(async (req, res) => {
     // ventil/pump finns att styra än (se README:s Roadmap), så ett schema
     // ger en påminnelse i notiscentret på schemalagda dagar i stället för
     // att låtsas kunna vattna på riktigt.
-    if (req.method === "POST" && p.endsWith("/api/scheman")) {
+    if (req.method === "POST" && p.endsWith("/api/schedules")) {
       const { zonId, veckodagar } = await lasBody(req);
       if (!zonId) return skickaJson(res, 400, { fel: "zonId saknas" });
       const dagar = Array.isArray(veckodagar) ? veckodagar.map(Number).filter((n) => n >= 0 && n <= 6) : [];
@@ -778,7 +778,7 @@ const server = createServer(async (req, res) => {
       });
       return skickaJson(res, 200, data);
     }
-    if (req.method === "POST" && p.endsWith("/api/scheman/ta-bort")) {
+    if (req.method === "POST" && p.endsWith("/api/schedules/delete")) {
       const { id } = await lasBody(req);
       const data = await muteraData((d) => { d.scheman = d.scheman.filter((s) => s.id !== id); });
       return skickaJson(res, 200, data);
@@ -794,7 +794,7 @@ const server = createServer(async (req, res) => {
       });
       return skickaJson(res, 200, data);
     }
-    if (req.method === "POST" && p.endsWith("/api/widgets/uppdatera")) {
+    if (req.method === "POST" && p.endsWith("/api/widgets/update")) {
       const { id, titel, enhetIds, entityId, kolumn } = await lasBody(req);
       const data = await muteraData((d) => {
         const w = d.widgets.find((x) => x.id === id);
@@ -806,7 +806,7 @@ const server = createServer(async (req, res) => {
       return skickaJson(res, 200, data);
     }
     // Sparar ny ordning på blocken (upp/ner-pilarna i panelen)
-    if (req.method === "POST" && p.endsWith("/api/widgets/ordna")) {
+    if (req.method === "POST" && p.endsWith("/api/widgets/reorder")) {
       const { ids } = await lasBody(req);
       const data = await muteraData((d) => {
         const perId = new Map(d.widgets.map((w) => [w.id, w]));
@@ -816,18 +816,18 @@ const server = createServer(async (req, res) => {
       });
       return skickaJson(res, 200, data);
     }
-    if (req.method === "POST" && p.endsWith("/api/widgets/ta-bort")) {
+    if (req.method === "POST" && p.endsWith("/api/widgets/delete")) {
       const { id } = await lasBody(req);
       const data = await muteraData((d) => { d.widgets = d.widgets.filter((w) => w.id !== id); });
       return skickaJson(res, 200, data);
     }
-    if (req.method === "GET" && p.endsWith("/api/kamera")) {
+    if (req.method === "GET" && p.endsWith("/api/camera")) {
       const bild = await hamtaKamerabild(url.searchParams.get("entityId") || "");
       if (!bild) return skickaJson(res, 404, { fel: "kunde inte hämta kamerabild" });
       res.writeHead(200, { "Content-Type": bild.typ, "Cache-Control": "no-store" });
       return res.end(bild.data);
     }
-    if (req.method === "POST" && p.endsWith("/api/zoner/ta-bort")) {
+    if (req.method === "POST" && p.endsWith("/api/zones/delete")) {
       const { id } = await lasBody(req);
       const data = await muteraData((d) => {
         const borttagen = d.zoner.find((z) => z.id === id);
@@ -846,7 +846,7 @@ const server = createServer(async (req, res) => {
       });
       return skickaJson(res, 200, data);
     }
-    if (req.method === "POST" && p.endsWith("/api/enheter")) {
+    if (req.method === "POST" && p.endsWith("/api/devices")) {
       const { entityId, namn } = await lasBody(req);
       if (!entityId) return skickaJson(res, 400, { fel: "entityId saknas" });
       const data = await muteraData((d) => {
@@ -854,24 +854,24 @@ const server = createServer(async (req, res) => {
       });
       return skickaJson(res, 200, data);
     }
-    if (req.method === "POST" && p.endsWith("/api/enheter/ta-bort")) {
+    if (req.method === "POST" && p.endsWith("/api/devices/delete")) {
       const { id } = await lasBody(req);
       const data = await muteraData((d) => { d.enheter = d.enheter.filter((e) => e.id !== id); });
       return skickaJson(res, 200, data);
     }
-    if (req.method === "GET" && p.endsWith("/api/ha-entiteter")) {
+    if (req.method === "GET" && p.endsWith("/api/ha-entities")) {
       return skickaJson(res, 200, await hamtaAllaEntiteter());
     }
-    if (req.method === "GET" && p.endsWith("/api/enheter/status")) {
+    if (req.method === "GET" && p.endsWith("/api/devices/status")) {
       const { enheter } = await lasData();
       const status = await Promise.all(enheter.map(async (e) => ({ ...e, ...(await hamtaEntitetStatus(e.entityId)) })));
       return skickaJson(res, 200, status);
     }
-    if (req.method === "GET" && p.endsWith("/api/installningar")) {
+    if (req.method === "GET" && p.endsWith("/api/settings")) {
       const { installningar } = await lasData();
       return skickaJson(res, 200, installningar);
     }
-    if (req.method === "POST" && p.endsWith("/api/installningar")) {
+    if (req.method === "POST" && p.endsWith("/api/settings")) {
       const { ntfyTopic, webhookUrl, norrGrader, kartaBreddM } = await lasBody(req);
       const data = await muteraData((d) => {
         const grader = Number(norrGrader);
@@ -886,7 +886,7 @@ const server = createServer(async (req, res) => {
       });
       return skickaJson(res, 200, data.installningar);
     }
-    if (req.method === "GET" && p.endsWith("/api/historik")) {
+    if (req.method === "GET" && p.endsWith("/api/history")) {
       const { historik } = await lasData();
       return skickaJson(res, 200, historik);
     }
@@ -896,7 +896,7 @@ const server = createServer(async (req, res) => {
     // av panelen och innehåller redan datum för dagsaktuella notiser, så en
     // "avvisad idag"-notis kommer tillbaka av sig själv nästa dag om läget
     // fortfarande gäller då.
-    if (req.method === "POST" && p.endsWith("/api/notiser")) {
+    if (req.method === "POST" && p.endsWith("/api/notifications")) {
       const { id, atgard } = await lasBody(req);
       if (!id) return skickaJson(res, 400, { fel: "id saknas" });
       const data = await muteraData((d) => {
@@ -910,21 +910,21 @@ const server = createServer(async (req, res) => {
     // kandidater, Claude prioriterar/slår ihop/skriver om dem (se
     // hamtaAiNotiser). Faller tillbaka på kandidaterna oförändrade om
     // ANTHROPIC_API_KEY saknas eller anropet misslyckas.
-    if (req.method === "POST" && p.endsWith("/api/notiser/ai")) {
+    if (req.method === "POST" && p.endsWith("/api/notifications/ai")) {
       const { kandidater } = await lasBody(req);
       return skickaJson(res, 200, await hamtaAiNotiser(kandidater));
     }
-    if (req.method === "GET" && p.endsWith("/api/scheman/forslag")) {
+    if (req.method === "GET" && p.endsWith("/api/schedules/suggestions")) {
       return skickaJson(res, 200, await hamtaAiSchemaforslag());
     }
-    if (req.method === "POST" && p.endsWith("/api/chatt")) {
+    if (req.method === "POST" && p.endsWith("/api/chat")) {
       const { meddelanden } = await lasBody(req);
       return skickaJson(res, 200, await svaraChatt(meddelanden));
     }
-    if (req.method === "GET" && p.endsWith("/api/bevattning")) {
+    if (req.method === "GET" && p.endsWith("/api/watering")) {
       return skickaJson(res, 200, await hamtaSmartBevattning());
     }
-    if (req.method === "GET" && p.endsWith("/api/vader")) {
+    if (req.method === "GET" && p.endsWith("/api/weather")) {
       return skickaJson(res, 200, await hamtaVader());
     }
     if (req.method === "GET" && p.endsWith("/logo.png")) {
