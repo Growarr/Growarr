@@ -762,7 +762,7 @@ const server = createServer(async (req, res) => {
       return skickaJson(res, 200, data);
     }
     if (req.method === "POST" && p.endsWith("/api/plantings/update")) {
-      const { id, planterad, skordFonster, skordManad, anteckning, jord, enhetIds, zonId, x, y, antal, layout } = await lasBody(req);
+      const { id, namn, planterad, skordFonster, skordManad, anteckning, jord, enhetIds, zonId, x, y, antal, layout } = await lasBody(req);
       const data = await muteraData((d) => {
         const o = d.odlingar.find((o2) => o2.id === id);
         if (!o) return;
@@ -770,6 +770,10 @@ const server = createServer(async (req, res) => {
           planterad: planterad || "", skordFonster: skordFonster || "", skordManad: skordManad || "",
           anteckning: anteckning || "", jord: jord || "", enhetIds: enhetIds ?? [],
         });
+        // Only touched when actually sent, and never blanked: several code
+        // paths (dragging on the map, linking an entity) call this without a
+        // name and must not wipe it.
+        if (typeof namn === "string" && namn.trim()) o.namn = namn.trim().slice(0, 80);
         // Plantans plats i sin zon/sektion (0–1), satt genom att dra på kartan.
         if (zonId !== undefined) o.zonId = zonId || "";
         if (x !== undefined) o.x = x;
@@ -785,7 +789,7 @@ const server = createServer(async (req, res) => {
       return skickaJson(res, 200, data);
     }
     if (req.method === "POST" && p.endsWith("/api/zones/update")) {
-      const { id, jord, anteckning, enhetIds, x, y, foralderId, bredd, hojd, hojdM } = await lasBody(req);
+      const { id, namn, typ, jord, anteckning, enhetIds, x, y, foralderId, bredd, hojd, hojdM } = await lasBody(req);
       const data = await muteraData((d) => {
         const zon = d.zoner.find((z) => z.id === id);
         if (!zon) return;
@@ -793,6 +797,10 @@ const server = createServer(async (req, res) => {
           jord: jord || "", anteckning: anteckning || "", enhetIds: enhetIds ?? [],
           x: x ?? zon.x ?? 0.5, y: y ?? zon.y ?? 0.5,
         });
+        // Only touched when actually sent, and never blanked: dragging a zone
+        // on the map also calls this, without a name, and must not wipe it.
+        if (typeof namn === "string" && namn.trim()) zon.namn = namn.trim().slice(0, 80);
+        if (typ !== undefined && ZON_TYPER_NAMN[typ]) zon.typ = typ;
         if (bredd !== undefined) zon.bredd = bredd;
         if (hojd !== undefined) zon.hojd = hojd;
         if (hojdM !== undefined) zon.hojdM = rensaHojdM(hojdM, zon.typ);

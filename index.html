@@ -1611,7 +1611,7 @@ const SPRAK_TEXT = {
     sprak: "Språk", svenska: "Svenska", engelska: "English",
     // Validation and status
     bakgrund: "Bakgrund", bakgrund_hjalp: "Rutnät, rent eller din egen flygbild",    bakgrund_rutnat: "Rutnät", bakgrund_ren: "Rent", bakgrund_foto: "Foto",    bakgrund_hjalp_lang: "Rent och Foto tar båda bort rutnätet. Ladda upp en flygbild (en skärmdump från Google Maps duger) för att lägga ut zonerna över er faktiska tomt.",    flygbild: "Flygbild", ladda_upp_bild: "Ladda upp bild", byt_bild: "Byt bild",    bildstyrka: "Bildstyrka", bildstyrka_hjalp: "Tona ner bilden så plantikonerna syns tydligt ovanpå.",    laddar_upp: "Laddar upp …", ingen_karta: "Ingen karta vald.",
-    namn_kravs: "Namn krävs.", kunde_inte_spara: "Kunde inte spara: ",
+    namn_kravs: "Namn krävs.", kunde_inte_spara: "Kunde inte spara: ", sparat: "Sparat.",
     valj_zon: "Välj en zon.", valj_veckodag: "Välj minst en veckodag.",
     // Create-new modal
     skapa_sub: "Zoner, plantor, kartor och egna block",
@@ -1693,7 +1693,7 @@ const SPRAK_TEXT = {
     tema_hjalp: "Follows your device's light/dark setting by default, or pick one yourself.",
     sprak: "Language", svenska: "Svenska", engelska: "English",
     bakgrund: "Background", bakgrund_hjalp: "Grid, plain or your own aerial photo",    bakgrund_rutnat: "Grid", bakgrund_ren: "Plain", bakgrund_foto: "Photo",    bakgrund_hjalp_lang: "Plain and Photo both drop the grid. Upload an aerial shot (a Google Maps screenshot works) to lay your zones out over your actual property.",    flygbild: "Aerial photo", ladda_upp_bild: "Upload image", byt_bild: "Replace image",    bildstyrka: "Image strength", bildstyrka_hjalp: "Dim the photo so the plant icons stay readable on top of it.",    laddar_upp: "Uploading …", ingen_karta: "No map selected.",
-    namn_kravs: "A name is required.", kunde_inte_spara: "Could not save: ",
+    namn_kravs: "A name is required.", kunde_inte_spara: "Could not save: ", sparat: "Saved.",
     valj_zon: "Pick a zone.", valj_veckodag: "Pick at least one day.",
     skapa_sub: "Zones, plants, maps and custom blocks",
     flik_zon: "Zone", flik_planta: "Plant", flik_karta: "Map", flik_block: "Block",
@@ -4292,6 +4292,15 @@ function renderaDetaljPanel() {
       ${zonSektionerHtml(z)}
       <div class="modal-entiteter">
         <label class="lbl">${t("detaljer")}</label>
+        <div class="skapa-rad" style="margin-top:12px">
+          <div><label class="lbl">${t("namn")}</label><input type="text" id="mNamn" maxlength="80" value="${esc(z.namn ?? "")}"></div>
+          <div><label class="lbl">${t("typ")}</label>
+            <select id="mTyp">
+              ${Object.keys(ZON_TYPER).map((nyckelTyp) =>
+                `<option value="${esc(nyckelTyp)}"${z.typ === nyckelTyp ? " selected" : ""}>${esc(t("typ_" + nyckelTyp))}</option>`).join("")}
+            </select>
+          </div>
+        </div>
         ${z.foralderId ? "" : `<div class="falt" style="margin-top:12px">
           <label class="lbl">${t("hojd_over_marken")}</label>
           <input type="number" id="mHojdM" min="0" max="20" step="0.1" value="${hojdMFor(z)}">
@@ -4318,6 +4327,10 @@ function renderaDetaljPanel() {
       ${detaljHistorikHtml(o.enhetIds)}
       <div class="modal-entiteter">
         <label class="lbl">${t("detaljer")}</label>
+        <div class="falt" style="margin-top:12px">
+          <label class="lbl">${t("namn")}</label>
+          <input type="text" id="mNamn" list="sortForslagList" autocomplete="off" maxlength="80" value="${esc(o.namn ?? "")}">
+        </div>
         <div class="skapa-rad" style="margin-top:12px">
           <div><label class="lbl">${t("antal_st")}</label><input type="number" id="mAntal" min="1" max="200" value="${antalFor(o)}"></div>
           <div><label class="lbl">${t("pa_kartan")}</label>
@@ -4394,20 +4407,25 @@ document.addEventListener("click", async (e) => {
     const st = $("mStatus");
     st.textContent = ""; st.className = "status";
     try {
+      // An empty name would blank the zone or plant on the map, so reject it
+      // here rather than let the server silently ignore it.
+      const nyttNamn = $("mNamn")?.value.trim() ?? "";
+      if (!nyttNamn) { st.textContent = t("namn_kravs"); st.className = "status err"; return; }
       if (valtMal.typ === "zon") {
-        const patch = { jord: $("mJord").value.trim(), anteckning: $("mAnteckning").value.trim() };
+        const patch = { namn: nyttNamn, typ: $("mTyp").value, jord: $("mJord").value.trim(), anteckning: $("mAnteckning").value.trim() };
         if ($("mHojdM")) patch.hojdM = $("mHojdM").value;
-        solTimmarCache = null; // höjden ändrar skuggorna
+        solTimmarCache = null; // height and type both change the shadows
         await sparaZon(valtMal.id, patch);
       } else {
         await sparaOdling(valtMal.id, {
+          namn: nyttNamn,
           planterad: $("mPlanterad").value, skordManad: $("mSkordManad").value,
           skordFonster: $("mSkordFonster").value.trim(), jord: $("mJord").value.trim(), anteckning: $("mAnteckning").value.trim(),
           antal: $("mAntal").value, layout: $("mLayout").value,
         });
       }
-      $("mStatus").textContent = "Sparat."; $("mStatus").className = "status ok";
-    } catch (err) { $("mStatus").textContent = "Kunde inte spara: " + err.message; $("mStatus").className = "status err"; }
+      $("mStatus").textContent = t("sparat"); $("mStatus").className = "status ok";
+    } catch (err) { $("mStatus").textContent = t("kunde_inte_spara") + err.message; $("mStatus").className = "status err"; }
     return;
   }
   // Detaljpanel: koppla en entitet
