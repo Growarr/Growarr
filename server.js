@@ -42,9 +42,10 @@ async function lasData() {
       kartor: d.kartor ?? [], zoner: d.zoner ?? [], odlingar: d.odlingar ?? [], enheter: d.enheter ?? [],
       widgets: d.widgets ?? [], installningar: d.installningar ?? {}, historik: d.historik ?? [],
       notiser: d.notiser ?? [], scheman: d.scheman ?? [],
+      tradgardsAutomationer: d.tradgardsAutomationer ?? [],
     };
   } catch {
-    return { kartor: [], zoner: [], odlingar: [], enheter: [], widgets: [], installningar: {}, historik: [], notiser: [], scheman: [] };
+    return { kartor: [], zoner: [], odlingar: [], enheter: [], widgets: [], installningar: {}, historik: [], notiser: [], scheman: [], tradgardsAutomationer: [] };
   }
 }
 async function skrivData(data) {
@@ -197,6 +198,47 @@ async function hamtaAllaEntiteter() {
     return lista;
   } catch {
     return [];
+  }
+}
+
+// ---- Home Assistant automations ----
+// Real automation logic (trigger, condition, action) already lives in Home
+// Assistant - duplicating that here would just be a weaker copy of
+// something that already works. Growarr's job is narrower: show which of
+// your existing HA automations matter to the garden, let you flip them on
+// or off without switching apps, and have Claude point out gaps in the
+// data rather than pretend to author a new automation itself.
+async function hamtaHaAutomationer() {
+  if (!HA_TOKEN) return [];
+  try {
+    const res = await fetch(`${HA_URL}/api/states`, { headers: { Authorization: `Bearer ${HA_TOKEN}` } });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data
+      .filter((s) => s.entity_id.startsWith("automation."))
+      .map((s) => ({ entityId: s.entity_id, namn: s.attributes?.friendly_name || s.entity_id, pa: s.state === "on" }))
+      .sort((a, b) => a.namn.localeCompare(b.namn, "sv"));
+  } catch {
+    return [];
+  }
+}
+// The app's first WRITE to Home Assistant - everything else here only ever
+// reads state. Deliberately narrow: one service call, the automation
+// domain only, and only ever reachable for entity ids the caller already
+// asked to toggle - never a generic "call any HA service" endpoint.
+async function vaxlaHaAutomation(entityId, pa) {
+  if (!HA_TOKEN) return { fel: "HA_TOKEN är inte konfigurerat" };
+  if (!entityId?.startsWith("automation.")) return { fel: "ogiltig automation" };
+  try {
+    const res = await fetch(`${HA_URL}/api/services/automation/${pa ? "turn_on" : "turn_off"}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${HA_TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ entity_id: entityId }),
+    });
+    if (!res.ok) return { fel: `HA svarade ${res.status}` };
+    return { ok: true };
+  } catch (err) {
+    return { fel: err.message };
   }
 }
 
@@ -973,6 +1015,36 @@ const server = createServer(async (req, res) => {
       const { id } = await lasBody(req);
       const data = await muteraData((d) => { d.scheman = d.scheman.filter((s) => s.id !== id); });
       return skickaJson(res, 200, data);
+    }
+    // Full HA automation list plus which of them are already linked to the
+    // garden, in one call - the picker in the panel needs both to render.
+    if (req.method === "GET" && p.endsWith("/api/automations")) {
+      const [d, alla] = await Promise.all([lasData(), hamtaHaAutomationer()]);
+      const lankade = new Set(d.tradgardsAutomationer);
+      return skickaJson(res, 200, alla.map((a) => ({ ...a, lankad: lankade.has(a.entityId) })));
+    }
+    if (req.method === "POST" && p.endsWith("/api/automations/link")) {
+      const { entityId } = await lasBody(req);
+      if (!entityId) return skickaJson(res, 400, { fel: "entityId saknas" });
+      const data = await muteraData((d) => {
+        if (!d.tradgardsAutomationer.includes(entityId)) d.tradgardsAutomationer.push(entityId);
+      });
+      return skickaJson(res, 200, data);
+    }
+    if (req.method === "POST" && p.endsWith("/api/automations/unlink")) {
+      const { entityId } = await lasBody(req);
+      const data = await muteraData((d) => {
+        d.tradgardsAutomationer = d.tradgardsAutomationer.filter((id) => id !== entityId);
+      });
+      return skickaJson(res, 200, data);
+    }
+    if (req.method === "POST" && p.endsWith("/api/automations/toggle")) {
+      const { entityId, pa } = await lasBody(req);
+      const d = await lasData();
+      if (!d.tradgardsAutomationer.includes(entityId)) return skickaJson(res, 400, { fel: "automationen är inte kopplad till trädgården" });
+      const resultat = await vaxlaHaAutomation(entityId, !!pa);
+      if (resultat.fel) return skickaJson(res, 502, resultat);
+      return skickaJson(res, 200, resultat);
     }
     if (req.method === "POST" && p.endsWith("/api/widgets")) {
       const { titel, typ, enhetIds, entityId, kolumn } = await lasBody(req);

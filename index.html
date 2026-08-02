@@ -770,6 +770,26 @@ try {
   .skord-chip svg { width:13px; height:13px; flex:0 0 auto; }
   .kalender-dagdetalj { margin-top:18px; padding-top:14px; border-top:1px solid var(--border); }
 
+  /* ---- Home Assistant automations linked to the garden ---- */
+  .automation-lista { display:flex; flex-direction:column; gap:8px; margin-bottom:18px; }
+  .automation-rad { display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:var(--r-sm);
+    background:var(--surface2); border:1px solid var(--border); }
+  .automation-rad .info { flex:1; min-width:0; }
+  .automation-rad .namn { font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .automation-rad .entity-id { font-size:.72rem; color:var(--muted); font-family:monospace; }
+  /* A checkbox styled as an iOS-like switch, since this is the app's first
+     on/off control that isn't just a button - flipping a real automation
+     deserves to look different from a normal click. */
+  .brytare { position:relative; flex:0 0 auto; width:42px; height:25px; }
+  .brytare input { position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer; }
+  .brytare .spar { position:absolute; inset:0; border-radius:99px; background:var(--border);
+    transition:background .15s ease; }
+  .brytare .spar::before { content:""; position:absolute; width:19px; height:19px; left:3px; top:3px;
+    border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.3); transition:transform .15s ease; }
+  .brytare input:checked + .spar { background:var(--grad); }
+  .brytare input:checked + .spar::before { transform:translateX(17px); }
+  .brytare input:disabled + .spar { opacity:.5; cursor:default; }
+  .automation-tom { font-size:.82rem; color:var(--muted); padding:4px 2px 14px; }
   /* ---- Schema: vattningspåminnelser per veckodag ---- */
   .schema-lista { display:flex; flex-direction:column; gap:8px; margin-bottom:18px; }
   .schema-rad { display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:var(--r-sm);
@@ -912,9 +932,12 @@ try {
   .metrik-tile.god .ikon { background:color-mix(in srgb, var(--ok) 22%, transparent); }
   .metrik-tile.varning .ikon { background:color-mix(in srgb, var(--warn) 22%, transparent); }
   .metrik-tile.fel .ikon { background:color-mix(in srgb, var(--err) 22%, transparent); }
-  .metrik-tile .ta-bort-liten { background:none; border:0; box-shadow:none; color:var(--muted); opacity:.6;
+  /* Shared by every small inline "x" remove button (metrik tiles, compact
+     entity rows, automation rows) rather than repeating the same rule under
+     each new parent context. */
+  .ta-bort-liten { background:none; border:0; box-shadow:none; color:var(--muted); opacity:.6;
     cursor:pointer; font-size:.9rem; padding:0; line-height:1; }
-  .metrik-tile .ta-bort-liten:hover { opacity:1; color:var(--err); transform:none; }
+  .ta-bort-liten:hover { opacity:1; color:var(--err); transform:none; }
   .metrik-tile .varde { font-size:1.5rem; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.1;
     display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
   .metrik-tile .enhet-namn { font-size:.76rem; color:var(--muted); margin-top:4px; }
@@ -950,9 +973,8 @@ try {
   .entitet-rad-kompakt .namn { font-size:.86rem; font-weight:650; }
   .entitet-rad-kompakt .statusrad { font-size:.76rem; color:var(--muted); font-variant-numeric:tabular-nums;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .entitet-rad-kompakt .ta-bort-liten { background:none; border:0; box-shadow:none; color:var(--muted); opacity:.5;
-    cursor:pointer; font-size:.9rem; padding:0; line-height:1; flex:0 0 auto; }
-  .entitet-rad-kompakt .ta-bort-liten:hover { opacity:1; color:var(--err); transform:none; }
+  .entitet-rad-kompakt .ta-bort-liten { opacity:.5; flex:0 0 auto; }
+  .automation-rad .ta-bort-liten { flex:0 0 auto; }
   .metrik-tile.god .not { background:color-mix(in srgb, var(--ok) 20%, transparent); color:var(--ok); }
   .metrik-tile.varning .not { background:color-mix(in srgb, var(--warn) 22%, transparent); color:var(--warn); }
   .metrik-tile.fel .varde { font-size:.86rem; color:var(--err); font-weight:600; }
@@ -1327,6 +1349,16 @@ try {
     </div>
   </div>
   <div class="card" style="margin-top:20px">
+    <div class="skapa-rad" style="align-items:center; justify-content:space-between">
+      <h2 style="margin:0" data-i18n="automationer">Automationer</h2>
+      <button id="automationKopplaBtn" data-i18n="koppla_automation">Koppla automation</button>
+    </div>
+    <p class="lbl" style="margin-top:6px" data-i18n="automationer_hjalp">Dina egna Home Assistant-automationer, kopplade till trädgården.</p>
+    <div id="automationInnehall" style="margin-top:12px">
+      <div class="skelett"><div class="skelett-rad" style="width:55%"></div><div class="skelett-rad" style="width:70%"></div></div>
+    </div>
+  </div>
+  <div class="card">
     <div id="schemaInnehall">
       <div class="skelett"><div class="skelett-rad" style="width:60%"></div><div class="skelett-rad" style="width:75%"></div></div>
     </div>
@@ -1655,6 +1687,7 @@ let historik = [];
 let installningar = {};
 let notiserHanterade = []; // { id, atgard, tid } – hämtade från servern
 let scheman = []; // { id, zonId, veckodagar: [0-6] } – vattningspåminnelser
+let automationer = []; // { entityId, namn, pa, lankad } – riktiga HA-automationer
 let sprak = "sv"; // sätts riktigt av tillampaSprak() vid start, se längre ner
 // Lexikon för nya funktioner, se kommentaren vid tillampaSprak(). Lägg en
 // rad här per ny sträng och skriv t("nyckel") i HTML-byggaren istället för
@@ -1724,7 +1757,7 @@ const SPRAK_TEXT = {
     sprak: "Språk", svenska: "Svenska", engelska: "English",
     // Validation and status
     bakgrund: "Bakgrund", bakgrund_hjalp: "Rutnät, rent eller din egen flygbild",    bakgrund_rutnat: "Rutnät", bakgrund_ren: "Rent", bakgrund_foto: "Foto",    bakgrund_hjalp_lang: "Rent och Foto tar båda bort rutnätet. Ladda upp en flygbild (en skärmdump från Google Maps duger) för att lägga ut zonerna över er faktiska tomt.",    flygbild: "Flygbild", ladda_upp_bild: "Ladda upp bild", byt_bild: "Byt bild",    bildstyrka: "Bildstyrka", bildstyrka_hjalp: "Tona ner bilden så plantikonerna syns tydligt ovanpå.",    laddar_upp: "Laddar upp …", ingen_karta: "Ingen karta vald.",
-    namn_kravs: "Namn krävs.", kunde_inte_spara: "Kunde inte spara: ", sparat: "Sparat.", okategoriserat: "Okategoriserat", fyller_ytan_kort: "fyller ytan", var_finns: "Var", inga_odlingar: "Inga odlingar ännu – lägg till en planta i en zon på kartan.", plats: "plats", platser: "platser", bekrafta_ta_bort_zon: "Ta bort zonen? Plantorna blir okategoriserade och sektioner flyttas upp en nivå.", bekrafta_ta_bort_planta: "Ta bort odlingen?", passa_in_bilden: "Passa in bilden", passa_in_hjalp: "Vrid, skala och flytta bilden tills bäddarna hamnar där de faktiskt ligger.", rotation: "Rotation", storlek: "Storlek", flytta_x: "Flytta i sidled", flytta_y: "Flytta upp/ner", aterstall_placering: "Återställ placering", klar: "Klar",
+    namn_kravs: "Namn krävs.", kunde_inte_spara: "Kunde inte spara: ", sparat: "Sparat.", okategoriserat: "Okategoriserat", fyller_ytan_kort: "fyller ytan", var_finns: "Var", inga_odlingar: "Inga odlingar ännu – lägg till en planta i en zon på kartan.", plats: "plats", platser: "platser", bekrafta_ta_bort_zon: "Ta bort zonen? Plantorna blir okategoriserade och sektioner flyttas upp en nivå.", bekrafta_ta_bort_planta: "Ta bort odlingen?", passa_in_bilden: "Passa in bilden", passa_in_hjalp: "Vrid, skala och flytta bilden tills bäddarna hamnar där de faktiskt ligger.", rotation: "Rotation", storlek: "Storlek", flytta_x: "Flytta i sidled", flytta_y: "Flytta upp/ner", aterstall_placering: "Återställ placering", klar: "Klar", automationer: "Automationer", koppla_automation: "Koppla automation", automationer_hjalp: "Dina egna Home Assistant-automationer, kopplade till trädgården.", inga_automationer: "Inga automationer kopplade än.", valj_automation_hjalp: "Välj en automation från Home Assistant att koppla till trädgården.", alla_automationer_kopplade: "Alla dina HA-automationer är redan kopplade.", inga_ha_automationer: "Inga automationer hittades i Home Assistant.",
     valj_zon: "Välj en zon.", valj_veckodag: "Välj minst en veckodag.",
     // Create-new modal
     skapa_sub: "Zoner, plantor, kartor och egna block",
@@ -1806,7 +1839,7 @@ const SPRAK_TEXT = {
     tema_hjalp: "Follows your device's light/dark setting by default, or pick one yourself.",
     sprak: "Language", svenska: "Svenska", engelska: "English",
     bakgrund: "Background", bakgrund_hjalp: "Grid, plain or your own aerial photo",    bakgrund_rutnat: "Grid", bakgrund_ren: "Plain", bakgrund_foto: "Photo",    bakgrund_hjalp_lang: "Plain and Photo both drop the grid. Upload an aerial shot (a Google Maps screenshot works) to lay your zones out over your actual property.",    flygbild: "Aerial photo", ladda_upp_bild: "Upload image", byt_bild: "Replace image",    bildstyrka: "Image strength", bildstyrka_hjalp: "Dim the photo so the plant icons stay readable on top of it.",    laddar_upp: "Uploading …", ingen_karta: "No map selected.",
-    namn_kravs: "A name is required.", kunde_inte_spara: "Could not save: ", sparat: "Saved.", okategoriserat: "Uncategorised", fyller_ytan_kort: "fills the area", var_finns: "Where", inga_odlingar: "Nothing planted yet. Add a plant to a zone on the map.", plats: "place", platser: "places", bekrafta_ta_bort_zon: "Delete this zone? Its plants become uncategorised and any sections move up a level.", bekrafta_ta_bort_planta: "Delete this planting?", passa_in_bilden: "Line the photo up", passa_in_hjalp: "Rotate, resize and nudge the photo until your beds sit where they really are.", rotation: "Rotation", storlek: "Size", flytta_x: "Move sideways", flytta_y: "Move up/down", aterstall_placering: "Reset placement", klar: "Done",
+    namn_kravs: "A name is required.", kunde_inte_spara: "Could not save: ", sparat: "Saved.", okategoriserat: "Uncategorised", fyller_ytan_kort: "fills the area", var_finns: "Where", inga_odlingar: "Nothing planted yet. Add a plant to a zone on the map.", plats: "place", platser: "places", bekrafta_ta_bort_zon: "Delete this zone? Its plants become uncategorised and any sections move up a level.", bekrafta_ta_bort_planta: "Delete this planting?", passa_in_bilden: "Line the photo up", passa_in_hjalp: "Rotate, resize and nudge the photo until your beds sit where they really are.", rotation: "Rotation", storlek: "Size", flytta_x: "Move sideways", flytta_y: "Move up/down", aterstall_placering: "Reset placement", klar: "Done", automationer: "Automations", koppla_automation: "Link automation", automationer_hjalp: "Your own Home Assistant automations, linked to the garden.", inga_automationer: "No automations linked yet.", valj_automation_hjalp: "Pick an automation from Home Assistant to link to the garden.", alla_automationer_kopplade: "All your HA automations are already linked.", inga_ha_automationer: "No automations found in Home Assistant.",
     valj_zon: "Pick a zone.", valj_veckodag: "Pick at least one day.",
     skapa_sub: "Zones, plants, maps and custom blocks",
     flik_zon: "Zone", flik_planta: "Plant", flik_karta: "Map", flik_block: "Block",
@@ -4011,11 +4044,21 @@ function bakgrundModalHtml() {
     </div>` : ""}
     <div class="status" id="bakgrundStatus"></div>`;
 }
+function oppnaAutomationValjare() {
+  modalKontext = { typ: "automation" };
+  renderaModal();
+  $("modalBakgrund").style.display = "flex";
+}
 function renderaModal() {
   if (!modalKontext) return;
   const { typ, id } = modalKontext;
   if (typ === "bakgrund") {
     $("modalInnehall").innerHTML = bakgrundModalHtml();
+    oversattStatiskMarkup();
+    return;
+  }
+  if (typ === "automation") {
+    $("modalInnehall").innerHTML = automationValjareHtml();
     oversattStatiskMarkup();
     return;
   }
@@ -4729,6 +4772,29 @@ document.addEventListener("click", async (e) => {
   // spara ett nytt.
   const schemaDagBtn = e.target.closest(".schema-dag-btn");
   if (schemaDagBtn) { schemaDagBtn.classList.toggle("aktiv"); return; }
+  // HA automations linked to the garden: open the picker, link one from it,
+  // or unlink one from the main list. Toggling on/off is a "change" event
+  // on the checkbox itself, handled separately below.
+  if (e.target.closest("#automationKopplaBtn")) { oppnaAutomationValjare(); return; }
+  const automationLank = e.target.closest(".automation-lank-btn");
+  if (automationLank) {
+    await fetch(`${BAS}api/automations/link`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ entityId: automationLank.dataset.entity }),
+    });
+    await laddaAutomationer();
+    renderaModal();
+    return;
+  }
+  const automationKopplaBort = e.target.closest(".automation-koppla-bort");
+  if (automationKopplaBort) {
+    await fetch(`${BAS}api/automations/unlink`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ entityId: automationKopplaBort.dataset.entity }),
+    });
+    await laddaAutomationer();
+    return;
+  }
   // Map backdrop: grid / plain / photo, plus uploading and dimming the photo
   if (e.target.closest("#bakgrundBtn")) { oppnaBakgrundModal(); return; }
   const bakgrundVal = e.target.closest("#bakgrundSegment .vy-segment-btn");
@@ -5156,8 +5222,25 @@ document.addEventListener("input", (e) => {
 });
 document.addEventListener("change", async (e) => {
   const cfg = BAKGRUND_REGLAGE[e.target.id];
-  if (!cfg) return;
-  await sparaKartaBakgrund({ [cfg.falt]: Number(e.target.value) });
+  if (cfg) { await sparaKartaBakgrund({ [cfg.falt]: Number(e.target.value) }); return; }
+  if (e.target.classList.contains("automation-brytare")) {
+    const entityId = e.target.dataset.entity;
+    const pa = e.target.checked;
+    e.target.disabled = true;
+    try {
+      const res = await fetch(`${BAS}api/automations/toggle`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entityId, pa }),
+      });
+      if (!res.ok) throw new Error();
+      const rad = automationer.find((a) => a.entityId === entityId);
+      if (rad) rad.pa = pa;
+    } catch {
+      e.target.checked = !pa; // HA didn't confirm the change, so don't claim it happened
+    } finally {
+      e.target.disabled = false;
+    }
+  }
 });
 $("solReglage").addEventListener("input", () => {
   solMinut = Number($("solReglage").value) || 0;
@@ -5198,7 +5281,7 @@ function visaVy() {
   if (aktiv.vy === "dashboardVy" && !kartaAnvandarstyrd) passaKarta();
   if (aktiv.vy === "anteckningarVy") renderaAnteckningar();
   if (aktiv.vy === "historikVy") renderaGlobalHistorik();
-  if (aktiv.vy === "schemaVy") { renderaSchema(); laddaSchemaForslag(); }
+  if (aktiv.vy === "schemaVy") { renderaSchema(); laddaSchemaForslag(); laddaAutomationer(); }
 }
 // #zon=<id> öppnar en zon direkt – det är den länken QR-etiketterna bär.
 function oppnaFranHash() {
@@ -5447,6 +5530,52 @@ function schemaForslagHtml() {
 }
 function renderaSchema() {
   $("schemaInnehall").innerHTML = schemaListaHtml() + schemaForslagHtml() + schemaFormularHtml();
+  renderaAutomationer();
+}
+// ---- Home Assistant automations linked to the garden ----
+// Deliberately thin: this never authors automation logic, it only shows
+// automations that already exist in HA and lets you flip the ones you
+// picked as garden-relevant on or off without switching apps.
+async function laddaAutomationer() {
+  try {
+    const res = await fetch(`${BAS}api/automations`, { cache: "no-store" });
+    automationer = await res.json();
+  } catch { automationer = []; }
+  renderaAutomationer();
+}
+function renderaAutomationer() {
+  const el = $("automationInnehall");
+  if (!el) return;
+  const lankade = automationer.filter((a) => a.lankad);
+  el.innerHTML = lankade.length ? `<div class="automation-lista">${lankade.map((a) => `
+    <div class="automation-rad" data-entity="${esc(a.entityId)}">
+      <div class="info">
+        <div class="namn">${esc(a.namn)}</div>
+        <div class="entity-id">${esc(a.entityId)}</div>
+      </div>
+      <label class="brytare" title="${esc(a.namn)}">
+        <input type="checkbox" class="automation-brytare" data-entity="${esc(a.entityId)}" ${a.pa ? "checked" : ""}>
+        <span class="spar"></span>
+      </label>
+      <button class="ta-bort-liten automation-koppla-bort" data-entity="${esc(a.entityId)}" title="${t("koppla_bort")}">×</button>
+    </div>`).join("")}</div>` : `<div class="automation-tom">${t("inga_automationer")}</div>`;
+}
+function automationValjareHtml() {
+  const olankade = automationer.filter((a) => !a.lankad);
+  return `
+    <button class="ta-bort" id="modalStangBtn" data-i18n-title="stang" style="position:absolute; top:16px; right:16px">×</button>
+    <h3>${t("koppla_automation")}</h3>
+    <div class="modal-sub">${t("valj_automation_hjalp")}</div>
+    <div class="modal-entiteter" style="margin-top:14px; max-height:340px; overflow:auto">
+      ${olankade.length ? olankade.map((a) => `
+        <div class="modal-lagg-entitet">
+          <div>
+            <div class="namn">${esc(a.namn)}</div>
+            <div class="entity-id">${esc(a.entityId)}</div>
+          </div>
+          <button class="automation-lank-btn" data-entity="${esc(a.entityId)}">${t("koppla")}</button>
+        </div>`).join("") : `<div class="tom">${automationer.length ? t("alla_automationer_kopplade") : t("inga_ha_automationer")}</div>`}
+    </div>`;
 }
 visaVy();
 
