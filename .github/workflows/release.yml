@@ -32,12 +32,18 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # ghcr.io requires a lowercase image path, but github.repository keeps
+      # whatever case the owner name actually has (e.g. "Growarr/growarr")
+      # - so lowercase it here rather than pushing a tag that fails to parse.
+      - name: Lowercase image path
+        run: echo "IMAGE=$(echo 'ghcr.io/${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+
       - name: Build and push version-tagged image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+          tags: ${{ env.IMAGE }}:${{ github.ref_name }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

@@ -7,7 +7,7 @@
 <p align="center">A garden map that knows the weather, waters itself intelligently, and talks to Home Assistant.</p>
 
 <p align="center">
-  <a href="https://github.com/mathiasmholm/growarr/actions/workflows/docker-publish.yml"><img src="https://github.com/mathiasmholm/growarr/actions/workflows/docker-publish.yml/badge.svg" alt="Build status"></a>
+  <a href="https://github.com/Growarr/growarr/actions/workflows/docker-publish.yml"><img src="https://github.com/Growarr/growarr/actions/workflows/docker-publish.yml/badge.svg" alt="Build status"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
 </p>
 
@@ -59,7 +59,7 @@ phone before a cold snap hits.
 
 ```bash
 sudo mkdir -p /opt/docker/growarr && cd /opt/docker/growarr
-sudo git clone https://github.com/mathiasmholm/growarr.git .
+sudo git clone https://github.com/Growarr/growarr.git .
 cp .env.example .env   # fill in HA_TOKEN, GEO_LAT, GEO_LON
 sudo docker compose up -d
 ```
@@ -69,11 +69,11 @@ the image on every push; pair it with [Watchtower](https://containrrr.dev/watcht
 and updates roll out on their own.
 
 Prefer to update on your own terms instead? Check the
-[releases](https://github.com/mathiasmholm/growarr/releases) for a specific
+[releases](https://github.com/Growarr/growarr/releases) for a specific
 version, e.g. `v0.1.0`, and pin `docker-compose.yml` to it:
 
 ```yaml
-image: ghcr.io/mathiasmholm/growarr:v0.1.0 # instead of :latest
+image: ghcr.io/growarr/growarr:v0.1.0 # instead of :latest
 ```
 
 <details>

@@ -25,7 +25,7 @@ if (!LAT || !LON) {
 // different response shape ("time" instead of "validTime", a flat "data"
 // object instead of a parameters array).
 const url = `https://opendata-download-metfcst.smhi.se/api/category/snow1g/version/1/geotype/point/lon/${LON}/lat/${LAT}/data.json`;
-const res = await fetch(url, { headers: { "User-Agent": "growarr (github.com/mathiasmholm/growarr)" } });
+const res = await fetch(url, { headers: { "User-Agent": "growarr (github.com/Growarr/growarr)" } });
 if (!res.ok) {
   console.error(`SMHI responded ${res.status}`);
   process.exit(1);
@@ -80,7 +80,7 @@ if (WEBHOOK_URL) {
   try {
     const res3 = await fetch(WEBHOOK_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "User-Agent": "growarr-bot/1.0 (+github.com/mathiasmholm/growarr)" },
+      headers: { "Content-Type": "application/json", "User-Agent": "growarr-bot/1.0 (+github.com/Growarr/growarr)" },
       body: JSON.stringify({ title, message }),
     });
     if (!res3.ok) console.warn(`HA webhook responded ${res3.status}`);

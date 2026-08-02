@@ -101,7 +101,7 @@ async function hamtaVader() {
   // ett annat svarsformat ("time" istället för "validTime", platt "data"-
   // objekt istället för en parameters-array).
   const url = `https://opendata-download-metfcst.smhi.se/api/category/snow1g/version/1/geotype/point/lon/${GEO_LON}/lat/${GEO_LAT}/data.json`;
-  const res = await fetch(url, { headers: { "User-Agent": "growarr (github.com/mathiasmholm/growarr)" } });
+  const res = await fetch(url, { headers: { "User-Agent": "growarr (github.com/Growarr/growarr)" } });
   if (!res.ok) return { fel: `SMHI svarade ${res.status}` };
   const data = await res.json();
 
@@ -646,7 +646,7 @@ async function skickaNotis(titel, meddelande) {
     try {
       const res = await fetch(webhookUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "User-Agent": "growarr-bot/1.0 (+github.com/mathiasmholm/growarr)" },
+        headers: { "Content-Type": "application/json", "User-Agent": "growarr-bot/1.0 (+github.com/Growarr/growarr)" },
         body: JSON.stringify({ title: titel, message: meddelande }),
       });
       if (!res.ok) console.warn(`HA-webhook svarade ${res.status}`);
