@@ -68,6 +68,14 @@ That's a working panel at `:8097`. GitHub Actions rebuilds and republishes
 the image on every push; pair it with [Watchtower](https://containrrr.dev/watchtower/)
 and updates roll out on their own.
 
+Prefer to update on your own terms instead? Check the
+[releases](https://github.com/mathiasmholm/growarr/releases) for a specific
+version, e.g. `v1.1.0`, and pin `docker-compose.yml` to it:
+
+```yaml
+image: ghcr.io/mathiasmholm/growarr:v1.1.0 # instead of :latest
+```
+
 <details>
 <summary><strong>Environment variables</strong></summary>
 
