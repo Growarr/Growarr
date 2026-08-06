@@ -1342,6 +1342,10 @@ try {
     <div id="anteckningarKalender"></div>
   </div>
   <div class="card">
+    <h2 data-i18n="ny_anteckning">Ny anteckning</h2>
+    <div id="anteckningarSkrivInnehall"></div>
+  </div>
+  <div class="card">
     <h2 data-i18n="alla_anteckningar">Alla anteckningar</h2>
     <div id="anteckningarInnehall"></div>
   </div>
@@ -1773,8 +1777,8 @@ const SPRAK_TEXT = {
     samlar_data: "Samlar data … kolla tillbaka om ett tag.",
     global_historik_tom: "Inga entiteter kopplade till några zoner eller plantor än – koppla en under en zons eller plantas detaljer på Översikt.",
     // Notes
-    kalender: "Kalender", alla_anteckningar: "Alla anteckningar",
-    anteckningar_tom: "Inga anteckningar än – skriv en fri text på en planta i dess detaljpanel så samlas den här.",
+    kalender: "Kalender", alla_anteckningar: "Alla anteckningar", ny_anteckning: "Ny anteckning", valj_planta: "Välj planta",
+    anteckningar_tom: "Inga anteckningar än – skriv en i formuläret ovan.",
     skord_denna_manad: "Skörd denna månad", inget_planterat_dagen: "Inget planterat den här dagen.", inget_planterat: "Inget planterat än", planterat: "st planterat",
     foreg_manad: "Föregående månad", nasta_manad: "Nästa månad",
     // Schedule
@@ -1859,8 +1863,8 @@ const SPRAK_TEXT = {
     historik_tom: "Link a Home Assistant entity to a zone or planting (click it on the garden map) to see history here.",
     samlar_data: "Collecting data … check back in a while.",
     global_historik_tom: "No entities linked to any zone or plant yet. Link one under a zone's or plant's details on Overview.",
-    kalender: "Calendar", alla_anteckningar: "All notes",
-    anteckningar_tom: "No notes yet. Write free text on a plant in its detail panel and it shows up here.",
+    kalender: "Calendar", alla_anteckningar: "All notes", ny_anteckning: "New note", valj_planta: "Pick a plant",
+    anteckningar_tom: "No notes yet — write one in the form above.",
     skord_denna_manad: "Harvest this month", inget_planterat_dagen: "Nothing planted on this day.", inget_planterat: "Nothing planted yet", planterat: "planted",
     foreg_manad: "Previous month", nasta_manad: "Next month",
     nytt_schema: "New schedule", inga_scheman: "No schedules yet. Add one below.",
@@ -4955,6 +4959,23 @@ document.addEventListener("click", async (e) => {
     renderaSchema();
     return;
   }
+  const anteckningSpara = e.target.closest("#anteckningSparaBtn");
+  if (anteckningSpara) {
+    const id = $("anteckningPlantaVal")?.value;
+    if (!id) return;
+    const text = $("anteckningTextVal").value.trim();
+    try {
+      await sparaOdling(id, { anteckning: text });
+      anteckningarSkrivValdId = id;
+      renderaAnteckningar();
+      const st = $("anteckningSkrivStatus");
+      st.textContent = t("sparat"); st.className = "status ok";
+    } catch (err) {
+      const st = $("anteckningSkrivStatus");
+      st.textContent = t("kunde_inte_spara") + err.message; st.className = "status err";
+    }
+    return;
+  }
   const schemaLaggTill = e.target.closest("#schemaLaggTillBtn");
   if (schemaLaggTill) {
     const zonId = $("schemaZonVal")?.value;
@@ -5330,6 +5351,14 @@ document.addEventListener("input", (e) => {
   tillampaKartBakgrund();
 });
 document.addEventListener("change", async (e) => {
+  if (e.target.id === "anteckningPlantaVal") {
+    anteckningarSkrivValdId = e.target.value;
+    const o = odlingar.find((x) => x.id === anteckningarSkrivValdId);
+    $("anteckningTextVal").value = o?.anteckning ?? "";
+    $("anteckningSkrivStatus").textContent = "";
+    $("anteckningSkrivStatus").className = "status";
+    return;
+  }
   const cfg = BAKGRUND_REGLAGE[e.target.id];
   if (cfg) { await sparaKartaBakgrund({ [cfg.falt]: Number(e.target.value) }); return; }
   if (e.target.classList.contains("automation-brytare")) {
@@ -5422,6 +5451,21 @@ $("navInstallningarBtn").addEventListener("click", () => { location.hash = "inst
 // gömd bakom en flikväxel.
 let anteckningarManad = new Date().toISOString().slice(0, 7);
 let anteckningarValdDag = null;
+let anteckningarSkrivValdId = null;
+function anteckningarSkrivHtml() {
+  if (!odlingar.length) return `<div class="tom">${t("inga_odlingar")}</div>`;
+  const sorterade = [...odlingar].sort((a, b) => a.namn.localeCompare(b.namn, "sv"));
+  const vald = sorterade.find((o) => o.id === anteckningarSkrivValdId) ?? sorterade[0];
+  return `<div class="falt">
+    <label class="lbl">${t("valj_planta")}</label>
+    <select id="anteckningPlantaVal">${sorterade.map((o) => `<option value="${esc(o.id)}"${o.id === vald.id ? " selected" : ""}>${esc(o.namn)}</option>`).join("")}</select>
+  </div>
+  <div class="falt">
+    <textarea id="anteckningTextVal" placeholder="${t("anteckning_placeholder")}">${esc(vald.anteckning ?? "")}</textarea>
+  </div>
+  <button id="anteckningSparaBtn">${t("spara")}</button>
+  <div class="status" id="anteckningSkrivStatus"></div>`;
+}
 function datumText(d) {
   return new Date(d + "T12:00:00").toLocaleDateString("sv-SE", { day: "numeric", month: "long", year: "numeric" });
 }
@@ -5500,6 +5544,7 @@ function anteckningarKalenderHtml() {
 }
 function renderaAnteckningar() {
   $("anteckningarKalender").innerHTML = anteckningarKalenderHtml();
+  $("anteckningarSkrivInnehall").innerHTML = anteckningarSkrivHtml();
   $("anteckningarInnehall").innerHTML = anteckningarListaHtml();
 }
 // Öppnar en plantas detaljpanel från en ANNAN vy (anteckningar/kalender) –
