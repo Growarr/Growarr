@@ -242,6 +242,163 @@ async function vaxlaHaAutomation(entityId, pa) {
   }
 }
 
+// Every entity_id anywhere inside a trigger/condition/action tree, however
+// deeply nested (HA's schema allows entity_id as a string or a list, at any
+// level). The single point every automation-writing path checks against
+// the real entity list - nothing gets close to HA's config API otherwise.
+function samlaEntitetIdI(varde, ut = new Set()) {
+  if (Array.isArray(varde)) { for (const v of varde) samlaEntitetIdI(v, ut); }
+  else if (varde && typeof varde === "object") {
+    for (const [k, v] of Object.entries(varde)) {
+      if (k === "entity_id") {
+        if (typeof v === "string") ut.add(v);
+        else if (Array.isArray(v)) for (const id of v) if (typeof id === "string") ut.add(id);
+      }
+      samlaEntitetIdI(v, ut);
+    }
+  }
+  return ut;
+}
+// A minimal JSON-to-YAML renderer, display only - HA's config API takes
+// JSON, so this never needs to parse YAML back, only show it. Good enough
+// for the plain nested dicts/lists/strings an automation config actually is.
+function yamlVarde(v) {
+  if (typeof v !== "string") return String(v);
+  return v === "" || /^[\s#>|@`"'%*&!?:,\[\]{}-]|[:#]\s|\s$/.test(v) ? JSON.stringify(v) : v;
+}
+function tillYaml(varde, indent = 0) {
+  const pad = "  ".repeat(indent);
+  if (Array.isArray(varde)) {
+    if (!varde.length) return `${pad}[]`;
+    return varde.map((v) => {
+      if (v && typeof v === "object") {
+        const rader = tillYaml(v, indent + 1).split("\n");
+        // A single-key object (e.g. { delay: "..." }) leaves nothing to
+        // join in the "rest" - joining an empty array still produces "",
+        // which would otherwise add a stray blank line after every item
+        // that happens to be that short.
+        const rest = rader.length > 1 ? `\n${rader.slice(1).join("\n")}` : "";
+        return `${pad}- ${rader[0].trimStart()}${rest}`;
+      }
+      return `${pad}- ${yamlVarde(v)}`;
+    }).join("\n");
+  }
+  if (varde && typeof varde === "object") {
+    const nycklar = Object.entries(varde);
+    if (!nycklar.length) return `${pad}{}`;
+    return nycklar.map(([k, v]) => (v && typeof v === "object")
+      ? `${pad}${k}:\n${tillYaml(v, indent + 1)}`
+      : `${pad}${k}: ${yamlVarde(v)}`).join("\n");
+  }
+  return `${pad}${yamlVarde(varde)}`;
+}
+
+// ---- Claude drafts a Home Assistant automation from a plain description ----
+// HA's own automation editor (visual and YAML) is already good - Growarr has
+// no business rebuilding it. What Growarr actually knows that HA's editor
+// doesn't is the garden itself, so this is scoped to drafting, not editing:
+// Claude proposes trigger/condition/action from real, already-linked
+// entities and Growarr's own exported metrics, the user reviews the plain-
+// language explanation and the YAML, and only an explicit "create" writes
+// anything to Home Assistant.
+async function utkastAutomation(beskrivning) {
+  if (!ANTHROPIC_API_KEY) return { fel: "ANTHROPIC_API_KEY är inte konfigurerad" };
+  const [d, vader, allaEntiteter] = await Promise.all([lasData(), hamtaVader(), hamtaAllaEntiteter()]);
+  const sprak = sprakNamn(d.installningar);
+  // Scoped to entities that actually mean something to this garden, plus
+  // Growarr's own exported sensors - never the household's whole HA
+  // install, most of which has nothing to do with the garden.
+  const kopplade = new Set(
+    [...kopladeEnhetIder(d)].map((id) => d.enheter.find((e) => e.id === id)?.entityId).filter(Boolean),
+  );
+  for (const zon of d.zoner.filter((z) => !z.foralderId)) kopplade.add(haMetrikEntitetId(zon.id));
+  const relevanta = allaEntiteter.filter((e) => kopplade.has(e.entityId));
+  const entitetText = relevanta.map((e) => `- entity_id: ${e.entityId} | namn: ${e.namn}`).join("\n");
+  try {
+    const sammanfattning = await byggTradgardsSammanfattning(d, vader);
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: ANTHROPIC_MODEL,
+        max_tokens: 1200,
+        messages: [{
+          role: "user",
+          content: `Du hjälper till att skriva ett utkast till en Home Assistant-automation utifrån en beskrivning på ${sprak}.
+
+Beskrivning: "${beskrivning}"
+
+Regler, viktigast:
+- Använd ENDAST entity_id från listan nedan. Hitta ALDRIG på en entitet.
+- Om beskrivningen kräver något (t.ex. en ventil) som inte finns i listan: svara med exakt {"fel":"kort förklaring på ${sprak} av vad som saknas"} och inget annat.
+- Bygg "trigger", "condition" och "action" enligt Home Assistants eget automationsschema (samma struktur som i HA:s YAML, fast som JSON-objekt/listor).
+- "alias" är en kort titel på ${sprak}. "forklaring" är 1-2 meningar på ${sprak} som beskriver vad automationen gör, för någon som inte läser JSON.
+- "mode" är "single" om du inte har skäl att välja annat.
+
+Tillgängliga entiteter:
+${entitetText || "(inga kopplade entiteter eller exporterade mätvärden ännu)"}
+
+Trädgården:
+${sammanfattning}
+
+Svara ENDAST med kompakt JSON: {"alias":"...","forklaring":"...","trigger":[...],"condition":[...],"action":[...],"mode":"single"}`,
+        }],
+      }),
+    });
+    if (!res.ok) return { fel: `Claude svarade ${res.status}` };
+    const data = await res.json();
+    if (data.stop_reason === "refusal") return { fel: "Claude avböjde" };
+    const text = data.content?.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
+    const parsed = JSON.parse((text ?? "").replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, ""));
+    if (parsed.fel) return { fel: String(parsed.fel).slice(0, 300) };
+    if (!parsed.alias || !Array.isArray(parsed.trigger) || !Array.isArray(parsed.action)) {
+      return { fel: "Claude svarade ofullständigt" };
+    }
+    // Hard validation: an invented entity_id would otherwise silently fail,
+    // or worse, resolve against the wrong real device, once created in HA.
+    const giltiga = new Set(relevanta.map((e) => e.entityId));
+    const anvanda = samlaEntitetIdI({ trigger: parsed.trigger, condition: parsed.condition ?? [], action: parsed.action });
+    const pahittade = [...anvanda].filter((id) => !giltiga.has(id));
+    if (pahittade.length) return { fel: `Använde okända entiteter: ${pahittade.join(", ")}` };
+    const konfig = {
+      alias: String(parsed.alias).slice(0, 100),
+      trigger: parsed.trigger, condition: Array.isArray(parsed.condition) ? parsed.condition : [], action: parsed.action,
+      mode: ["single", "restart", "queued", "parallel"].includes(parsed.mode) ? parsed.mode : "single",
+    };
+    return { ...konfig, forklaring: typeof parsed.forklaring === "string" ? parsed.forklaring.slice(0, 400) : "", yaml: tillYaml(konfig) };
+  } catch (err) {
+    return { fel: err.message };
+  }
+}
+// The only path that actually writes to Home Assistant's automation config.
+// Re-validates independently of utkastAutomation(): never trust a client-
+// echoed config, since this is the step with a real, permanent side effect.
+async function skapaHaAutomation({ alias, trigger, condition, action, mode }) {
+  if (!HA_TOKEN) return { fel: "HA_TOKEN är inte konfigurerat" };
+  const giltiga = new Set((await hamtaAllaEntiteter()).map((e) => e.entityId));
+  const anvanda = samlaEntitetIdI({ trigger, condition, action });
+  const pahittade = [...anvanda].filter((id) => !giltiga.has(id));
+  if (pahittade.length) return { fel: `Okända entiteter: ${pahittade.join(", ")}` };
+  const id = `growarr_${Date.now()}`;
+  try {
+    const res = await fetch(`${HA_URL}/api/config/automation/config/${id}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${HA_TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ alias, trigger, condition: condition ?? [], action, mode: mode || "single" }),
+    });
+    if (!res.ok) return { fel: `HA svarade ${res.status}` };
+    // Config API writes the file but doesn't apply it - without this the
+    // automation exists on disk but HA keeps running the old set until its
+    // own next restart.
+    await fetch(`${HA_URL}/api/services/automation/reload`, {
+      method: "POST", headers: { Authorization: `Bearer ${HA_TOKEN}`, "Content-Type": "application/json" }, body: "{}",
+    }).catch(() => {});
+    return { ok: true, entityId: `automation.${id}` };
+  } catch (err) {
+    return { fel: err.message };
+  }
+}
+
 // ---- Smart bevattningsinsikt (Claude) ----
 // Ger Claude en sammanfattning av trädgården (zoner, odlingar, kopplade
 // sensorers senaste värden, väderprognos) och ber om en kort, konkret
@@ -476,37 +633,84 @@ function enhetArFuktsensor(enhet) {
   return namn.includes("fukt") || namn.includes("moist") || namn.includes("humid");
 }
 
-// The arithmetic half: which zones are drying out, and how fast?
+// The arithmetic core: is this one zone drying out, and how fast? Shared by
+// the schedule suggestions (which skip zones already scheduled) and the HA
+// sensor export (which does not - the real-world number is worth exposing
+// either way, a schedule existing in Growarr doesn't make it stale).
+function raknaFuktMetrikForZon(zon, d) {
+  for (const enhetId of zon.enhetIds ?? []) {
+    const enhet = d.enheter.find((e) => e.id === enhetId);
+    if (!enhet || !enhetArFuktsensor(enhet)) continue;
+    const punkter = (d.historik ?? [])
+      .filter((p) => p.enhetId === enhetId)
+      .sort((a, b) => new Date(a.tid) - new Date(b.tid));
+    const lutning = torkTakt(punkter);
+    if (lutning == null || lutning > -MIN_LUTNING) continue; // flat, or getting wetter
+    const nu = Number(punkter[punkter.length - 1].varde);
+    // Already below the dry mark is no reason to skip: that is exactly when
+    // a schedule is wanted. dagarTillTorrt clamps to 1 in that case.
+    if (!Number.isFinite(nu)) continue;
+    const takt = Math.abs(lutning);
+    const dagarTillTorrt = Math.max(1, Math.round((nu - TORR_GRANS) / takt));
+    const intervall = Math.min(7, Math.max(1, dagarTillTorrt));
+    return {
+      zonId: zon.id, zonNamn: zon.namn, veckodagar: veckodagarForIntervall(intervall),
+      // Everything Claude is allowed to mention is measured, never guessed.
+      // Math.max(0): a glitching sensor should never print a negative %.
+      matt: { nu: Math.max(0, Math.round(nu)), taktPerDygn: Math.round(takt * 10) / 10, dagarTillTorrt, intervall, sensor: enhet.namn },
+    };
+  }
+  return null; // one metric per zone is enough; no qualifying sensor found
+}
 function raknaSchemaKandidater(d) {
-  const kandidater = [];
   const harSchema = new Set((d.scheman ?? []).map((s) => s.zonId));
+  const kandidater = [];
   for (const zon of d.zoner.filter((z) => !z.foralderId)) {
     if (harSchema.has(zon.id)) continue; // already scheduled, leave it alone
-    for (const enhetId of zon.enhetIds ?? []) {
-      const enhet = d.enheter.find((e) => e.id === enhetId);
-      if (!enhet || !enhetArFuktsensor(enhet)) continue;
-      const punkter = (d.historik ?? [])
-        .filter((p) => p.enhetId === enhetId)
-        .sort((a, b) => new Date(a.tid) - new Date(b.tid));
-      const lutning = torkTakt(punkter);
-      if (lutning == null || lutning > -MIN_LUTNING) continue; // flat, or getting wetter
-      const nu = Number(punkter[punkter.length - 1].varde);
-      // Already below the dry mark is no reason to skip: that is exactly when
-      // a schedule is wanted. dagarTillTorrt clamps to 1 in that case.
-      if (!Number.isFinite(nu)) continue;
-      const takt = Math.abs(lutning);
-      const dagarTillTorrt = Math.max(1, Math.round((nu - TORR_GRANS) / takt));
-      const intervall = Math.min(7, Math.max(1, dagarTillTorrt));
-      kandidater.push({
-        zonId: zon.id, zonNamn: zon.namn, veckodagar: veckodagarForIntervall(intervall),
-        // Everything Claude is allowed to mention is measured, never guessed
-        // Math.max(0): a glitching sensor should never print a negative %
-        matt: { nu: Math.max(0, Math.round(nu)), taktPerDygn: Math.round(takt * 10) / 10, dagarTillTorrt, intervall, sensor: enhet.namn },
-      });
-      break; // one suggestion per zone is enough
-    }
+    const m = raknaFuktMetrikForZon(zon, d);
+    if (m) kandidater.push(m);
   }
   return kandidater;
+}
+// Every zone with a valid trend, schedule or not - used to keep the HA
+// sensor export current regardless of Growarr's own reminder state.
+function raknaAllaFuktMetriker(d) {
+  return d.zoner.filter((z) => !z.foralderId).map((zon) => raknaFuktMetrikForZon(zon, d)).filter(Boolean);
+}
+
+// ---- Push Growarr's own computed numbers back into Home Assistant ----
+// HA's own automation editor is already good - the missing piece is that it
+// has nothing garden-aware to trigger on. Each zone with a valid drying
+// trend gets a real sensor entity in HA (same trend line the schedule
+// suggestions already use), so any automation built in HA's own UI, visual
+// or YAML, can react to it exactly like a real sensor.
+function haMetrikEntitetId(zonId) {
+  const rensat = String(zonId).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  return `sensor.growarr_${rensat}_dagar_till_torrt`;
+}
+async function synkaMetrikerTillHa() {
+  if (!HA_TOKEN) return { synkade: 0, fel: "HA_TOKEN är inte konfigurerat" };
+  const d = await lasData();
+  const metriker = raknaAllaFuktMetriker(d);
+  let synkade = 0;
+  for (const m of metriker) {
+    try {
+      const res = await fetch(`${HA_URL}/api/states/${encodeURIComponent(haMetrikEntitetId(m.zonId))}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${HA_TOKEN}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          state: m.matt.dagarTillTorrt,
+          attributes: {
+            friendly_name: `${m.zonNamn} – dagar till torrt`,
+            unit_of_measurement: "d", icon: "mdi:water-alert-outline",
+            jordfuktighet_procent: m.matt.nu, torkar_procent_per_dygn: m.matt.taktPerDygn,
+          },
+        }),
+      });
+      if (res.ok) synkade++;
+    } catch { /* best effort - try again next cycle rather than fail the whole sync */ }
+  }
+  return { synkade, totalt: metriker.length };
 }
 
 // Plain-language fallback used when there is no API key, or the call fails.
@@ -769,6 +973,10 @@ async function loggaHistorik() {
 }
 const EN_TIMME_MS = 3600 * 1000;
 setInterval(() => loggaHistorik().catch((err) => console.warn("Historik-loggning misslyckades:", err.message)), EN_TIMME_MS);
+// Same cadence as the history log: the trend line these depend on doesn't
+// meaningfully change faster than the underlying sensor readings arrive.
+synkaMetrikerTillHa().catch(() => {}); // once at startup, so a fresh restart doesn't wait an hour
+setInterval(() => synkaMetrikerTillHa().catch((err) => console.warn("HA-metriksynk misslyckades:", err.message)), EN_TIMME_MS);
 
 // ---- Migrering ----
 // Kartor tillkom efter att zoner redan fanns: se till att det alltid finns
@@ -1043,6 +1251,26 @@ const server = createServer(async (req, res) => {
       const d = await lasData();
       if (!d.tradgardsAutomationer.includes(entityId)) return skickaJson(res, 400, { fel: "automationen är inte kopplad till trädgården" });
       const resultat = await vaxlaHaAutomation(entityId, !!pa);
+      if (resultat.fel) return skickaJson(res, 502, resultat);
+      return skickaJson(res, 200, resultat);
+    }
+    // Force the HA sensor export to run now, instead of waiting for the
+    // hourly timer - used after linking a new sensor so it shows up in HA
+    // without a wait.
+    if (req.method === "POST" && p.endsWith("/api/metrics/sync")) {
+      return skickaJson(res, 200, await synkaMetrikerTillHa());
+    }
+    // Draft only - nothing is written to Home Assistant until /create.
+    if (req.method === "POST" && p.endsWith("/api/automations/draft")) {
+      const { beskrivning } = await lasBody(req);
+      if (!beskrivning?.trim()) return skickaJson(res, 400, { fel: "beskrivning saknas" });
+      const resultat = await utkastAutomation(beskrivning.trim());
+      return skickaJson(res, resultat.fel ? 502 : 200, resultat);
+    }
+    if (req.method === "POST" && p.endsWith("/api/automations/create")) {
+      const { alias, trigger, condition, action, mode } = await lasBody(req);
+      if (!alias || !Array.isArray(trigger) || !Array.isArray(action)) return skickaJson(res, 400, { fel: "ofullständig automation" });
+      const resultat = await skapaHaAutomation({ alias, trigger, condition, action, mode });
       if (resultat.fel) return skickaJson(res, 502, resultat);
       return skickaJson(res, 200, resultat);
     }

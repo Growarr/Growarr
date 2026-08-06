@@ -677,7 +677,7 @@ try {
      so it gets the clear, solid treatment - "Cancel" is the safe default. */
   .bekrafta-ja { background:var(--err); color:#fff; border:0; box-shadow:none; }
   .bekrafta-ja:hover { background:color-mix(in srgb, var(--err) 82%, black); transform:none; box-shadow:none; }
-  .bekrafta-avbryt { background:var(--surface2); color:var(--text); border:1px solid var(--border); box-shadow:none; }
+  .bekrafta-avbryt, .automation-utkast-avbryt { background:var(--surface2); color:var(--text); border:1px solid var(--border); box-shadow:none; }
   .sort-detalj { margin-top:20px; padding-top:18px; border-top:1px solid var(--border); }
 
   .historik-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin-top:4px; }
@@ -887,11 +887,16 @@ try {
   .modal .falt { margin-bottom:14px; }
   /* Detaljpanelen har samma fält som popupen, så den måste med här – annars
      blir anteckningsrutan webbläsarens vita standardruta i mörkt läge. */
-  .modal textarea, .detalj-panel textarea { width:100%; min-height:70px; padding:10px 12px; border-radius:var(--r-sm);
+  .modal textarea, .detalj-panel textarea, .card textarea { width:100%; min-height:70px; padding:10px 12px; border-radius:var(--r-sm);
     border:1px solid var(--border); background:var(--surface2); color:var(--text); font:inherit;
     font-family:inherit; resize:vertical; }
-  .modal textarea:focus, .detalj-panel textarea:focus { outline:none; border-color:var(--accent);
+  .modal textarea:focus, .detalj-panel textarea:focus, .card textarea:focus { outline:none; border-color:var(--accent);
     box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+  /* Home Assistant automation drafts: readable monospace, wraps rather than
+     forcing horizontal scroll on a phone. */
+  .automation-yaml { width:100%; margin-top:8px; padding:12px 14px; border-radius:var(--r-sm);
+    border:1px solid var(--border); background:var(--surface2); font-family:monospace; font-size:.78rem;
+    white-space:pre-wrap; word-break:break-word; }
   /* Egna kort i stället för löpande text med bara en linje mellan
      avsnitten – lättare att se var "Kopplade entiteter" slutar och
      "Plantor i zonen" börjar när det faktiskt är en egen ruta. */
@@ -1371,6 +1376,13 @@ try {
     <div id="automationInnehall" style="margin-top:12px">
       <div class="skelett"><div class="skelett-rad" style="width:55%"></div><div class="skelett-rad" style="width:70%"></div></div>
     </div>
+    <div class="falt" style="margin-top:18px; padding-top:16px; border-top:1px solid var(--border)">
+      <label class="lbl" data-i18n="bygg_automation">Bygg en ny automation</label>
+      <p class="lbl" data-i18n="bygg_automation_hjalp">Beskriv vad den ska göra, så skriver Claude ett utkast utifrån er faktiska trädgård. Inget skapas i Home Assistant förrän du bekräftar.</p>
+      <textarea id="automationBeskrivning" rows="2" data-i18n-placeholder="bygg_automation_placeholder" placeholder="T.ex. vattna växthuset när jordfuktigheten är låg, men bara om det inte ska regna"></textarea>
+      <button id="automationForeslaBtn" style="margin-top:8px" data-i18n="foresla_automation">Föreslå automation</button>
+      <div id="automationUtkastInnehall"></div>
+    </div>
   </div>
   <div class="card">
     <div id="schemaInnehall">
@@ -1702,6 +1714,8 @@ let installningar = {};
 let notiserHanterade = []; // { id, atgard, tid } – hämtade från servern
 let scheman = []; // { id, zonId, veckodagar: [0-6] } – vattningspåminnelser
 let automationer = []; // { entityId, namn, pa, lankad } – riktiga HA-automationer
+let automationUtkast = null; // { alias, forklaring, trigger, condition, action, mode, yaml } | { fel } | null
+let automationUtkastLaddar = false;
 let sprak = "sv"; // sätts riktigt av tillampaSprak() vid start, se längre ner
 // Lexikon för nya funktioner, se kommentaren vid tillampaSprak(). Lägg en
 // rad här per ny sträng och skriv t("nyckel") i HTML-byggaren istället för
@@ -1771,7 +1785,7 @@ const SPRAK_TEXT = {
     sprak: "Språk", svenska: "Svenska", engelska: "English",
     // Validation and status
     bakgrund: "Bakgrund", bakgrund_hjalp: "Rutnät, rent eller din egen flygbild",    bakgrund_rutnat: "Rutnät", bakgrund_ren: "Rent", bakgrund_foto: "Foto",    bakgrund_hjalp_lang: "Rent och Foto tar båda bort rutnätet. Ladda upp en flygbild (en skärmdump från Google Maps duger) för att lägga ut zonerna över er faktiska tomt.",    flygbild: "Flygbild", ladda_upp_bild: "Ladda upp bild", byt_bild: "Byt bild",    bildstyrka: "Bildstyrka", bildstyrka_hjalp: "Tona ner bilden så plantikonerna syns tydligt ovanpå.",    laddar_upp: "Laddar upp …", ingen_karta: "Ingen karta vald.",
-    namn_kravs: "Namn krävs.", kunde_inte_spara: "Kunde inte spara: ", sparat: "Sparat.", okategoriserat: "Okategoriserat", fyller_ytan_kort: "fyller ytan", var_finns: "Var", inga_odlingar: "Inga odlingar ännu – lägg till en planta i en zon på kartan.", plats: "plats", platser: "platser", bekrafta_ta_bort_zon: "Ta bort zonen? Plantorna blir okategoriserade och sektioner flyttas upp en nivå.", bekrafta_ta_bort_planta: "Ta bort odlingen?", passa_in_bilden: "Passa in bilden", passa_in_hjalp: "Vrid, skala och flytta bilden tills bäddarna hamnar där de faktiskt ligger.", rotation: "Rotation", storlek: "Storlek", flytta_x: "Flytta i sidled", flytta_y: "Flytta upp/ner", aterstall_placering: "Återställ placering", klar: "Klar", automationer: "Automationer", koppla_automation: "Koppla automation", automationer_hjalp: "Dina egna Home Assistant-automationer, kopplade till trädgården.", inga_automationer: "Inga automationer kopplade än.", valj_automation_hjalp: "Välj en automation från Home Assistant att koppla till trädgården.", alla_automationer_kopplade: "Alla dina HA-automationer är redan kopplade.", inga_ha_automationer: "Inga automationer hittades i Home Assistant.", avbryt: "Avbryt", bekrafta_ta_bort_karta: "Ta bort kartan? Zonerna på den flyttas till den första kvarvarande kartan.", kunde_inte_lasa_bilden: "Kunde inte läsa bilden: ",
+    namn_kravs: "Namn krävs.", kunde_inte_spara: "Kunde inte spara: ", sparat: "Sparat.", okategoriserat: "Okategoriserat", fyller_ytan_kort: "fyller ytan", var_finns: "Var", inga_odlingar: "Inga odlingar ännu – lägg till en planta i en zon på kartan.", plats: "plats", platser: "platser", bekrafta_ta_bort_zon: "Ta bort zonen? Plantorna blir okategoriserade och sektioner flyttas upp en nivå.", bekrafta_ta_bort_planta: "Ta bort odlingen?", passa_in_bilden: "Passa in bilden", passa_in_hjalp: "Vrid, skala och flytta bilden tills bäddarna hamnar där de faktiskt ligger.", rotation: "Rotation", storlek: "Storlek", flytta_x: "Flytta i sidled", flytta_y: "Flytta upp/ner", aterstall_placering: "Återställ placering", klar: "Klar", automationer: "Automationer", koppla_automation: "Koppla automation", automationer_hjalp: "Dina egna Home Assistant-automationer, kopplade till trädgården.", inga_automationer: "Inga automationer kopplade än.", valj_automation_hjalp: "Välj en automation från Home Assistant att koppla till trädgården.", alla_automationer_kopplade: "Alla dina HA-automationer är redan kopplade.", inga_ha_automationer: "Inga automationer hittades i Home Assistant.", avbryt: "Avbryt", bekrafta_ta_bort_karta: "Ta bort kartan? Zonerna på den flyttas till den första kvarvarande kartan.", kunde_inte_lasa_bilden: "Kunde inte läsa bilden: ", bygg_automation: "Bygg en ny automation", bygg_automation_hjalp: "Beskriv vad den ska göra, så skriver Claude ett utkast utifrån er faktiska trädgård. Inget skapas i Home Assistant förrän du bekräftar.", bygg_automation_placeholder: "T.ex. vattna växthuset när jordfuktigheten är låg, men bara om det inte ska regna", foresla_automation: "Föreslå automation", skapa_i_ha: "Skapa i Home Assistant",
     valj_zon: "Välj en zon.", valj_veckodag: "Välj minst en veckodag.",
     // Create-new modal
     skapa_sub: "Zoner, plantor, kartor och egna block",
@@ -1853,7 +1867,7 @@ const SPRAK_TEXT = {
     tema_hjalp: "Follows your device's light/dark setting by default, or pick one yourself.",
     sprak: "Language", svenska: "Svenska", engelska: "English",
     bakgrund: "Background", bakgrund_hjalp: "Grid, plain or your own aerial photo",    bakgrund_rutnat: "Grid", bakgrund_ren: "Plain", bakgrund_foto: "Photo",    bakgrund_hjalp_lang: "Plain and Photo both drop the grid. Upload an aerial shot (a Google Maps screenshot works) to lay your zones out over your actual property.",    flygbild: "Aerial photo", ladda_upp_bild: "Upload image", byt_bild: "Replace image",    bildstyrka: "Image strength", bildstyrka_hjalp: "Dim the photo so the plant icons stay readable on top of it.",    laddar_upp: "Uploading …", ingen_karta: "No map selected.",
-    namn_kravs: "A name is required.", kunde_inte_spara: "Could not save: ", sparat: "Saved.", okategoriserat: "Uncategorised", fyller_ytan_kort: "fills the area", var_finns: "Where", inga_odlingar: "Nothing planted yet. Add a plant to a zone on the map.", plats: "place", platser: "places", bekrafta_ta_bort_zon: "Delete this zone? Its plants become uncategorised and any sections move up a level.", bekrafta_ta_bort_planta: "Delete this planting?", passa_in_bilden: "Line the photo up", passa_in_hjalp: "Rotate, resize and nudge the photo until your beds sit where they really are.", rotation: "Rotation", storlek: "Size", flytta_x: "Move sideways", flytta_y: "Move up/down", aterstall_placering: "Reset placement", klar: "Done", automationer: "Automations", koppla_automation: "Link automation", automationer_hjalp: "Your own Home Assistant automations, linked to the garden.", inga_automationer: "No automations linked yet.", valj_automation_hjalp: "Pick an automation from Home Assistant to link to the garden.", alla_automationer_kopplade: "All your HA automations are already linked.", inga_ha_automationer: "No automations found in Home Assistant.", avbryt: "Cancel", bekrafta_ta_bort_karta: "Delete this map? Its zones move to the first remaining map.", kunde_inte_lasa_bilden: "Could not read the image: ",
+    namn_kravs: "A name is required.", kunde_inte_spara: "Could not save: ", sparat: "Saved.", okategoriserat: "Uncategorised", fyller_ytan_kort: "fills the area", var_finns: "Where", inga_odlingar: "Nothing planted yet. Add a plant to a zone on the map.", plats: "place", platser: "places", bekrafta_ta_bort_zon: "Delete this zone? Its plants become uncategorised and any sections move up a level.", bekrafta_ta_bort_planta: "Delete this planting?", passa_in_bilden: "Line the photo up", passa_in_hjalp: "Rotate, resize and nudge the photo until your beds sit where they really are.", rotation: "Rotation", storlek: "Size", flytta_x: "Move sideways", flytta_y: "Move up/down", aterstall_placering: "Reset placement", klar: "Done", automationer: "Automations", koppla_automation: "Link automation", automationer_hjalp: "Your own Home Assistant automations, linked to the garden.", inga_automationer: "No automations linked yet.", valj_automation_hjalp: "Pick an automation from Home Assistant to link to the garden.", alla_automationer_kopplade: "All your HA automations are already linked.", inga_ha_automationer: "No automations found in Home Assistant.", avbryt: "Cancel", bekrafta_ta_bort_karta: "Delete this map? Its zones move to the first remaining map.", kunde_inte_lasa_bilden: "Could not read the image: ", bygg_automation: "Build a new automation", bygg_automation_hjalp: "Describe what it should do, and Claude drafts it from your actual garden data. Nothing is created in Home Assistant until you confirm.", bygg_automation_placeholder: "E.g. water the greenhouse when soil moisture is low, but only if it isn't going to rain", foresla_automation: "Suggest automation", skapa_i_ha: "Create in Home Assistant",
     valj_zon: "Pick a zone.", valj_veckodag: "Pick at least one day.",
     skapa_sub: "Zones, plants, maps and custom blocks",
     flik_zon: "Zone", flik_planta: "Plant", flik_karta: "Map", flik_block: "Block",
@@ -4838,6 +4852,35 @@ document.addEventListener("click", async (e) => {
     await laddaAutomationer();
     return;
   }
+  if (e.target.closest("#automationForeslaBtn")) { await foreslaAutomation(); return; }
+  if (e.target.closest(".automation-utkast-avbryt")) { automationUtkast = null; renderaAutomationUtkast(); return; }
+  if (e.target.closest(".automation-utkast-skapa")) {
+    const st = $("automationSkapaStatus");
+    st.textContent = ""; st.className = "status";
+    try {
+      const { alias, trigger, condition, action, mode } = automationUtkast;
+      const res = await fetch(`${BAS}api/automations/create`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alias, trigger, condition, action, mode }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.fel) throw new Error(data.fel || `HTTP ${res.status}`);
+      // Built specifically for the garden via this flow, so link it
+      // straight away rather than making the user find it in the picker.
+      if (data.entityId) {
+        await fetch(`${BAS}api/automations/link`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ entityId: data.entityId }),
+        });
+      }
+      automationUtkast = null;
+      $("automationBeskrivning").value = "";
+      await laddaAutomationer();
+    } catch (err) {
+      st.textContent = t("kunde_inte_spara") + err.message; st.className = "status err";
+    }
+    return;
+  }
   // Map backdrop: grid / plain / photo, plus uploading and dimming the photo
   if (e.target.closest("#bakgrundBtn")) { oppnaBakgrundModal(); return; }
   const bakgrundVal = e.target.closest("#bakgrundSegment .vy-segment-btn");
@@ -5602,6 +5645,52 @@ function renderaAutomationer() {
       </label>
       <button class="ta-bort-liten automation-koppla-bort" data-entity="${esc(a.entityId)}" title="${t("koppla_bort")}">×</button>
     </div>`).join("")}</div>` : `<div class="automation-tom">${t("inga_automationer")}</div>`;
+  renderaAutomationUtkast();
+}
+// Claude drafts, the user reviews, and only an explicit click writes
+// anything to Home Assistant - see utkastAutomation()/skapaHaAutomation()
+// on the server for why this is scoped to drafting rather than a full
+// visual trigger/condition/action builder duplicating HA's own editor.
+function renderaAutomationUtkast() {
+  const el = $("automationUtkastInnehall");
+  if (!el) return;
+  if (automationUtkastLaddar) {
+    el.innerHTML = `<div class="skelett" style="margin-top:12px"><div class="skelett-rad" style="width:60%"></div><div class="skelett-rad" style="width:40%"></div></div>`;
+    return;
+  }
+  if (!automationUtkast) { el.innerHTML = ""; return; }
+  if (automationUtkast.fel) {
+    el.innerHTML = `<div class="status err" style="margin-top:10px">${esc(automationUtkast.fel)}</div>`;
+    return;
+  }
+  el.innerHTML = `
+    <div style="margin-top:12px">
+      <div class="namn">${esc(automationUtkast.alias)}</div>
+      <p class="lbl" style="margin-top:2px">${esc(automationUtkast.forklaring)}</p>
+      <pre class="automation-yaml">${esc(automationUtkast.yaml)}</pre>
+      <div class="detalj-knapprad" style="margin-top:10px">
+        <button class="automation-utkast-avbryt" style="flex:1">${t("avbryt")}</button>
+        <button class="automation-utkast-skapa" style="flex:1">${t("skapa_i_ha")}</button>
+      </div>
+      <div class="status" id="automationSkapaStatus"></div>
+    </div>`;
+}
+async function foreslaAutomation() {
+  const beskrivning = $("automationBeskrivning").value.trim();
+  if (!beskrivning) return;
+  automationUtkastLaddar = true; automationUtkast = null;
+  renderaAutomationUtkast();
+  try {
+    const res = await fetch(`${BAS}api/automations/draft`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ beskrivning }),
+    });
+    automationUtkast = await res.json();
+  } catch (err) {
+    automationUtkast = { fel: t("kunde_inte_spara") + err.message };
+  }
+  automationUtkastLaddar = false;
+  renderaAutomationUtkast();
 }
 function automationValjareHtml() {
   const olankade = automationer.filter((a) => !a.lankad);
