@@ -370,16 +370,124 @@ Svara ENDAST med kompakt JSON: {"alias":"...","forklaring":"...","trigger":[...]
     return { fel: err.message };
   }
 }
+// The object_id half of an automation's entity_id is the same string HA's
+// config API stores it under - see the note on skapaHaAutomation.
+function haAutomationObjektId(entityId) {
+  return entityId?.startsWith("automation.") ? entityId.slice("automation.".length) : null;
+}
+async function hamtaHaAutomationKonfig(entityId) {
+  if (!HA_TOKEN) return { fel: "HA_TOKEN är inte konfigurerat" };
+  const objektId = haAutomationObjektId(entityId);
+  if (!objektId) return { fel: "ogiltig automation" };
+  try {
+    const res = await fetch(`${HA_URL}/api/config/automation/config/${objektId}`, {
+      headers: { Authorization: `Bearer ${HA_TOKEN}` },
+    });
+    if (res.status === 404) return { fel: "hittade ingen redigerbar konfiguration för den automationen i Home Assistant" };
+    if (!res.ok) return { fel: `HA svarade ${res.status}` };
+    return await res.json();
+  } catch (err) {
+    return { fel: err.message };
+  }
+}
+// Same shape and validation as utkastAutomation(), but starting from an
+// existing automation's real config instead of a blank page - Claude edits
+// only what the description asks for, rather than redrafting the whole
+// thing from scratch and risking silently dropping something the user
+// never asked to change.
+async function revideraAutomation(entityId, beskrivning) {
+  if (!ANTHROPIC_API_KEY) return { fel: "ANTHROPIC_API_KEY är inte konfigurerad" };
+  const befintlig = await hamtaHaAutomationKonfig(entityId);
+  if (befintlig.fel) return befintlig;
+  const [d, vader, allaEntiteter] = await Promise.all([lasData(), hamtaVader(), hamtaAllaEntiteter()]);
+  const sprak = sprakNamn(d.installningar);
+  const kopplade = new Set(
+    [...kopladeEnhetIder(d)].map((id) => d.enheter.find((e) => e.id === id)?.entityId).filter(Boolean),
+  );
+  for (const zon of d.zoner.filter((z) => !z.foralderId)) kopplade.add(haMetrikEntitetId(zon.id));
+  // The automation's own current entities must stay selectable even if they
+  // fall outside "garden-linked" (e.g. it already used a switch nobody has
+  // told Growarr about) - otherwise editing it would flag its own existing
+  // config as using "unknown" entities.
+  for (const id of samlaEntitetIdI(befintlig)) kopplade.add(id);
+  const relevanta = allaEntiteter.filter((e) => kopplade.has(e.entityId));
+  const entitetText = relevanta.map((e) => `- entity_id: ${e.entityId} | namn: ${e.namn}`).join("\n");
+  try {
+    const sammanfattning = await byggTradgardsSammanfattning(d, vader);
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: ANTHROPIC_MODEL,
+        max_tokens: 1200,
+        messages: [{
+          role: "user",
+          content: `Du hjälper till att ändra en befintlig Home Assistant-automation utifrån en beskrivning på ${sprak}.
+
+Befintlig automation:
+${JSON.stringify({ alias: befintlig.alias, trigger: befintlig.trigger, condition: befintlig.condition ?? [], action: befintlig.action, mode: befintlig.mode })}
+
+Önskad ändring: "${beskrivning}"
+
+Regler, viktigast:
+- Ändra ENDAST det beskrivningen faktiskt kräver. Behåll allt annat i den befintliga automationen oförändrat.
+- Använd ENDAST entity_id från listan nedan. Hitta ALDRIG på en entitet.
+- Om ändringen kräver något som inte finns i listan: svara med exakt {"fel":"kort förklaring på ${sprak} av vad som saknas"} och inget annat.
+- "forklaring" är 1-2 meningar på ${sprak} som beskriver vad automationen gör EFTER ändringen.
+
+Tillgängliga entiteter:
+${entitetText}
+
+Trädgården:
+${sammanfattning}
+
+Svara ENDAST med kompakt JSON: {"alias":"...","forklaring":"...","trigger":[...],"condition":[...],"action":[...],"mode":"single"}`,
+        }],
+      }),
+    });
+    if (!res.ok) return { fel: `Claude svarade ${res.status}` };
+    const data = await res.json();
+    if (data.stop_reason === "refusal") return { fel: "Claude avböjde" };
+    const text = data.content?.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
+    const parsed = JSON.parse((text ?? "").replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, ""));
+    if (parsed.fel) return { fel: String(parsed.fel).slice(0, 300) };
+    if (!parsed.alias || !Array.isArray(parsed.trigger) || !Array.isArray(parsed.action)) {
+      return { fel: "Claude svarade ofullständigt" };
+    }
+    const giltiga = new Set(relevanta.map((e) => e.entityId));
+    const anvanda = samlaEntitetIdI({ trigger: parsed.trigger, condition: parsed.condition ?? [], action: parsed.action });
+    const pahittade = [...anvanda].filter((id) => !giltiga.has(id));
+    if (pahittade.length) return { fel: `Använde okända entiteter: ${pahittade.join(", ")}` };
+    const konfig = {
+      alias: String(parsed.alias).slice(0, 100),
+      trigger: parsed.trigger, condition: Array.isArray(parsed.condition) ? parsed.condition : [], action: parsed.action,
+      mode: ["single", "restart", "queued", "parallel"].includes(parsed.mode) ? parsed.mode : "single",
+    };
+    return {
+      ...konfig, entityId,
+      forklaring: typeof parsed.forklaring === "string" ? parsed.forklaring.slice(0, 400) : "",
+      yaml: tillYaml(konfig),
+    };
+  } catch (err) {
+    return { fel: err.message };
+  }
+}
 // The only path that actually writes to Home Assistant's automation config.
-// Re-validates independently of utkastAutomation(): never trust a client-
-// echoed config, since this is the step with a real, permanent side effect.
-async function skapaHaAutomation({ alias, trigger, condition, action, mode }) {
+// Re-validates independently of utkastAutomation()/revideraAutomation():
+// never trust a client-echoed config, since this is the step with a real,
+// permanent side effect.
+// entityId (optional) means "overwrite this existing automation in place"
+// rather than create a new one - the object_id half of an automation's
+// entity_id is the same string the config API stores it under, in every
+// normal Home Assistant install (this app never renames one, so the two
+// never drift apart for anything Growarr itself created or has touched).
+async function skapaHaAutomation({ alias, trigger, condition, action, mode, entityId }) {
   if (!HA_TOKEN) return { fel: "HA_TOKEN är inte konfigurerat" };
   const giltiga = new Set((await hamtaAllaEntiteter()).map((e) => e.entityId));
   const anvanda = samlaEntitetIdI({ trigger, condition, action });
   const pahittade = [...anvanda].filter((id) => !giltiga.has(id));
   if (pahittade.length) return { fel: `Okända entiteter: ${pahittade.join(", ")}` };
-  const id = `growarr_${Date.now()}`;
+  const id = entityId?.startsWith("automation.") ? entityId.slice("automation.".length) : `growarr_${Date.now()}`;
   try {
     const res = await fetch(`${HA_URL}/api/config/automation/config/${id}`, {
       method: "POST",
@@ -1267,10 +1375,19 @@ const server = createServer(async (req, res) => {
       const resultat = await utkastAutomation(beskrivning.trim());
       return skickaJson(res, resultat.fel ? 502 : 200, resultat);
     }
+    // Same idea, but starting from an automation that already exists -
+    // "make it wait 10 minutes instead of 5" edits the real config rather
+    // than drafting a brand new automation from nothing.
+    if (req.method === "POST" && p.endsWith("/api/automations/revise")) {
+      const { entityId, beskrivning } = await lasBody(req);
+      if (!entityId || !beskrivning?.trim()) return skickaJson(res, 400, { fel: "entityId och beskrivning krävs" });
+      const resultat = await revideraAutomation(entityId, beskrivning.trim());
+      return skickaJson(res, resultat.fel ? 502 : 200, resultat);
+    }
     if (req.method === "POST" && p.endsWith("/api/automations/create")) {
-      const { alias, trigger, condition, action, mode } = await lasBody(req);
+      const { alias, trigger, condition, action, mode, entityId } = await lasBody(req);
       if (!alias || !Array.isArray(trigger) || !Array.isArray(action)) return skickaJson(res, 400, { fel: "ofullständig automation" });
-      const resultat = await skapaHaAutomation({ alias, trigger, condition, action, mode });
+      const resultat = await skapaHaAutomation({ alias, trigger, condition, action, mode, entityId });
       if (resultat.fel) return skickaJson(res, 502, resultat);
       return skickaJson(res, 200, resultat);
     }

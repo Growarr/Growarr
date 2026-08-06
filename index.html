@@ -993,7 +993,7 @@ try {
   .entitet-rad-kompakt .statusrad { font-size:.76rem; color:var(--muted); font-variant-numeric:tabular-nums;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .entitet-rad-kompakt .ta-bort-liten { opacity:.5; flex:0 0 auto; }
-  .automation-rad .ta-bort-liten { flex:0 0 auto; }
+  .automation-rad .ta-bort-liten { flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; }
   .metrik-tile.god .not { background:color-mix(in srgb, var(--ok) 20%, transparent); color:var(--ok); }
   .metrik-tile.varning .not { background:color-mix(in srgb, var(--warn) 22%, transparent); color:var(--warn); }
   .metrik-tile.fel .varde { font-size:.86rem; color:var(--err); font-weight:600; }
@@ -1377,10 +1377,13 @@ try {
       <div class="skelett"><div class="skelett-rad" style="width:55%"></div><div class="skelett-rad" style="width:70%"></div></div>
     </div>
     <div class="falt" style="margin-top:18px; padding-top:16px; border-top:1px solid var(--border)">
-      <label class="lbl" data-i18n="bygg_automation">Bygg en ny automation</label>
-      <p class="lbl" data-i18n="bygg_automation_hjalp">Beskriv vad den ska göra, så skriver Claude ett utkast utifrån er faktiska trädgård. Inget skapas i Home Assistant förrän du bekräftar.</p>
+      <label class="lbl" id="automationByggareRubrik" data-i18n="bygg_automation">Bygg en ny automation</label>
+      <p class="lbl" id="automationByggareHjalp" data-i18n="bygg_automation_hjalp">Beskriv vad den ska göra, så skriver Claude ett utkast utifrån er faktiska trädgård. Inget skapas i Home Assistant förrän du bekräftar.</p>
       <textarea id="automationBeskrivning" rows="2" data-i18n-placeholder="bygg_automation_placeholder" placeholder="T.ex. vattna växthuset när jordfuktigheten är låg, men bara om det inte ska regna"></textarea>
-      <button id="automationForeslaBtn" style="margin-top:8px" data-i18n="foresla_automation">Föreslå automation</button>
+      <div class="detalj-knapprad" style="margin-top:8px">
+        <button id="automationForeslaBtn" data-i18n="foresla_automation">Föreslå automation</button>
+        <button class="automation-utkast-avbryt" id="automationAvslutaRedigeraBtn" style="display:none" data-i18n="avbryt_andring">Avbryt ändringen</button>
+      </div>
       <div id="automationUtkastInnehall"></div>
     </div>
   </div>
@@ -1716,6 +1719,10 @@ let scheman = []; // { id, zonId, veckodagar: [0-6] } – vattningspåminnelser
 let automationer = []; // { entityId, namn, pa, lankad } – riktiga HA-automationer
 let automationUtkast = null; // { alias, forklaring, trigger, condition, action, mode, yaml } | { fel } | null
 let automationUtkastLaddar = false;
+// Set to an entityId to put the builder in "change this one" mode instead
+// of drafting a new automation - see foreslaAutomation() and
+// automationByggareRubrikHtml().
+let automationRedigerarId = null;
 let sprak = "sv"; // sätts riktigt av tillampaSprak() vid start, se längre ner
 // Lexikon för nya funktioner, se kommentaren vid tillampaSprak(). Lägg en
 // rad här per ny sträng och skriv t("nyckel") i HTML-byggaren istället för
@@ -1785,7 +1792,7 @@ const SPRAK_TEXT = {
     sprak: "Språk", svenska: "Svenska", engelska: "English",
     // Validation and status
     bakgrund: "Bakgrund", bakgrund_hjalp: "Rutnät, rent eller din egen flygbild",    bakgrund_rutnat: "Rutnät", bakgrund_ren: "Rent", bakgrund_foto: "Foto",    bakgrund_hjalp_lang: "Rent och Foto tar båda bort rutnätet. Ladda upp en flygbild (en skärmdump från Google Maps duger) för att lägga ut zonerna över er faktiska tomt.",    flygbild: "Flygbild", ladda_upp_bild: "Ladda upp bild", byt_bild: "Byt bild",    bildstyrka: "Bildstyrka", bildstyrka_hjalp: "Tona ner bilden så plantikonerna syns tydligt ovanpå.",    laddar_upp: "Laddar upp …", ingen_karta: "Ingen karta vald.",
-    namn_kravs: "Namn krävs.", kunde_inte_spara: "Kunde inte spara: ", sparat: "Sparat.", okategoriserat: "Okategoriserat", fyller_ytan_kort: "fyller ytan", var_finns: "Var", inga_odlingar: "Inga odlingar ännu – lägg till en planta i en zon på kartan.", plats: "plats", platser: "platser", bekrafta_ta_bort_zon: "Ta bort zonen? Plantorna blir okategoriserade och sektioner flyttas upp en nivå.", bekrafta_ta_bort_planta: "Ta bort odlingen?", passa_in_bilden: "Passa in bilden", passa_in_hjalp: "Vrid, skala och flytta bilden tills bäddarna hamnar där de faktiskt ligger.", rotation: "Rotation", storlek: "Storlek", flytta_x: "Flytta i sidled", flytta_y: "Flytta upp/ner", aterstall_placering: "Återställ placering", klar: "Klar", automationer: "Automationer", koppla_automation: "Koppla automation", automationer_hjalp: "Dina egna Home Assistant-automationer, kopplade till trädgården.", inga_automationer: "Inga automationer kopplade än.", valj_automation_hjalp: "Välj en automation från Home Assistant att koppla till trädgården.", alla_automationer_kopplade: "Alla dina HA-automationer är redan kopplade.", inga_ha_automationer: "Inga automationer hittades i Home Assistant.", avbryt: "Avbryt", bekrafta_ta_bort_karta: "Ta bort kartan? Zonerna på den flyttas till den första kvarvarande kartan.", kunde_inte_lasa_bilden: "Kunde inte läsa bilden: ", bygg_automation: "Bygg en ny automation", bygg_automation_hjalp: "Beskriv vad den ska göra, så skriver Claude ett utkast utifrån er faktiska trädgård. Inget skapas i Home Assistant förrän du bekräftar.", bygg_automation_placeholder: "T.ex. vattna växthuset när jordfuktigheten är låg, men bara om det inte ska regna", foresla_automation: "Föreslå automation", skapa_i_ha: "Skapa i Home Assistant",
+    namn_kravs: "Namn krävs.", kunde_inte_spara: "Kunde inte spara: ", sparat: "Sparat.", okategoriserat: "Okategoriserat", fyller_ytan_kort: "fyller ytan", var_finns: "Var", inga_odlingar: "Inga odlingar ännu – lägg till en planta i en zon på kartan.", plats: "plats", platser: "platser", bekrafta_ta_bort_zon: "Ta bort zonen? Plantorna blir okategoriserade och sektioner flyttas upp en nivå.", bekrafta_ta_bort_planta: "Ta bort odlingen?", passa_in_bilden: "Passa in bilden", passa_in_hjalp: "Vrid, skala och flytta bilden tills bäddarna hamnar där de faktiskt ligger.", rotation: "Rotation", storlek: "Storlek", flytta_x: "Flytta i sidled", flytta_y: "Flytta upp/ner", aterstall_placering: "Återställ placering", klar: "Klar", automationer: "Automationer", koppla_automation: "Koppla automation", automationer_hjalp: "Dina egna Home Assistant-automationer, kopplade till trädgården.", inga_automationer: "Inga automationer kopplade än.", valj_automation_hjalp: "Välj en automation från Home Assistant att koppla till trädgården.", alla_automationer_kopplade: "Alla dina HA-automationer är redan kopplade.", inga_ha_automationer: "Inga automationer hittades i Home Assistant.", avbryt: "Avbryt", bekrafta_ta_bort_karta: "Ta bort kartan? Zonerna på den flyttas till den första kvarvarande kartan.", kunde_inte_lasa_bilden: "Kunde inte läsa bilden: ", bygg_automation: "Bygg en ny automation", bygg_automation_hjalp: "Beskriv vad den ska göra, så skriver Claude ett utkast utifrån er faktiska trädgård. Inget skapas i Home Assistant förrän du bekräftar.", bygg_automation_placeholder: "T.ex. vattna växthuset när jordfuktigheten är låg, men bara om det inte ska regna", foresla_automation: "Föreslå automation", skapa_i_ha: "Skapa i Home Assistant", andra_automation: "Ändra automation", andra_automation_hjalp: "Beskriv vad som ska ändras, så skriver Claude om den befintliga automationen åt dig. Inget sparas förrän du bekräftar.", andra_automation_placeholder: "T.ex. vänta 10 minuter i stället för 5", avbryt_andring: "Avbryt ändringen",
     valj_zon: "Välj en zon.", valj_veckodag: "Välj minst en veckodag.",
     // Create-new modal
     skapa_sub: "Zoner, plantor, kartor och egna block",
@@ -1867,7 +1874,7 @@ const SPRAK_TEXT = {
     tema_hjalp: "Follows your device's light/dark setting by default, or pick one yourself.",
     sprak: "Language", svenska: "Svenska", engelska: "English",
     bakgrund: "Background", bakgrund_hjalp: "Grid, plain or your own aerial photo",    bakgrund_rutnat: "Grid", bakgrund_ren: "Plain", bakgrund_foto: "Photo",    bakgrund_hjalp_lang: "Plain and Photo both drop the grid. Upload an aerial shot (a Google Maps screenshot works) to lay your zones out over your actual property.",    flygbild: "Aerial photo", ladda_upp_bild: "Upload image", byt_bild: "Replace image",    bildstyrka: "Image strength", bildstyrka_hjalp: "Dim the photo so the plant icons stay readable on top of it.",    laddar_upp: "Uploading …", ingen_karta: "No map selected.",
-    namn_kravs: "A name is required.", kunde_inte_spara: "Could not save: ", sparat: "Saved.", okategoriserat: "Uncategorised", fyller_ytan_kort: "fills the area", var_finns: "Where", inga_odlingar: "Nothing planted yet. Add a plant to a zone on the map.", plats: "place", platser: "places", bekrafta_ta_bort_zon: "Delete this zone? Its plants become uncategorised and any sections move up a level.", bekrafta_ta_bort_planta: "Delete this planting?", passa_in_bilden: "Line the photo up", passa_in_hjalp: "Rotate, resize and nudge the photo until your beds sit where they really are.", rotation: "Rotation", storlek: "Size", flytta_x: "Move sideways", flytta_y: "Move up/down", aterstall_placering: "Reset placement", klar: "Done", automationer: "Automations", koppla_automation: "Link automation", automationer_hjalp: "Your own Home Assistant automations, linked to the garden.", inga_automationer: "No automations linked yet.", valj_automation_hjalp: "Pick an automation from Home Assistant to link to the garden.", alla_automationer_kopplade: "All your HA automations are already linked.", inga_ha_automationer: "No automations found in Home Assistant.", avbryt: "Cancel", bekrafta_ta_bort_karta: "Delete this map? Its zones move to the first remaining map.", kunde_inte_lasa_bilden: "Could not read the image: ", bygg_automation: "Build a new automation", bygg_automation_hjalp: "Describe what it should do, and Claude drafts it from your actual garden data. Nothing is created in Home Assistant until you confirm.", bygg_automation_placeholder: "E.g. water the greenhouse when soil moisture is low, but only if it isn't going to rain", foresla_automation: "Suggest automation", skapa_i_ha: "Create in Home Assistant",
+    namn_kravs: "A name is required.", kunde_inte_spara: "Could not save: ", sparat: "Saved.", okategoriserat: "Uncategorised", fyller_ytan_kort: "fills the area", var_finns: "Where", inga_odlingar: "Nothing planted yet. Add a plant to a zone on the map.", plats: "place", platser: "places", bekrafta_ta_bort_zon: "Delete this zone? Its plants become uncategorised and any sections move up a level.", bekrafta_ta_bort_planta: "Delete this planting?", passa_in_bilden: "Line the photo up", passa_in_hjalp: "Rotate, resize and nudge the photo until your beds sit where they really are.", rotation: "Rotation", storlek: "Size", flytta_x: "Move sideways", flytta_y: "Move up/down", aterstall_placering: "Reset placement", klar: "Done", automationer: "Automations", koppla_automation: "Link automation", automationer_hjalp: "Your own Home Assistant automations, linked to the garden.", inga_automationer: "No automations linked yet.", valj_automation_hjalp: "Pick an automation from Home Assistant to link to the garden.", alla_automationer_kopplade: "All your HA automations are already linked.", inga_ha_automationer: "No automations found in Home Assistant.", avbryt: "Cancel", bekrafta_ta_bort_karta: "Delete this map? Its zones move to the first remaining map.", kunde_inte_lasa_bilden: "Could not read the image: ", bygg_automation: "Build a new automation", bygg_automation_hjalp: "Describe what it should do, and Claude drafts it from your actual garden data. Nothing is created in Home Assistant until you confirm.", bygg_automation_placeholder: "E.g. water the greenhouse when soil moisture is low, but only if it isn't going to rain", foresla_automation: "Suggest automation", skapa_i_ha: "Create in Home Assistant", andra_automation: "Change automation", andra_automation_hjalp: "Describe what should change, and Claude rewrites the existing automation for you. Nothing is saved until you confirm.", andra_automation_placeholder: "E.g. wait 10 minutes instead of 5", avbryt_andring: "Cancel the change",
     valj_zon: "Pick a zone.", valj_veckodag: "Pick at least one day.",
     skapa_sub: "Zones, plants, maps and custom blocks",
     flik_zon: "Zone", flik_planta: "Plant", flik_karta: "Map", flik_block: "Block",
@@ -4852,29 +4859,35 @@ document.addEventListener("click", async (e) => {
     await laddaAutomationer();
     return;
   }
+  const automationRedigera = e.target.closest(".automation-redigera");
+  if (automationRedigera) { paborjaAutomationRedigering(automationRedigera.dataset.entity, automationRedigera.dataset.namn); return; }
+  if (e.target.closest("#automationAvslutaRedigeraBtn")) { avslutaAutomationRedigering(); return; }
   if (e.target.closest("#automationForeslaBtn")) { await foreslaAutomation(); return; }
+  // Discards only this one draft - "Avbryt ändringen" above (handled just
+  // above) is the one that leaves edit-an-existing-automation mode entirely.
   if (e.target.closest(".automation-utkast-avbryt")) { automationUtkast = null; renderaAutomationUtkast(); return; }
   if (e.target.closest(".automation-utkast-skapa")) {
     const st = $("automationSkapaStatus");
     st.textContent = ""; st.className = "status";
     try {
-      const { alias, trigger, condition, action, mode } = automationUtkast;
+      const { alias, trigger, condition, action, mode, entityId } = automationUtkast;
       const res = await fetch(`${BAS}api/automations/create`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ alias, trigger, condition, action, mode }),
+        body: JSON.stringify({ alias, trigger, condition, action, mode, entityId }),
       });
       const data = await res.json();
       if (!res.ok || data.fel) throw new Error(data.fel || `HTTP ${res.status}`);
       // Built specifically for the garden via this flow, so link it
       // straight away rather than making the user find it in the picker.
-      if (data.entityId) {
+      // Not needed when revising: it is already linked, or it wouldn't
+      // have been editable here in the first place.
+      if (data.entityId && !entityId) {
         await fetch(`${BAS}api/automations/link`, {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ entityId: data.entityId }),
         });
       }
-      automationUtkast = null;
-      $("automationBeskrivning").value = "";
+      avslutaAutomationRedigering();
       await laddaAutomationer();
     } catch (err) {
       st.textContent = t("kunde_inte_spara") + err.message; st.className = "status err";
@@ -5643,6 +5656,9 @@ function renderaAutomationer() {
         <input type="checkbox" class="automation-brytare" data-entity="${esc(a.entityId)}" ${a.pa ? "checked" : ""}>
         <span class="spar"></span>
       </label>
+      <button class="ta-bort-liten automation-redigera" data-entity="${esc(a.entityId)}" data-namn="${esc(a.namn)}" title="${t("andra_automation")}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      </button>
       <button class="ta-bort-liten automation-koppla-bort" data-entity="${esc(a.entityId)}" title="${t("koppla_bort")}">×</button>
     </div>`).join("")}</div>` : `<div class="automation-tom">${t("inga_automationer")}</div>`;
   renderaAutomationUtkast();
@@ -5675,15 +5691,46 @@ function renderaAutomationUtkast() {
       <div class="status" id="automationSkapaStatus"></div>
     </div>`;
 }
+// Editing an existing automation opens a pencil button on its row rather
+// than a separate screen: it reuses this exact same builder, just aimed at
+// /revise instead of /draft - see automationRedigerarId.
+function paborjaAutomationRedigering(entityId, namn) {
+  automationRedigerarId = entityId;
+  automationUtkast = null;
+  $("automationBeskrivning").value = "";
+  $("automationBeskrivning").focus();
+  uppdateraAutomationByggareLage(namn);
+  renderaAutomationUtkast();
+}
+function avslutaAutomationRedigering() {
+  automationRedigerarId = null;
+  automationUtkast = null;
+  $("automationBeskrivning").value = "";
+  uppdateraAutomationByggareLage();
+  renderaAutomationUtkast();
+}
+function uppdateraAutomationByggareLage(namn) {
+  const redigerar = !!automationRedigerarId;
+  $("automationAvslutaRedigeraBtn").style.display = redigerar ? "" : "none";
+  if (redigerar) {
+    $("automationByggareRubrik").textContent = `${t("andra_automation")}: ${namn ?? ""}`;
+    $("automationByggareHjalp").textContent = t("andra_automation_hjalp");
+    $("automationBeskrivning").placeholder = t("andra_automation_placeholder");
+  } else {
+    oversattStatiskMarkup(); // restores the default "build new" copy
+  }
+}
 async function foreslaAutomation() {
   const beskrivning = $("automationBeskrivning").value.trim();
   if (!beskrivning) return;
   automationUtkastLaddar = true; automationUtkast = null;
   renderaAutomationUtkast();
   try {
-    const res = await fetch(`${BAS}api/automations/draft`, {
+    const vag = automationRedigerarId ? "automations/revise" : "automations/draft";
+    const kropp = automationRedigerarId ? { entityId: automationRedigerarId, beskrivning } : { beskrivning };
+    const res = await fetch(`${BAS}api/${vag}`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ beskrivning }),
+      body: JSON.stringify(kropp),
     });
     automationUtkast = await res.json();
   } catch (err) {
