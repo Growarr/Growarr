@@ -664,7 +664,20 @@ try {
   .sort-summary-kort .antal { font-size:.95rem; font-weight:700; display:block; margin-top:4px;
     font-variant-numeric:tabular-nums; }
   .sort-summary-kort .platser { font-size:.7rem; font-weight:500; color:var(--muted); }
-  /* Save and delete side by side; delete stays visually secondary until     hovered, so it is reachable without inviting a mis-click. */  .detalj-knapprad { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }  .ta-bort-knapp { background:var(--surface2); color:var(--muted); border:1px solid var(--border);    box-shadow:none; font-size:.84rem; padding:9px 16px; }  .ta-bort-knapp:hover { background:color-mix(in srgb, var(--err) 14%, var(--surface2));    border-color:color-mix(in srgb, var(--err) 42%, var(--border)); color:var(--err);    transform:none; box-shadow:none; }
+  /* Save and delete side by side; delete stays visually secondary until
+     hovered, so it is reachable without inviting a mis-click. */
+  .detalj-knapprad { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .ta-bort-knapp { background:var(--surface2); color:var(--muted); border:1px solid var(--border);
+    box-shadow:none; font-size:.84rem; padding:9px 16px; }
+  .ta-bort-knapp:hover { background:color-mix(in srgb, var(--err) 14%, var(--surface2));
+    border-color:color-mix(in srgb, var(--err) 42%, var(--border)); color:var(--err);
+    transform:none; box-shadow:none; }
+  /* Confirm dialog: the reverse of the pattern above. Here the destructive
+     choice is the one the user already committed to by opening this dialog,
+     so it gets the clear, solid treatment - "Cancel" is the safe default. */
+  .bekrafta-ja { background:var(--err); color:#fff; border:0; box-shadow:none; }
+  .bekrafta-ja:hover { background:color-mix(in srgb, var(--err) 82%, black); transform:none; box-shadow:none; }
+  .bekrafta-avbryt { background:var(--surface2); color:var(--text); border:1px solid var(--border); box-shadow:none; }
   .sort-detalj { margin-top:20px; padding-top:18px; border-top:1px solid var(--border); }
 
   .historik-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin-top:4px; }
@@ -843,6 +856,7 @@ try {
   .chatt-bubbla.fel { background:color-mix(in srgb, var(--err) 14%, var(--surface2)); border-color:var(--err); }
   .chatt-botten { border-top:1px solid var(--border); padding:12px 14px; }
   .chatt-forhandsvisning { display:none; align-items:center; gap:8px; margin-bottom:8px; font-size:.78rem; color:var(--muted); }
+  .chatt-forhandsvisning.fel #chattBildNamn { color:var(--err); }
   .chatt-forhandsvisning.visas { display:flex; }
   .chatt-forhandsvisning img { width:38px; height:38px; object-fit:cover; border-radius:8px; }
   .chatt-input-rad { display:flex; align-items:flex-end; gap:8px; }
@@ -1757,7 +1771,7 @@ const SPRAK_TEXT = {
     sprak: "Språk", svenska: "Svenska", engelska: "English",
     // Validation and status
     bakgrund: "Bakgrund", bakgrund_hjalp: "Rutnät, rent eller din egen flygbild",    bakgrund_rutnat: "Rutnät", bakgrund_ren: "Rent", bakgrund_foto: "Foto",    bakgrund_hjalp_lang: "Rent och Foto tar båda bort rutnätet. Ladda upp en flygbild (en skärmdump från Google Maps duger) för att lägga ut zonerna över er faktiska tomt.",    flygbild: "Flygbild", ladda_upp_bild: "Ladda upp bild", byt_bild: "Byt bild",    bildstyrka: "Bildstyrka", bildstyrka_hjalp: "Tona ner bilden så plantikonerna syns tydligt ovanpå.",    laddar_upp: "Laddar upp …", ingen_karta: "Ingen karta vald.",
-    namn_kravs: "Namn krävs.", kunde_inte_spara: "Kunde inte spara: ", sparat: "Sparat.", okategoriserat: "Okategoriserat", fyller_ytan_kort: "fyller ytan", var_finns: "Var", inga_odlingar: "Inga odlingar ännu – lägg till en planta i en zon på kartan.", plats: "plats", platser: "platser", bekrafta_ta_bort_zon: "Ta bort zonen? Plantorna blir okategoriserade och sektioner flyttas upp en nivå.", bekrafta_ta_bort_planta: "Ta bort odlingen?", passa_in_bilden: "Passa in bilden", passa_in_hjalp: "Vrid, skala och flytta bilden tills bäddarna hamnar där de faktiskt ligger.", rotation: "Rotation", storlek: "Storlek", flytta_x: "Flytta i sidled", flytta_y: "Flytta upp/ner", aterstall_placering: "Återställ placering", klar: "Klar", automationer: "Automationer", koppla_automation: "Koppla automation", automationer_hjalp: "Dina egna Home Assistant-automationer, kopplade till trädgården.", inga_automationer: "Inga automationer kopplade än.", valj_automation_hjalp: "Välj en automation från Home Assistant att koppla till trädgården.", alla_automationer_kopplade: "Alla dina HA-automationer är redan kopplade.", inga_ha_automationer: "Inga automationer hittades i Home Assistant.",
+    namn_kravs: "Namn krävs.", kunde_inte_spara: "Kunde inte spara: ", sparat: "Sparat.", okategoriserat: "Okategoriserat", fyller_ytan_kort: "fyller ytan", var_finns: "Var", inga_odlingar: "Inga odlingar ännu – lägg till en planta i en zon på kartan.", plats: "plats", platser: "platser", bekrafta_ta_bort_zon: "Ta bort zonen? Plantorna blir okategoriserade och sektioner flyttas upp en nivå.", bekrafta_ta_bort_planta: "Ta bort odlingen?", passa_in_bilden: "Passa in bilden", passa_in_hjalp: "Vrid, skala och flytta bilden tills bäddarna hamnar där de faktiskt ligger.", rotation: "Rotation", storlek: "Storlek", flytta_x: "Flytta i sidled", flytta_y: "Flytta upp/ner", aterstall_placering: "Återställ placering", klar: "Klar", automationer: "Automationer", koppla_automation: "Koppla automation", automationer_hjalp: "Dina egna Home Assistant-automationer, kopplade till trädgården.", inga_automationer: "Inga automationer kopplade än.", valj_automation_hjalp: "Välj en automation från Home Assistant att koppla till trädgården.", alla_automationer_kopplade: "Alla dina HA-automationer är redan kopplade.", inga_ha_automationer: "Inga automationer hittades i Home Assistant.", avbryt: "Avbryt", bekrafta_ta_bort_karta: "Ta bort kartan? Zonerna på den flyttas till den första kvarvarande kartan.", kunde_inte_lasa_bilden: "Kunde inte läsa bilden: ",
     valj_zon: "Välj en zon.", valj_veckodag: "Välj minst en veckodag.",
     // Create-new modal
     skapa_sub: "Zoner, plantor, kartor och egna block",
@@ -1839,7 +1853,7 @@ const SPRAK_TEXT = {
     tema_hjalp: "Follows your device's light/dark setting by default, or pick one yourself.",
     sprak: "Language", svenska: "Svenska", engelska: "English",
     bakgrund: "Background", bakgrund_hjalp: "Grid, plain or your own aerial photo",    bakgrund_rutnat: "Grid", bakgrund_ren: "Plain", bakgrund_foto: "Photo",    bakgrund_hjalp_lang: "Plain and Photo both drop the grid. Upload an aerial shot (a Google Maps screenshot works) to lay your zones out over your actual property.",    flygbild: "Aerial photo", ladda_upp_bild: "Upload image", byt_bild: "Replace image",    bildstyrka: "Image strength", bildstyrka_hjalp: "Dim the photo so the plant icons stay readable on top of it.",    laddar_upp: "Uploading …", ingen_karta: "No map selected.",
-    namn_kravs: "A name is required.", kunde_inte_spara: "Could not save: ", sparat: "Saved.", okategoriserat: "Uncategorised", fyller_ytan_kort: "fills the area", var_finns: "Where", inga_odlingar: "Nothing planted yet. Add a plant to a zone on the map.", plats: "place", platser: "places", bekrafta_ta_bort_zon: "Delete this zone? Its plants become uncategorised and any sections move up a level.", bekrafta_ta_bort_planta: "Delete this planting?", passa_in_bilden: "Line the photo up", passa_in_hjalp: "Rotate, resize and nudge the photo until your beds sit where they really are.", rotation: "Rotation", storlek: "Size", flytta_x: "Move sideways", flytta_y: "Move up/down", aterstall_placering: "Reset placement", klar: "Done", automationer: "Automations", koppla_automation: "Link automation", automationer_hjalp: "Your own Home Assistant automations, linked to the garden.", inga_automationer: "No automations linked yet.", valj_automation_hjalp: "Pick an automation from Home Assistant to link to the garden.", alla_automationer_kopplade: "All your HA automations are already linked.", inga_ha_automationer: "No automations found in Home Assistant.",
+    namn_kravs: "A name is required.", kunde_inte_spara: "Could not save: ", sparat: "Saved.", okategoriserat: "Uncategorised", fyller_ytan_kort: "fills the area", var_finns: "Where", inga_odlingar: "Nothing planted yet. Add a plant to a zone on the map.", plats: "place", platser: "places", bekrafta_ta_bort_zon: "Delete this zone? Its plants become uncategorised and any sections move up a level.", bekrafta_ta_bort_planta: "Delete this planting?", passa_in_bilden: "Line the photo up", passa_in_hjalp: "Rotate, resize and nudge the photo until your beds sit where they really are.", rotation: "Rotation", storlek: "Size", flytta_x: "Move sideways", flytta_y: "Move up/down", aterstall_placering: "Reset placement", klar: "Done", automationer: "Automations", koppla_automation: "Link automation", automationer_hjalp: "Your own Home Assistant automations, linked to the garden.", inga_automationer: "No automations linked yet.", valj_automation_hjalp: "Pick an automation from Home Assistant to link to the garden.", alla_automationer_kopplade: "All your HA automations are already linked.", inga_ha_automationer: "No automations found in Home Assistant.", avbryt: "Cancel", bekrafta_ta_bort_karta: "Delete this map? Its zones move to the first remaining map.", kunde_inte_lasa_bilden: "Could not read the image: ",
     valj_zon: "Pick a zone.", valj_veckodag: "Pick at least one day.",
     skapa_sub: "Zones, plants, maps and custom blocks",
     flik_zon: "Zone", flik_planta: "Plant", flik_karta: "Map", flik_block: "Block",
@@ -3966,8 +3980,23 @@ function kopplaEntiteterHtml(idLista) {
   </div>`;
 }
 function stangModal() {
+  // A confirm dialog dismissed via the × button (rather than answered) is a
+  // "no" - the caller is awaiting this promise and must not hang forever.
+  if (modalKontext?.typ === "bekrafta") modalKontext.resolve(false);
   $("modalBakgrund").style.display = "none";
   modalKontext = null;
+}
+// Replaces window.confirm() with a modal in the app's own style. Native
+// browser confirm/alert boxes are the single most jarring "this is just a
+// web page" tell in the whole panel - unstyleable, and they freeze the tab
+// while open. Resolves true/false exactly like confirm() did, so call sites
+// only need "await" added in front of the old confirm(...) call.
+function bekraftaModal(meddelande, undertext = "") {
+  return new Promise((resolve) => {
+    modalKontext = { typ: "bekrafta", meddelande, undertext, resolve };
+    renderaModal();
+    $("modalBakgrund").style.display = "flex";
+  });
 }
 function oppnaQrModal(zonId) {
   modalKontext = { typ: "qr", id: zonId };
@@ -4059,6 +4088,18 @@ function renderaModal() {
   }
   if (typ === "automation") {
     $("modalInnehall").innerHTML = automationValjareHtml();
+    oversattStatiskMarkup();
+    return;
+  }
+  if (typ === "bekrafta") {
+    $("modalInnehall").innerHTML = `
+      <button class="ta-bort" id="modalStangBtn" data-i18n-title="stang" style="position:absolute; top:16px; right:16px">×</button>
+      <h3>${esc(modalKontext.meddelande)}</h3>
+      ${modalKontext.undertext ? `<div class="modal-sub">${esc(modalKontext.undertext)}</div>` : ""}
+      <div class="detalj-knapprad" style="margin-top:18px">
+        <button class="bekrafta-avbryt" style="flex:1">${t("avbryt")}</button>
+        <button class="bekrafta-ja" style="flex:1">${t("ta_bort")}</button>
+      </div>`;
     oversattStatiskMarkup();
     return;
   }
@@ -4615,7 +4656,7 @@ document.addEventListener("click", async (e) => {
   }
   const zonTaBort = e.target.closest(".zon-ta-bort, .sektion-ta-bort");
   if (zonTaBort) {
-    if (!confirm("Ta bort zonen? Plantor i den blir okategoriserade, och eventuella sektioner flyttas ut.")) return;
+    if (!await bekraftaModal(t("bekrafta_ta_bort_zon"))) return;
     await fetch(`${BAS}api/zones/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: zonTaBort.dataset.id }) });
     await laddaOdlingar();
     return;
@@ -4631,7 +4672,7 @@ document.addEventListener("click", async (e) => {
     const namn = arZon
       ? zoner.find((z) => z.id === mTaBort.dataset.id)?.namn
       : odlingar.find((o) => o.id === mTaBort.dataset.id)?.namn;
-    if (!confirm(`${t(arZon ? "bekrafta_ta_bort_zon" : "bekrafta_ta_bort_planta")}\n\n${namn ?? ""}`)) return;
+    if (!await bekraftaModal(t(arZon ? "bekrafta_ta_bort_zon" : "bekrafta_ta_bort_planta"), namn ?? "")) return;
     await fetch(`${BAS}api/${arZon ? "zones" : "plantings"}/delete`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: mTaBort.dataset.id }),
@@ -4710,6 +4751,8 @@ document.addEventListener("click", async (e) => {
 
   // Popup (ny zon): stäng
   if (e.target.closest("#modalStangBtn")) { stangModal(); return; }
+  if (e.target.closest(".bekrafta-ja")) { modalKontext.resolve(true); modalKontext = null; $("modalBakgrund").style.display = "none"; return; }
+  if (e.target.closest(".bekrafta-avbryt")) { stangModal(); return; }
   if (e.target.id === "modalBakgrund") { stangModal(); return; }
 
   // Popup: avmarkera i detaljpanelen
@@ -4883,7 +4926,7 @@ document.addEventListener("click", async (e) => {
   const flikTaBort = e.target.closest(".karta-flik-ta-bort");
   if (flikTaBort) {
     e.stopPropagation();
-    if (!confirm("Ta bort kartan? Zonerna på den flyttas till den första kvarvarande kartan.")) return;
+    if (!await bekraftaModal(t("bekrafta_ta_bort_karta"))) return;
     await fetch(`${BAS}api/maps/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: flikTaBort.dataset.id }) });
     await laddaOdlingar();
     return;
@@ -5639,11 +5682,22 @@ function laddaBild(fil, maxKant = 1600) {
 
 function visaChattBild() {
   const ruta = $("chattBildForhands");
+  ruta.classList.remove("fel");
+  $("chattBildMini").style.display = "";
   ruta.classList.toggle("visas", !!chattBild);
   if (chattBild) {
     $("chattBildMini").src = `data:${chattBild.typ};base64,${chattBild.data}`;
     $("chattBildNamn").textContent = chattBild.namn;
   }
+}
+// Shown in the same preview row a successful image occupies, rather than a
+// native alert() - one is jarring and freezes the tab, the other reads as
+// part of the app that was already there for the file name.
+function visaChattBildFel(meddelande) {
+  const ruta = $("chattBildForhands");
+  ruta.classList.add("visas", "fel");
+  $("chattBildMini").style.display = "none";
+  $("chattBildNamn").textContent = meddelande;
 }
 
 $("chattKnapp").addEventListener("click", () => {
@@ -5657,7 +5711,7 @@ $("chattBildFil").addEventListener("change", async (e) => {
   const fil = e.target.files?.[0];
   if (!fil) return;
   try { chattBild = await laddaBild(fil); visaChattBild(); }
-  catch (err) { alert("Kunde inte läsa bilden: " + err.message); }
+  catch (err) { visaChattBildFel(t("kunde_inte_lasa_bilden") + err.message); }
 });
 $("chattText").addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); skickaChatt(); }
