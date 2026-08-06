@@ -487,12 +487,22 @@ async function skapaHaAutomation({ alias, trigger, condition, action, mode, enti
   const anvanda = samlaEntitetIdI({ trigger, condition, action });
   const pahittade = [...anvanda].filter((id) => !giltiga.has(id));
   if (pahittade.length) return { fel: `Okända entiteter: ${pahittade.join(", ")}` };
+  const arNy = !entityId;
   const id = entityId?.startsWith("automation.") ? entityId.slice("automation.".length) : `growarr_${Date.now()}`;
   try {
+    const konfig = { alias, trigger, condition: condition ?? [], action, mode: mode || "single" };
+    // Entity-id validation catches Claude inventing a device, but not
+    // Claude getting the logic subtly wrong on a real one (the wrong
+    // comparison, a threshold the user didn't mean). A brand new automation
+    // therefore lands OFF: nothing can fire until the user makes a second,
+    // separate decision to flip it on with the toggle that already exists
+    // for exactly this. Revising an automation that was already running
+    // does not touch its current on/off state.
+    if (arNy) konfig.initial_state = false;
     const res = await fetch(`${HA_URL}/api/config/automation/config/${id}`, {
       method: "POST",
       headers: { Authorization: `Bearer ${HA_TOKEN}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ alias, trigger, condition: condition ?? [], action, mode: mode || "single" }),
+      body: JSON.stringify(konfig),
     });
     if (!res.ok) return { fel: `HA svarade ${res.status}` };
     // Config API writes the file but doesn't apply it - without this the
@@ -501,7 +511,7 @@ async function skapaHaAutomation({ alias, trigger, condition, action, mode, enti
     await fetch(`${HA_URL}/api/services/automation/reload`, {
       method: "POST", headers: { Authorization: `Bearer ${HA_TOKEN}`, "Content-Type": "application/json" }, body: "{}",
     }).catch(() => {});
-    return { ok: true, entityId: `automation.${id}` };
+    return { ok: true, entityId: `automation.${id}`, avstangdTillsVidare: arNy };
   } catch (err) {
     return { fel: err.message };
   }
