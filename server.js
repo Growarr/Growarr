@@ -3,10 +3,15 @@
 // sensorer, ventiler m.m. som HA-entiteter här den dagen ni har dem
 // installerade – ingen kodändring behövs, bara ange entity_id i panelen.
 import { createServer } from "node:http";
-import { readFile, writeFile, mkdir, unlink } from "node:fs/promises";
+import { readFile, writeFile, rename, mkdir, unlink, readdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
+import {
+  stockholmManad, stockholmDatum, lokalTimme, rensaAntal, rensaLayout, rensaHojdM,
+  torkTakt, TORR_GRANS, MIN_LUTNING, veckodagarForIntervall, enhetArFuktsensor,
+  samlaEntitetIdI, tillYaml, haAutomationObjektId, haMetrikEntitetId,
+} from "./src/logic.js";
 
 const PORT = process.env.PORT || 8097;
 const DATA_PATH = process.env.DATA_PATH || "/data/tradgard.json";
@@ -24,15 +29,14 @@ const ANTHROPIC_MODEL = "claude-sonnet-5";
 const KARTBILD_DIR = join(dirname(DATA_PATH), "maps");
 const PANEL_HTML = join(dirname(fileURLToPath(import.meta.url)), "index.html");
 const LOGO_PNG = join(dirname(fileURLToPath(import.meta.url)), "logo.png");
+// Rullande dagliga säkerhetskopior av tradgard.json, i en egen mapp bredvid
+// datafilen (samma volym, ingen extra konfiguration krävs). Skyddar mot en
+// felaktig ändring eller en trasig migrering – inte mot att disken dör, då
+// krävs en kopia utanför boxen (t.ex. volymen synkad till annan lagring).
+const BACKUP_DIR = join(dirname(DATA_PATH), "backups");
+const BACKUP_DAGAR = 30;
 
-function stockholmManad(d = new Date()) {
-  const delar = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Stockholm", year: "numeric", month: "2-digit" }).formatToParts(d);
-  const f = Object.fromEntries(delar.map((p) => [p.type, p.value]));
-  return `${f.year}-${f.month}`;
-}
-function lokalTimme(iso) {
-  return Number(new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Stockholm", hour: "2-digit", hour12: false }).format(new Date(iso)));
-}
+// stockholmManad, stockholmDatum, lokalTimme: se src/logic.js
 
 // ---- Lagring: zoner, odlingsjournal + bevakade HA-enheter ----
 async function lasData() {
@@ -50,33 +54,43 @@ async function lasData() {
 }
 async function skrivData(data) {
   await mkdir(dirname(DATA_PATH), { recursive: true });
-  await writeFile(DATA_PATH, JSON.stringify(data, null, 2) + "\n");
+  // Skriv till en temporär fil och byt namn på den istället för att skriva
+  // datafilen på plats – ett döende/omstartat containeranrop mitt i en
+  // writeFile() skulle annars kunna lämna kvar en halvskriven, trasig
+  // tradgard.json. rename() på samma filsystem är atomärt.
+  const tmp = `${DATA_PATH}.tmp`;
+  await writeFile(tmp, JSON.stringify(data, null, 2) + "\n");
+  await rename(tmp, DATA_PATH);
+}
+// En gång om dagen: kopiera dagens datafil till backups/tradgard-ÅÅÅÅ-MM-DD.json
+// och städa bort kopior äldre än BACKUP_DAGAR. Skriver om samma dags backup
+// flera gånger vid omstarter samma dag – det är avsiktligt, det är dagens
+// senaste stånd som är intressant att kunna gå tillbaka till, inte varje
+// enskild körning.
+async function sakerhetskopieraData() {
+  let innehall;
+  try {
+    innehall = await readFile(DATA_PATH);
+  } catch {
+    return; // inget att säkerhetskopiera ännu
+  }
+  await mkdir(BACKUP_DIR, { recursive: true });
+  await writeFile(join(BACKUP_DIR, `tradgard-${stockholmDatum()}.json`), innehall);
+  const gransTid = Date.now() - BACKUP_DAGAR * 24 * 3600 * 1000;
+  for (const namn of await readdir(BACKUP_DIR).catch(() => [])) {
+    const match = namn.match(/^tradgard-(\d{4}-\d{2}-\d{2})\.json$/);
+    if (match && new Date(`${match[1]}T00:00:00Z`).getTime() < gransTid) {
+      await unlink(join(BACKUP_DIR, namn)).catch(() => {});
+    }
+  }
 }
 // En odlingspost är "en sort på en plats" och bär ett antal – t.ex. 6 gurkor
 // i en låda är én post med antal 6, inte sex poster. Taket på 200 finns bara
 // för att en felskrivning inte ska rita ut tiotusen ikoner på kartan.
-const MAX_ANTAL = 200;
-function rensaAntal(v) {
-  const n = Math.round(Number(v));
-  if (!Number.isFinite(n) || n < 1) return 1;
-  return Math.min(MAX_ANTAL, n);
-}
-// "klunga" = plantorna står samlade på sin punkt i zonen, "fyll" = de sprids
-// jämnt över hela ytan (en låda helt full med samma sort).
-function rensaLayout(v) {
-  return v === "fyll" ? "fyll" : "klunga";
-}
 // Utetemperaturen (SMHI) sparas i historiken under ett reserverat id, så den
 // ligger sida vid sida med sensorserierna utan att vara en "enhet".
 const UTE_SERIE = "__ute";
-// Zonens höjd över marken i meter – styr hur lång skugga den kastar i
-// solkartan. Ett växthus skuggar, en utplanterad bädd i praktiken inte.
-const STANDARD_HOJD_M = { vaxthus: 2.2, odlingslada: 0.4, utomhus: 0.15, inomhus: 0, annat: 0 };
-function rensaHojdM(v, typ) {
-  const n = Number(v);
-  if (!Number.isFinite(n) || n < 0) return STANDARD_HOJD_M[typ] ?? 0;
-  return Math.min(20, Math.round(n * 100) / 100);
-}
+// rensaAntal, rensaLayout, rensaHojdM: se src/logic.js
 
 let ko = Promise.resolve();
 function muteraData(fn) {
@@ -246,52 +260,7 @@ async function vaxlaHaAutomation(entityId, pa) {
 // deeply nested (HA's schema allows entity_id as a string or a list, at any
 // level). The single point every automation-writing path checks against
 // the real entity list - nothing gets close to HA's config API otherwise.
-function samlaEntitetIdI(varde, ut = new Set()) {
-  if (Array.isArray(varde)) { for (const v of varde) samlaEntitetIdI(v, ut); }
-  else if (varde && typeof varde === "object") {
-    for (const [k, v] of Object.entries(varde)) {
-      if (k === "entity_id") {
-        if (typeof v === "string") ut.add(v);
-        else if (Array.isArray(v)) for (const id of v) if (typeof id === "string") ut.add(id);
-      }
-      samlaEntitetIdI(v, ut);
-    }
-  }
-  return ut;
-}
-// A minimal JSON-to-YAML renderer, display only - HA's config API takes
-// JSON, so this never needs to parse YAML back, only show it. Good enough
-// for the plain nested dicts/lists/strings an automation config actually is.
-function yamlVarde(v) {
-  if (typeof v !== "string") return String(v);
-  return v === "" || /^[\s#>|@`"'%*&!?:,\[\]{}-]|[:#]\s|\s$/.test(v) ? JSON.stringify(v) : v;
-}
-function tillYaml(varde, indent = 0) {
-  const pad = "  ".repeat(indent);
-  if (Array.isArray(varde)) {
-    if (!varde.length) return `${pad}[]`;
-    return varde.map((v) => {
-      if (v && typeof v === "object") {
-        const rader = tillYaml(v, indent + 1).split("\n");
-        // A single-key object (e.g. { delay: "..." }) leaves nothing to
-        // join in the "rest" - joining an empty array still produces "",
-        // which would otherwise add a stray blank line after every item
-        // that happens to be that short.
-        const rest = rader.length > 1 ? `\n${rader.slice(1).join("\n")}` : "";
-        return `${pad}- ${rader[0].trimStart()}${rest}`;
-      }
-      return `${pad}- ${yamlVarde(v)}`;
-    }).join("\n");
-  }
-  if (varde && typeof varde === "object") {
-    const nycklar = Object.entries(varde);
-    if (!nycklar.length) return `${pad}{}`;
-    return nycklar.map(([k, v]) => (v && typeof v === "object")
-      ? `${pad}${k}:\n${tillYaml(v, indent + 1)}`
-      : `${pad}${k}: ${yamlVarde(v)}`).join("\n");
-  }
-  return `${pad}${yamlVarde(varde)}`;
-}
+// samlaEntitetIdI, yamlVarde, tillYaml: se src/logic.js
 
 // ---- Claude drafts a Home Assistant automation from a plain description ----
 // HA's own automation editor (visual and YAML) is already good - Growarr has
@@ -372,9 +341,7 @@ Svara ENDAST med kompakt JSON: {"alias":"...","forklaring":"...","trigger":[...]
 }
 // The object_id half of an automation's entity_id is the same string HA's
 // config API stores it under - see the note on skapaHaAutomation.
-function haAutomationObjektId(entityId) {
-  return entityId?.startsWith("automation.") ? entityId.slice("automation.".length) : null;
-}
+// haAutomationObjektId: se src/logic.js
 async function hamtaHaAutomationKonfig(entityId) {
   if (!HA_TOKEN) return { fel: "HA_TOKEN är inte konfigurerat" };
   const objektId = haAutomationObjektId(entityId);
@@ -712,44 +679,7 @@ ${sammanfattning}`,
 let schemaAiCache = null; // { nyckel, tid, resultat }
 const SCHEMA_AI_CACHE_MS = 6 * 3600 * 1000;
 const VECKODAG_NAMN = ["söndag", "måndag", "tisdag", "onsdag", "torsdag", "fredag", "lördag"];
-const TORR_GRANS = 25;        // % moisture we want to water before reaching
-const MIN_MATPUNKTER = 6;     // fewer points than this and a trend line is noise
-const MIN_LUTNING = 0.7;      // %/day; anything flatter is not really drying out
-
-// Least-squares slope of value against time, in units per day. Returns null
-// when there is too little data for the answer to mean anything.
-function torkTakt(punkter) {
-  if (punkter.length < MIN_MATPUNKTER) return null;
-  const t0 = new Date(punkter[0].tid).getTime();
-  const xs = punkter.map((p) => (new Date(p.tid).getTime() - t0) / 86400000);
-  const ys = punkter.map((p) => Number(p.varde));
-  if (ys.some((y) => !Number.isFinite(y))) return null;
-  const n = xs.length;
-  const mx = xs.reduce((a, b) => a + b, 0) / n;
-  const my = ys.reduce((a, b) => a + b, 0) / n;
-  let tal = 0, namn = 0;
-  for (let i = 0; i < n; i++) { tal += (xs[i] - mx) * (ys[i] - my); namn += (xs[i] - mx) ** 2; }
-  if (namn === 0) return null;
-  return tal / namn; // negative means drying out
-}
-
-// Turn "water every N days" into concrete weekdays, spread across the week
-// rather than bunched together. 0 = Sunday, matching Date.getDay().
-function veckodagarForIntervall(intervall) {
-  if (intervall <= 1) return [0, 1, 2, 3, 4, 5, 6];
-  if (intervall === 2) return [1, 3, 5];
-  if (intervall === 3) return [1, 4];
-  if (intervall <= 5) return [1, 5];
-  return [3];
-}
-
-// The unit of measurement lives on the live Home Assistant state rather than
-// in our own data file, so this is a name-based guess. Kept small and
-// separate so the intent stays obvious.
-function enhetArFuktsensor(enhet) {
-  const namn = (enhet.namn ?? "").toLowerCase();
-  return namn.includes("fukt") || namn.includes("moist") || namn.includes("humid");
-}
+// TORR_GRANS, MIN_LUTNING, torkTakt, veckodagarForIntervall, enhetArFuktsensor: se src/logic.js
 
 // The arithmetic core: is this one zone drying out, and how fast? Shared by
 // the schedule suggestions (which skip zones already scheduled) and the HA
@@ -802,10 +732,7 @@ function raknaAllaFuktMetriker(d) {
 // trend gets a real sensor entity in HA (same trend line the schedule
 // suggestions already use), so any automation built in HA's own UI, visual
 // or YAML, can react to it exactly like a real sensor.
-function haMetrikEntitetId(zonId) {
-  const rensat = String(zonId).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
-  return `sensor.growarr_${rensat}_dagar_till_torrt`;
-}
+// haMetrikEntitetId: se src/logic.js
 async function synkaMetrikerTillHa() {
   if (!HA_TOKEN) return { synkade: 0, fel: "HA_TOKEN är inte konfigurerat" };
   const d = await lasData();
@@ -1054,6 +981,7 @@ async function kollaSkordepaminnelser() {
 }
 const EN_DAG_MS = 24 * 3600 * 1000;
 setInterval(() => kollaSkordepaminnelser().catch((err) => console.warn("Skördepåminnelse-koll misslyckades:", err.message)), EN_DAG_MS);
+setInterval(() => sakerhetskopieraData().catch((err) => console.warn("Säkerhetskopiering misslyckades:", err.message)), EN_DAG_MS);
 
 // ---- Historik för entiteter kopplade till zoner/odlingar ----
 // Pollar HA en gång i timmen för varje entitet som är kopplad till en zon
@@ -1125,6 +1053,22 @@ async function lasBody(req) {
   }
   return delar.length ? JSON.parse(Buffer.concat(delar).toString("utf8")) : {};
 }
+
+// Enkel, processglobal rate limit på de endpoints som anropar Claude. Det
+// finns ingen inloggning som skiljer klienter åt, så gränsen gäller hela
+// installationen snarare än en enskild användare – syftet är att en
+// exponerad port eller en trasig klient inte ska kunna dra iväg med
+// Anthropic-notan, inte att strypa en enskild persons användning.
+const anropsFonster = new Map(); // namn -> tidsstämplar inom fönstret
+function inomGrans(namn, max, fonsterMs) {
+  const nu = Date.now();
+  const tider = (anropsFonster.get(namn) ?? []).filter((t) => nu - t < fonsterMs);
+  if (tider.length >= max) { anropsFonster.set(namn, tider); return false; }
+  tider.push(nu);
+  anropsFonster.set(namn, tider);
+  return true;
+}
+const FOR_MANGA_FORFRAGNINGAR = { fel: "för många AI-förfrågningar just nu, försök igen om en stund" };
 
 // Matchar på slutet av sökvägen – robust oavsett om reverse-proxyn framför
 // strippar sitt prefix eller inte, samma mönster som i bostadsvakt-api och
@@ -1380,6 +1324,7 @@ const server = createServer(async (req, res) => {
     }
     // Draft only - nothing is written to Home Assistant until /create.
     if (req.method === "POST" && p.endsWith("/api/automations/draft")) {
+      if (!inomGrans("automations", 15, EN_TIMME_MS)) return skickaJson(res, 429, FOR_MANGA_FORFRAGNINGAR);
       const { beskrivning } = await lasBody(req);
       if (!beskrivning?.trim()) return skickaJson(res, 400, { fel: "beskrivning saknas" });
       const resultat = await utkastAutomation(beskrivning.trim());
@@ -1389,6 +1334,7 @@ const server = createServer(async (req, res) => {
     // "make it wait 10 minutes instead of 5" edits the real config rather
     // than drafting a brand new automation from nothing.
     if (req.method === "POST" && p.endsWith("/api/automations/revise")) {
+      if (!inomGrans("automations", 15, EN_TIMME_MS)) return skickaJson(res, 429, FOR_MANGA_FORFRAGNINGAR);
       const { entityId, beskrivning } = await lasBody(req);
       if (!entityId || !beskrivning?.trim()) return skickaJson(res, 400, { fel: "entityId och beskrivning krävs" });
       const resultat = await revideraAutomation(entityId, beskrivning.trim());
@@ -1541,12 +1487,14 @@ const server = createServer(async (req, res) => {
     // ANTHROPIC_API_KEY saknas eller anropet misslyckas.
     if (req.method === "POST" && p.endsWith("/api/notifications/ai")) {
       const { kandidater } = await lasBody(req);
+      if (!inomGrans("notifikationer", 20, EN_TIMME_MS)) return skickaJson(res, 429, { ...FOR_MANGA_FORFRAGNINGAR, notiser: kandidater });
       return skickaJson(res, 200, await hamtaAiNotiser(kandidater));
     }
     if (req.method === "GET" && p.endsWith("/api/schedules/suggestions")) {
       return skickaJson(res, 200, await hamtaAiSchemaforslag());
     }
     if (req.method === "POST" && p.endsWith("/api/chat")) {
+      if (!inomGrans("chat", 30, EN_TIMME_MS)) return skickaJson(res, 429, FOR_MANGA_FORFRAGNINGAR);
       const { meddelanden } = await lasBody(req);
       return skickaJson(res, 200, await svaraChatt(meddelanden));
     }
@@ -1576,3 +1524,4 @@ server.listen(PORT, () => console.log(`growarr lyssnar på :${PORT}, data i ${DA
 migreraData().catch((err) => console.warn("Migrering misslyckades:", err.message));
 kollaSkordepaminnelser().catch((err) => console.warn("Skördepåminnelse-koll misslyckades:", err.message));
 loggaHistorik().catch((err) => console.warn("Historik-loggning misslyckades:", err.message));
+sakerhetskopieraData().catch((err) => console.warn("Säkerhetskopiering misslyckades:", err.message)); // en gång vid start, så en omstart mitt på dagen inte väntar ett dygn
