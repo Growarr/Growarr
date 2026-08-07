@@ -247,6 +247,17 @@ describe("vaxtfamiljFor", () => {
     assert.equal(vaxtfamiljFor(""), null);
     assert.equal(vaxtfamiljFor(undefined), null);
   });
+  test("compound names aren't misclassified by a false substring match", () => {
+    // Jordärtskocka/Kronärtskocka (Jerusalem/globe artichoke, both
+    // thistles) contain "ärt" but are not legumes; Potatislök (a shallot)
+    // contains "potatis" but is not a nightshade.
+    assert.equal(vaxtfamiljFor("Jordärtskocka"), "korgblommiga");
+    assert.equal(vaxtfamiljFor("Kronärtskocka"), "korgblommiga");
+    assert.equal(vaxtfamiljFor("Potatislök"), "lokvaxter");
+    // Legitimate compounds still work: these really are what they contain.
+    assert.equal(vaxtfamiljFor("Sockerärt"), "baljvaxter");
+    assert.equal(vaxtfamiljFor("Purjolök"), "lokvaxter");
+  });
 });
 
 describe("skordFamiljVarning", () => {

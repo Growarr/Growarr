@@ -1848,6 +1848,14 @@ const VAXT_FAMILJER = {
   rosvaxter:  { namn: "Jordgubbar",       vilaAr: 2 },
   kryddvaxter: { namn: "Kryddväxter (mynta-familjen)", vilaAr: 1 },
 };
+// Checked before the generic patterns below - see the matching comment in
+// src/logic.js for why (jordärtskocka/kronärtskocka/potatislök are
+// compounds that contain another family's keyword as a plain substring
+// without actually being that family).
+const VAXT_FAMILJ_UNDANTAG = [
+  [/jordärtskocka|kronärtskocka/i, "korgblommiga"],
+  [/potatislök/i, "lokvaxter"],
+];
 const VAXT_FAMILJ_MONSTER = [
   [/tomat|potatis|paprika|paprikor|chili|aubergine/i, "nattskott"],
   [/kål|broccoli|rädisa|rädisor|rova|rovor|rucola|ruccola/i, "kal"],
@@ -1862,6 +1870,7 @@ const VAXT_FAMILJ_MONSTER = [
 ];
 function vaxtfamiljFor(namn) {
   if (!namn) return null;
+  for (const [monster, familj] of VAXT_FAMILJ_UNDANTAG) if (monster.test(namn)) return familj;
   for (const [monster, familj] of VAXT_FAMILJ_MONSTER) if (monster.test(namn)) return familj;
   return null;
 }

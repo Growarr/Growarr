@@ -201,6 +201,21 @@ export const VAXT_FAMILJER = {
   kryddvaxter: { namn: "Kryddväxter (mynta-familjen)", vilaAr: 1 },  // basilika, mynta, timjan, rosmarin
 };
 
+// Checked before the generic patterns below: a few real Swedish crop names
+// are compounds that contain another family's keyword as a plain
+// substring, but aren't that family at all - jordärtskocka/kronärtskocka
+// (Jerusalem/globe artichoke, both thistles) contain "ärt" and would
+// otherwise match legumes, and potatislök (a shallot) contains "potatis"
+// and would otherwise match nightshades. A general word-boundary regex
+// would "fix" this but break more than it solves: Swedish relies on the
+// same unbounded compounding for legitimate matches (sockerärt, purjolök,
+// vaxböna all need the substring to match without a boundary), so known
+// exceptions are listed explicitly instead.
+const VAXT_FAMILJ_UNDANTAG = [
+  [/jordärtskocka|kronärtskocka/i, "korgblommiga"],
+  [/potatislök/i, "lokvaxter"],
+];
+
 // Swedish plurals often swap the trailing vowel rather than just append
 // (pumpa -> pumpor, rädisa -> rädisor, böna -> bönor, paprika -> paprikor,
 // rödbeta -> rödbetor) - a naive singular-only stem misses the plural form,
@@ -222,6 +237,7 @@ const VAXT_FAMILJ_MONSTER = [
 
 export function vaxtfamiljFor(namn) {
   if (!namn) return null;
+  for (const [monster, familj] of VAXT_FAMILJ_UNDANTAG) if (monster.test(namn)) return familj;
   for (const [monster, familj] of VAXT_FAMILJ_MONSTER) if (monster.test(namn)) return familj;
   return null;
 }
