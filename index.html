@@ -1510,7 +1510,7 @@ try {
   <div class="card">
     <h2 data-i18n="om_growarr">Om Growarr</h2>
     <p class="lbl" id="appVersion"></p>
-    <p class="lbl" data-i18n="version_hjalp">Uppdateras automatiskt vid varje ny version på main.</p>
+    <p class="lbl" id="appUppdatering" style="display:none; color:var(--warn)"></p>
     <button id="logoutBtn" class="ta-bort-knapp" style="margin-top:14px" data-i18n="logga_ut">Logga ut</button>
   </div>
 
@@ -1869,7 +1869,7 @@ const SPRAK_TEXT = {
     enhet_namn_placeholder: "fylls i automatiskt, går att ändra",
     sprak_hjalp: "Appens språk. Svenska är standard; delar som ännu inte översatts visas på svenska.",
     fraga_radgivare: "Fråga trädgårdsrådgivaren", ta_bort_bild: "Ta bort bild",
-    om_growarr: "Om Growarr", version_hjalp: "Uppdateras automatiskt vid varje ny version på main.",
+    om_growarr: "Om Growarr", ny_version_finns: "En nyare version finns:",
     logga_in: "Logga in", logga_in_hjalp: "Samma lösenord för hela hushållet.", losenord: "Lösenord", logga_ut: "Logga ut",
   },
   en: {
@@ -1952,7 +1952,7 @@ const SPRAK_TEXT = {
     enhet_namn_placeholder: "filled in automatically, editable",
     sprak_hjalp: "The app's language. Swedish is the default; anything not translated yet falls back to Swedish.",
     fraga_radgivare: "Ask the garden adviser", ta_bort_bild: "Remove image",
-    om_growarr: "About Growarr", version_hjalp: "Updates automatically with every new version on main.",
+    om_growarr: "About Growarr", ny_version_finns: "A newer version is available:",
     logga_in: "Log in", logga_in_hjalp: "Same password for the whole household.", losenord: "Password", logga_ut: "Log out",
   },
 };
@@ -5341,8 +5341,15 @@ async function laddaInstallningar() {
   } catch { /* ok att inte kunna hämta – fälten blir bara tomma */ }
   try {
     const res = await fetch(`${BAS}api/version`, { cache: "no-store" });
-    const { version } = await res.json();
+    const { version, senasteVersion } = await res.json();
     $("appVersion").textContent = `Growarr v${version}`;
+    const upd = $("appUppdatering");
+    if (senasteVersion && senasteVersion !== version) {
+      upd.textContent = `${t("ny_version_finns")} v${senasteVersion}`;
+      upd.style.display = "block";
+    } else {
+      upd.style.display = "none";
+    }
   } catch { /* ok att inte kunna hämta – raden blir bara tom */ }
 }
 

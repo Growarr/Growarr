@@ -48,6 +48,27 @@ const LOGO_PNG = join(dirname(fileURLToPath(import.meta.url)), "logo.png");
 const APP_VERSION = JSON.parse(
   readFileSync(join(dirname(fileURLToPath(import.meta.url)), "package.json"), "utf8"),
 ).version;
+// Whether a newer build has already landed on main - every push bumps the
+// version and rebuilds :latest (see docker-publish.yml), so this is really
+// "has your Watchtower/redeploy caught up yet" rather than anything you'd
+// act on by hand. Cached for an hour: nobody needs this to the minute, and
+// it's one unauthenticated GitHub request per check otherwise.
+let senasteVersionCache = null; // { tid, version }
+const SENASTE_VERSION_CACHE_MS = 3600 * 1000;
+async function hamtaSenasteVersion() {
+  if (senasteVersionCache && Date.now() - senasteVersionCache.tid < SENASTE_VERSION_CACHE_MS) return senasteVersionCache.version;
+  try {
+    const res = await fetch("https://raw.githubusercontent.com/Growarr/growarr/main/package.json", {
+      headers: { "User-Agent": "growarr (github.com/Growarr/growarr)" },
+    });
+    if (!res.ok) return null;
+    const { version } = await res.json();
+    senasteVersionCache = { tid: Date.now(), version };
+    return version;
+  } catch {
+    return null;
+  }
+}
 // Rolling daily backups of tradgard.json, in their own folder next to the
 // data file (same volume, no extra configuration needed). Protects against
 // a bad edit or a broken migration - not against the disk itself dying, that
@@ -1575,7 +1596,7 @@ const server = createServer(async (req, res) => {
       return skickaJson(res, 200, status);
     }
     if (req.method === "GET" && p.endsWith("/api/version")) {
-      return skickaJson(res, 200, { version: APP_VERSION });
+      return skickaJson(res, 200, { version: APP_VERSION, senasteVersion: await hamtaSenasteVersion() });
     }
     if (req.method === "GET" && p.endsWith("/api/settings")) {
       const { installningar } = await lasData();
