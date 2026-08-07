@@ -2415,11 +2415,14 @@ function fyllHtml(o, i, antalFyllda, iSektion, ruta) {
 // många sorter som faktiskt delar lådan (i stället för ett fast antagande
 // om 4 kolumner) – annars klämdes flera klungor ihop på varandra i en
 // smal låda med bara två-tre sorter. Klämningen på sparade koordinater
-// (samma vida gräns som dragEnd tillåter) läker samtidigt äldre plantor
-// som råkat sparas långt utanför sin låda och sett ut att ha försvunnit.
+// håller dem innanför .zon-ytas overflow:hidden - en tidigare, vidare gräns
+// (±20 % utanför ytan) sparade fortfarande positioner som var klippta och
+// osynliga så fort dragningen var över, vilket kunde se ut som att en
+// planta helt försvunnit. Läker samtidigt äldre plantor som råkat sparas
+// där.
 function plantPosition(o, i, totalKlungor = 4) {
   if (o.x != null && o.y != null) {
-    return { x: Math.min(1.2, Math.max(-0.2, o.x)), y: Math.min(1.2, Math.max(-0.2, o.y)) };
+    return { x: Math.min(0.96, Math.max(0.04, o.x)), y: Math.min(0.96, Math.max(0.04, o.y)) };
   }
   const kolumner = Math.min(4, Math.max(1, totalKlungor));
   return {
@@ -3253,21 +3256,18 @@ async function dragEnd(e) {
 
   if (s.typ === "planta") {
     // Släpps plantan i en annan låda flyttar den dit; utanför alla lådor
-    // stannar den kvar i sin egen. Byter man INTE behållare används i
-    // princip exakt det x/y som redan syns på skärmen (från dragMove) –
-    // ingen omräkning mot den nya rutan, så det aldrig blir en synlig
-    // "hoppa tillbaka"-skillnad vid släpp. Men rakt av, oklämt, kunde en
-    // dragning långt utanför lådan (utan att träffa en annan) spara ett x/y
-    // längre bort än ±20 % utanför ytan – osynligt bakom .zon-ytas
-    // overflow:hidden för alltid, tills man råkade hitta den i redigeringsläge
-    // och drog tillbaka den för hand. Samma vida gränser som andelIBehallare
-    // redan tillåter (så vanliga dragningar nära kanten aldrig klämmer synligt).
+    // stannar den kvar i sin egen, klämd till samma trygga 0.04-0.96 som
+    // andelIBehallare() använder för en riktig behållarbytning - tidigare
+    // klämdes den till ±20 % UTANFÖR ytan i stället, vilket sparade ett x/y
+    // som var permanent osynligt bakom .zon-ytas overflow:hidden så fort
+    // dragningen var över (se plantPosition() för samma fix på rendering
+    // av redan sparade positioner).
     const nyBehallare = slappMal(e, s.el, ".zon-plantor");
     const agare = nyBehallare?.closest(".zon-sektion, .zon-kort-canvas");
     const o = odlingar.find((x) => x.id === s.id);
     const byterZon = Boolean(agare && agare.dataset.id !== (o?.zonId ?? ""));
     const patch = byterZon ? andelIBehallare(e, nyBehallare)
-      : { x: Math.min(1.2, Math.max(-0.2, s.x)), y: Math.min(1.2, Math.max(-0.2, s.y)) };
+      : { x: Math.min(0.96, Math.max(0.04, s.x)), y: Math.min(0.96, Math.max(0.04, s.y)) };
     if (byterZon) patch.zonId = agare.dataset.id;
     return sparaOdling(s.id, patch);
   }
