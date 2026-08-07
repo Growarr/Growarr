@@ -101,5 +101,13 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.bump.outputs.version }}
+          # generate_release_notes alone is nearly empty here: it mainly
+          # summarizes merged pull requests, and pushes go straight to main
+          # with no PRs, so it was falling back to just a bare "Full
+          # Changelog" compare link. The commit message that triggered this
+          # push already says what changed - use it as the actual body,
+          # with the generated section (still just the compare link, but
+          # harmless) appended after it.
+          body: ${{ github.event.head_commit.message }}
           generate_release_notes: true
           prerelease: ${{ startsWith(steps.bump.outputs.version, '0.') }}
