@@ -961,6 +961,8 @@ async function svaraChatt(meddelanden) {
 
 Om användaren bifogar ett foto: beskriv först kort vad du faktiskt ser på plantan (färg, fläckar, form, jord), och koppla sedan ihop det med mätdatan nedan om den är relevant. Var tydlig med vad som är säkert och vad som är en gissning – hitta aldrig på mätvärden som inte står här.
 
+Om frågan handlar om sensorer, enheter eller automationer i Home Assistant: utgå bara från det som faktiskt är kopplat och listat nedan – hitta aldrig på en entitet, ett device eller en automation som inte står här. Vill användaren sätta upp eller ändra en riktig automation, beskriv den inte själv i löptext – hänvisa till "Bygg en ny automation" under Schema, som skriver ett utkast från de faktiska kopplade enheterna och aldrig skapar något i Home Assistant förrän det bekräftats.
+
 Aktuell trädgård:
 ${sammanfattning}
 

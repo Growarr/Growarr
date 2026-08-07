@@ -1976,6 +1976,14 @@ function ikonForEnhet(enhet) {
 
 function esc(s) { return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 
+// Claude's free-text answers (chat, watering insight, notifications, schedule
+// suggestions) sometimes use **bold** for emphasis, but were only ever HTML-
+// escaped and printed as-is, so the asterisks showed up literally. Escapes
+// first for safety, then turns just that one marker into real markup - not a
+// full markdown parser, since nothing here has asked for lists, links or
+// headings.
+function formatAiText(s) { return esc(s).replace(/\*\*([^*]+?)\*\*/g, "<strong>$1</strong>"); }
+
 async function laddaVader() {
   try {
     const res = await fetch(`${BAS}api/weather`, { cache: "no-store" });
@@ -2093,7 +2101,7 @@ async function laddaBevattning() {
     const data = await res.json();
     if (data.text) {
       const kl = new Date(data.tid).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
-      $("bevattningInnehall").innerHTML = `<span>${esc(data.text)}<div class="ai-tid">Uppdaterad ${kl}</div></span>`;
+      $("bevattningInnehall").innerHTML = `<span>${formatAiText(data.text)}<div class="ai-tid">Uppdaterad ${kl}</div></span>`;
       return;
     }
   } catch { /* faller igenom till heuristiken nedan */ }
@@ -3437,7 +3445,7 @@ function renderaNotiser() {
       <span class="ikon">${n.ikon}</span>
       <div class="info">
         <div class="titel">${esc(n.titel)}</div>
-        <div class="text">${esc(n.text)}</div>
+        <div class="text">${formatAiText(n.text)}</div>
       </div>
       <div class="notis-atgarder">
         <button class="notis-klar" data-id="${esc(n.id)}" title="Markera som klar">✓</button>
@@ -5714,7 +5722,7 @@ function schemaForslagHtml() {
         <div class="info">
           <div class="namn">${esc(f.zonNamn)}</div>
           <div class="dagar">${f.veckodagar.map((d) => VECKODAGAR_NAMN[d]).join(", ")}</div>
-          ${f.motivering ? `<div class="motivering">${esc(f.motivering)}</div>` : ""}
+          ${f.motivering ? `<div class="motivering">${formatAiText(f.motivering)}</div>` : ""}
         </div>
         <button class="forslag-lagg-till" data-nyckel="${esc(forslagNyckel(f))}" title="${t("lagg_till_schemat")}">${t("lagg_till")}</button>
         <button class="ta-bort-liten forslag-avfarda" data-nyckel="${esc(forslagNyckel(f))}" title="${t("avfarda_forslag")}">×</button>
@@ -5966,7 +5974,7 @@ function renderaChatt() {
     `<div class="chatt-rad fran-${m.roll === "ai" ? "ai" : "du"}">` +
     `<div class="chatt-bubbla${m.fel ? " fel" : ""}">` +
     (m.bild ? `<img src="data:${esc(m.bild.typ)};base64,${m.bild.data}" alt="Bifogat foto">` : "") +
-    esc(m.text) +
+    (m.roll === "ai" ? formatAiText(m.text) : esc(m.text)) +
     `</div></div>`).join("") +
     (chattVantar ? '<div class="chatt-rad fran-ai"><div class="chatt-bubbla">Tänker …</div></div>' : "");
   $("chattLogg").scrollTop = $("chattLogg").scrollHeight;
