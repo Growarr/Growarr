@@ -1281,26 +1281,26 @@ const server = createServer(async (req, res) => {
       return skickaJson(res, 200, await lasData());
     }
     if (req.method === "POST" && p.endsWith("/api/plantings")) {
-      const { namn, planterad, skordFonster, skordManad, anteckning, zonId, antal, layout } = await lasBody(req);
+      const { namn, planterad, skordFonster, skordManad, anteckning, zonId, antal, layout, sort } = await lasBody(req);
       if (!namn) return skickaJson(res, 400, { fel: "namn saknas" });
       const data = await muteraData((d) => {
         d.odlingar.push({
           id: randomUUID(), namn, planterad: planterad || "",
           skordFonster: skordFonster || "", skordManad: skordManad || "", anteckning: anteckning || "",
-          zonId: zonId || "", jord: "", enhetIds: [],
+          zonId: zonId || "", jord: "", sort: sort || "", enhetIds: [],
           antal: rensaAntal(antal), layout: rensaLayout(layout),
         });
       });
       return skickaJson(res, 200, data);
     }
     if (req.method === "POST" && p.endsWith("/api/plantings/update")) {
-      const { id, namn, planterad, skordFonster, skordManad, anteckning, jord, enhetIds, zonId, x, y, antal, layout } = await lasBody(req);
+      const { id, namn, planterad, skordFonster, skordManad, anteckning, jord, sort, enhetIds, zonId, x, y, antal, layout } = await lasBody(req);
       const data = await muteraData((d) => {
         const o = d.odlingar.find((o2) => o2.id === id);
         if (!o) return;
         Object.assign(o, {
           planterad: planterad || "", skordFonster: skordFonster || "", skordManad: skordManad || "",
-          anteckning: anteckning || "", jord: jord || "", enhetIds: enhetIds ?? [],
+          anteckning: anteckning || "", jord: jord || "", sort: sort || "", enhetIds: enhetIds ?? [],
         });
         // Only touched when actually sent, and never blanked: several code
         // paths (dragging on the map, linking an entity) call this without a
@@ -1335,7 +1335,7 @@ const server = createServer(async (req, res) => {
         const o = d.odlingar[i];
         const zon = d.zoner.find((z) => z.id === o.zonId);
         d.skordat.push({
-          id: o.id, namn: o.namn, antal: o.antal, jord: o.jord, anteckning: o.anteckning,
+          id: o.id, namn: o.namn, sort: o.sort, antal: o.antal, jord: o.jord, anteckning: o.anteckning,
           planterad: o.planterad, skordFonster: o.skordFonster, skordManad: o.skordManad,
           // Snapshotted, not looked up live - stays readable even if the
           // zone is later renamed or deleted, rather than the archive

@@ -6,6 +6,7 @@ import {
   stockholmManad, stockholmDatum, lokalTimme,
   normaliseraIp, ipINat, arBetroddAdress, versionArNyare,
   OBJEKT_TYPER, rensaObjektTyp, snappaRotation,
+  VAXT_FAMILJER, vaxtfamiljFor, skordFamiljVarning,
 } from "../src/logic.js";
 
 describe("rensaAntal", () => {
@@ -230,5 +231,69 @@ describe("snappaRotation", () => {
   test("non-numeric input is treated as 0", () => {
     assert.equal(snappaRotation(NaN), 0);
     assert.equal(snappaRotation(undefined), 0);
+  });
+});
+
+describe("vaxtfamiljFor", () => {
+  test("matches known crops to their family, case-insensitively", () => {
+    assert.equal(vaxtfamiljFor("Tomat"), "nattskott");
+    assert.equal(vaxtfamiljFor("potatis"), "nattskott");
+    assert.equal(vaxtfamiljFor("Grönkål"), "kal");
+    assert.equal(vaxtfamiljFor("Gurkor"), "gurkvaxter");
+    assert.equal(vaxtfamiljFor("Morötter"), "rotfrukter");
+  });
+  test("an unrecognized or empty name has no family - never a guess", () => {
+    assert.equal(vaxtfamiljFor("Marsianska bönplantor från Xylo"), null);
+    assert.equal(vaxtfamiljFor(""), null);
+    assert.equal(vaxtfamiljFor(undefined), null);
+  });
+});
+
+describe("skordFamiljVarning", () => {
+  const nu = new Date(Date.UTC(2026, 7, 7)); // 2026-08-07
+
+  test("warns when the same family was harvested here inside its rest period", () => {
+    const historik = [{ namn: "Tomat", arkiveradDatum: new Date(Date.UTC(2026, 1, 7)).toISOString() }]; // 6 months ago
+    const v = skordFamiljVarning(historik, "Potatis", nu);
+    assert.ok(v, "expected a warning - potatoes after tomatoes, both nightshades");
+    assert.equal(v.familj, "nattskott");
+    assert.equal(v.senastNamn, "Tomat");
+    assert.equal(v.vilaAr, 3);
+    assert.ok(Math.abs(v.arSedan - 0.5) < 0.05, `expected ~0.5 years, got ${v.arSedan}`);
+  });
+
+  test("no warning once the family's rest period has passed", () => {
+    const historik = [{ namn: "Tomat", arkiveradDatum: new Date(Date.UTC(2022, 7, 1)).toISOString() }]; // 4 years ago
+    assert.equal(skordFamiljVarning(historik, "Potatis", nu), null);
+  });
+
+  test("no warning for a different family in the history", () => {
+    const historik = [{ namn: "Morötter", arkiveradDatum: new Date(Date.UTC(2026, 5, 1)).toISOString() }];
+    assert.equal(skordFamiljVarning(historik, "Tomat", nu), null);
+  });
+
+  test("no warning for an unclassifiable name, regardless of history", () => {
+    const historik = [{ namn: "Tomat", arkiveradDatum: new Date(Date.UTC(2026, 5, 1)).toISOString() }];
+    assert.equal(skordFamiljVarning(historik, "Något okänt", nu), null);
+  });
+
+  test("no warning for an empty or unrelated zone history", () => {
+    assert.equal(skordFamiljVarning([], "Tomat", nu), null);
+    assert.equal(skordFamiljVarning(undefined, "Tomat", nu), null);
+  });
+
+  test("uses the most recent same-family entry when there are several", () => {
+    const historik = [
+      { namn: "Potatis", arkiveradDatum: new Date(Date.UTC(2021, 0, 1)).toISOString() }, // long ago
+      { namn: "Paprika", arkiveradDatum: new Date(Date.UTC(2026, 6, 1)).toISOString() }, // 1 month ago
+    ];
+    const v = skordFamiljVarning(historik, "Tomat", nu);
+    assert.equal(v.senastNamn, "Paprika");
+  });
+
+  test("every family in VAXT_FAMILJER has a positive integer vilaAr", () => {
+    for (const info of Object.values(VAXT_FAMILJER)) {
+      assert.ok(Number.isInteger(info.vilaAr) && info.vilaAr > 0, `bad vilaAr for ${info.namn}`);
+    }
   });
 });

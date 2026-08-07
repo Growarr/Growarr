@@ -212,6 +212,7 @@ try {
   .vader-dag .temp .min { color:var(--muted); font-weight:500; }
   .vader-dag .nb { font-size:var(--fs-2xs); color:var(--muted); margin-top:4px; }
   .frost-varning { font-size:var(--fs-xs); color:var(--warn); margin-top:12px; }
+  .familj-varning { font-size:var(--fs-xs); color:var(--warn); margin-top:8px; }
   .insikt { display:flex; align-items:center; gap:12px; margin-top:4px; font-size:var(--fs-sm);
     padding-top:14px; border-top:1px solid var(--border); }
   .insikt .ikon { font-size:1.6rem; flex:0 0 auto; }
@@ -1668,6 +1669,10 @@ try {
         <div><label class="lbl">Namn</label><input type="text" id="oNamn" list="sortForslagList" autocomplete="off" data-i18n-placeholder="planta_namn_placeholder" placeholder="t.ex. Tomater"></div>
         <div><label class="lbl">${t("zon")}</label><select id="oZon"><option value="" data-i18n="ingen_zon">Ingen zon</option></select></div>
       </div>
+      <div class="skapa-rad" style="margin-top:12px; grid-template-columns:1fr">
+        <div><label class="lbl" data-i18n="sort">Sort</label><input type="text" id="oSort" maxlength="60" data-i18n-placeholder="sort_placeholder" placeholder="t.ex. Sungold"></div>
+      </div>
+      <div class="familj-varning" id="oFamiljVarning"></div>
       <div class="skapa-rad" style="margin-top:12px">
         <div><label class="lbl">${t("antal_st")}</label><input type="number" id="oAntal" min="1" max="200" value="1"></div>
         <div><label class="lbl">${t("pa_kartan")}</label>
@@ -1824,6 +1829,72 @@ function ikonForVaxt(namn) {
   for (const [regex, ikon] of VAXT_IKONER) if (regex.test(namn)) return ikon;
   return IKON_SPRA;
 }
+
+// Mirrors VAXT_FAMILJER/vaxtfamiljFor/skordFamiljVarning in src/logic.js
+// (kept manually in sync, same as ZON_TYPER here vs. ZON_TYPER_NAMN in
+// server.js - this file has no module imports to share it directly). Used
+// for a live crop-rotation heads-up while creating a planting: growing the
+// same family in the same bed too soon lets family-specific pests/disease
+// build up in the soil.
+const VAXT_FAMILJER = {
+  nattskott:  { namn: "Nattskatteväxter", vilaAr: 3 },
+  kal:        { namn: "Kål",              vilaAr: 3 },
+  gurkvaxter: { namn: "Gurkväxter",       vilaAr: 2 },
+  baljvaxter: { namn: "Baljväxter",       vilaAr: 2 },
+  rotfrukter: { namn: "Rotfrukter",       vilaAr: 3 },
+  lokvaxter:  { namn: "Lökväxter",        vilaAr: 2 },
+  amarant:    { namn: "Mangold/rödbeta/spenat", vilaAr: 2 },
+  korgblommiga: { namn: "Sallad m.fl. korgblommiga", vilaAr: 2 },
+  rosvaxter:  { namn: "Jordgubbar",       vilaAr: 2 },
+  kryddvaxter: { namn: "Kryddväxter (mynta-familjen)", vilaAr: 1 },
+};
+const VAXT_FAMILJ_MONSTER = [
+  [/tomat|potatis|paprika|paprikor|chili|aubergine/i, "nattskott"],
+  [/kål|broccoli|rädisa|rädisor|rova|rovor|rucola|ruccola/i, "kal"],
+  [/gurk|pumpa|pumpor|squash|zucchini|melon/i, "gurkvaxter"],
+  [/ärt|böna|bönor/i, "baljvaxter"],
+  [/morot|morötter|palsternacka|palsternackor|persilja|dill|selleri/i, "rotfrukter"],
+  [/lök/i, "lokvaxter"],
+  [/rödbeta|rödbetor|mangold|spenat/i, "amarant"],
+  [/sallad|sallat|solros/i, "korgblommiga"],
+  [/jordgubb/i, "rosvaxter"],
+  [/basilika|mynta|timjan|rosmarin/i, "kryddvaxter"],
+];
+function vaxtfamiljFor(namn) {
+  if (!namn) return null;
+  for (const [monster, familj] of VAXT_FAMILJ_MONSTER) if (monster.test(namn)) return familj;
+  return null;
+}
+function skordFamiljVarning(zonHistorik, namn, nu = new Date()) {
+  const familj = vaxtfamiljFor(namn);
+  if (!familj) return null;
+  const info = VAXT_FAMILJER[familj];
+  let senast = null;
+  for (const post of zonHistorik ?? []) {
+    if (vaxtfamiljFor(post.namn) !== familj) continue;
+    const datum = new Date(post.arkiveradDatum);
+    if (Number.isNaN(datum.getTime())) continue;
+    if (!senast || datum > senast.datum) senast = { datum, namn: post.namn };
+  }
+  if (!senast) return null;
+  const arSedan = (nu - senast.datum) / (365.25 * 24 * 60 * 60 * 1000);
+  if (arSedan >= info.vilaAr) return null;
+  return { familj, familjNamn: info.namn, vilaAr: info.vilaAr, senastNamn: senast.namn, arSedan };
+}
+// Non-blocking heads-up, never a confirmation dialog - the grower might
+// have solarized the soil, be using containers, or simply be planting
+// anyway. Dynamic, data-driven sentence, so it stays Swedish-only like
+// frostVarning's text (index.html ~2117) rather than going through t().
+function familjVarningHtml(zonId, namn) {
+  if (!zonId || !namn) return "";
+  const v = skordFamiljVarning(skordat.filter((a) => a.zonId === zonId), namn);
+  if (!v) return "";
+  const sedan = v.arSedan < 1
+    ? `${Math.round(v.arSedan * 12)} månader sedan`
+    : `${v.arSedan.toFixed(1).replace(".", ",")} år sedan`;
+  return `⚠️ ${esc(v.familjNamn)} (${esc(v.senastNamn)}) odlades här ${sedan} – rekommenderad vila är ${v.vilaAr} år.`;
+}
+
 let odlingar = [];
 let zoner = [];
 let kartor = [];
@@ -1877,6 +1948,7 @@ const SPRAK_TEXT = {
     ny_sektion_placeholder: "Ny sektion, t.ex. Odlingslåda 1",
     lagg_till: "Lägg till", spara: "Spara", avmarkera: "Avmarkera", ta_bort: "Ta bort", skorda: "Skörda",
     tidigare_odlat_har: "Tidigare odlat här", skordad_mangd_placeholder: "t.ex. 4 kg",
+    sort: "Sort", sort_placeholder: "t.ex. Sungold",
     hojd_over_marken: "Höjd över marken (m) – styr hur lång skugga zonen kastar i solkartan",
     jord: "Jord", jord_placeholder_zon: "t.ex. näringsrik potatisjord + kompost",
     jord_placeholder_planta: "t.ex. kruka med kaktusjord",
@@ -1971,6 +2043,7 @@ const SPRAK_TEXT = {
     ny_sektion_placeholder: "New section, e.g. Raised bed 1",
     lagg_till: "Add", spara: "Save", avmarkera: "Deselect", ta_bort: "Delete", skorda: "Harvest",
     tidigare_odlat_har: "Previously grown here", skordad_mangd_placeholder: "e.g. 4 kg",
+    sort: "Variety", sort_placeholder: "e.g. Sungold",
     hojd_over_marken: "Height above ground (m), sets how long a shadow the zone casts on the sun map",
     jord: "Soil", jord_placeholder_zon: "e.g. rich potting soil + compost",
     jord_placeholder_planta: "e.g. pot with cactus soil",
@@ -3345,12 +3418,13 @@ $("oLaggTillBtn").addEventListener("click", async () => {
     await fetch(`${BAS}api/plantings`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        namn, zonId: $("oZon").value, planterad: $("oPlanterad").value, antal: $("oAntal").value, layout: $("oLayout").value,
+        namn, sort: $("oSort").value.trim(), zonId: $("oZon").value, planterad: $("oPlanterad").value, antal: $("oAntal").value, layout: $("oLayout").value,
         skordManad: $("oSkordManad").value, skordFonster: $("oSkord").value.trim(), anteckning: $("oAnteckning").value.trim(),
       }),
     });
-    $("oNamn").value = ""; $("oPlanterad").value = ""; $("oSkordManad").value = ""; $("oSkord").value = "";
+    $("oNamn").value = ""; $("oSort").value = ""; $("oPlanterad").value = ""; $("oSkordManad").value = ""; $("oSkord").value = "";
     $("oAnteckning").value = ""; $("oAntal").value = "1"; $("oLayout").value = "klunga";
+    $("oFamiljVarning").innerHTML = "";
     await laddaOdlingar();
   } catch (e) { st.textContent = "Kunde inte spara: " + e.message; st.className = "status err"; }
   finally { $("oLaggTillBtn").disabled = false; }
@@ -3401,6 +3475,12 @@ async function laddaHaEntiteter() {
 // Panelen ritas om, så fälten nås via delegering i stället för direkt bindning
 document.addEventListener("input", (e) => {
   if (e.target.id === "zNyPlanta" || e.target.id === "zNyPlantaAntal") uppdateraSnabbknapp();
+  if (e.target.id === "zNyPlanta") {
+    $("zFamiljVarning").innerHTML = familjVarningHtml(valtMal?.id, e.target.value.trim());
+  }
+  if (e.target.id === "oNamn") {
+    $("oFamiljVarning").innerHTML = familjVarningHtml($("oZon").value, e.target.value.trim());
+  }
 });
 
 $("eEntityId").addEventListener("input", () => {
@@ -3835,7 +3915,7 @@ function perPlantaDetaljHtml(sort) {
     // grows, so it should be the way in to editing or removing it too.
     return `<div class="plant-rad plant-rad-klickbar" data-id="${esc(o.id)}">
       <span class="plant-ikon">${ikonForVaxt(o.namn)}</span>
-      <span class="namn">${zon ? esc(zon.namn) : t("okategoriserat")}</span>
+      <span class="namn">${zon ? esc(zon.namn) : t("okategoriserat")}${o.sort ? ` · ${esc(o.sort)}` : ""}</span>
       <span class="varde">${antalFor(o)} st${layoutFor(o) === "fyll" ? ` · ${t("fyller_ytan_kort")}` : ""}</span>
     </div>`;
   }).join("");
@@ -4138,7 +4218,7 @@ async function sparaOdling(id, patch) {
   if (!o) return;
   const body = {
     id, planterad: o.planterad ?? "", skordManad: o.skordManad ?? "", skordFonster: o.skordFonster ?? "",
-    jord: o.jord ?? "", anteckning: o.anteckning ?? "", enhetIds: o.enhetIds ?? [], ...patch,
+    jord: o.jord ?? "", sort: o.sort ?? "", anteckning: o.anteckning ?? "", enhetIds: o.enhetIds ?? [], ...patch,
   };
   await fetch(`${BAS}api/plantings/update`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   await laddaOdlingar();
@@ -4485,7 +4565,7 @@ function zonSkordatHtml(z) {
     <div class="plant-lista">${lista.map((a) => `
       <div class="plant-rad">
         <span class="plant-ikon">${ikonForVaxt(a.namn)}</span>
-        <span class="namn">${esc(a.namn)}</span>
+        <span class="namn">${esc(a.namn)}${a.sort ? ` · ${esc(a.sort)}` : ""}</span>
         <span class="varde">${antalFor(a)} st · ${esc((a.arkiveradDatum || "").slice(0, 10))}</span>
         <input type="text" class="skordad-mangd" data-id="${esc(a.id)}" maxlength="100"
           placeholder="${t("skordad_mangd_placeholder")}" value="${esc(a.skordMangd ?? "")}" style="width:90px">
@@ -4506,13 +4586,14 @@ function zonPlantorHtml(z) {
     ${lista.length ? `<div class="plant-lista">${lista.map((o) => `
       <div class="plant-rad plant-rad-klickbar" data-id="${esc(o.id)}">
         <span class="plant-ikon">${ikonForVaxt(o.namn)}</span>
-        <span class="namn">${esc(o.namn)}</span>
+        <span class="namn">${esc(o.namn)}${o.sort ? ` · ${esc(o.sort)}` : ""}</span>
         <span class="varde">${antalFor(o)} st${layoutFor(o) === "fyll" ? " · fyller ytan" : ""}${o.skordManad ? ` · ${esc(manadNamn(o.skordManad))}` : ""}</span>
         ${redigerarLayout ? `<button class="ta-bort odling-ta-bort" data-id="${esc(o.id)}" title="Ta bort planta" style="position:static">×</button>` : ""}
       </div>`).join("")}</div>` : `<div class="tom">${t("inga_plantor")}</div>`}
     <label class="lbl" style="margin-top:18px">${t("lagg_till_planta")}</label>
     <input type="text" id="zNyPlanta" list="sortForslagList" autocomplete="off"
       placeholder="${t("planta_placeholder")}">
+    <div class="familj-varning" id="zFamiljVarning"></div>
     <div class="antal-rad">
       <span class="lbl">${t("antal_st")}</span>
       <button class="antal-btn" id="antalNer" title="Färre">−</button>
@@ -4857,7 +4938,7 @@ function renderaDetaljPanel() {
     $("detaljPanel").innerHTML = `
       <div class="detalj-head">
         <span class="ikon">${ikonForVaxt(o.namn)}</span>
-        <div><h3>${esc(o.namn)}</h3><div class="modal-sub">${antalFor(o)} st${zon ? ` · ${esc(zon.namn)}` : " · okategoriserat"}${snabblasningHtml(o.enhetIds)}</div></div>
+        <div><h3>${esc(o.namn)}${o.sort ? ` · ${esc(o.sort)}` : ""}</h3><div class="modal-sub">${antalFor(o)} st${zon ? ` · ${esc(zon.namn)}` : " · okategoriserat"}${snabblasningHtml(o.enhetIds)}</div></div>
         ${zon
           ? `<button class="tillbaka-zon-btn" id="dTillbakaZonBtn" data-zon-id="${esc(zon.id)}" title="Tillbaka till ${esc(zon.namn)}">${IKON_TILLBAKA}<span>${esc(zon.namn)}</span></button>`
           : `<button class="tillbaka-btn" id="dAvmarkeraBtn">${t("avmarkera")}</button>`}
@@ -4869,6 +4950,10 @@ function renderaDetaljPanel() {
         <div class="falt" style="margin-top:12px">
           <label class="lbl">${t("namn")}</label>
           <input type="text" id="mNamn" list="sortForslagList" autocomplete="off" maxlength="80" value="${esc(o.namn ?? "")}">
+        </div>
+        <div class="falt" style="margin-top:12px">
+          <label class="lbl">${t("sort")}</label>
+          <input type="text" id="mSort" maxlength="60" placeholder="${t("sort_placeholder")}" value="${esc(o.sort ?? "")}">
         </div>
         <div class="skapa-rad" style="margin-top:12px">
           <div><label class="lbl">${t("antal_st")}</label><input type="number" id="mAntal" min="1" max="200" value="${antalFor(o)}"></div>
@@ -5008,7 +5093,7 @@ document.addEventListener("click", async (e) => {
         await sparaZon(valtMal.id, patch);
       } else {
         await sparaOdling(valtMal.id, {
-          namn: nyttNamn,
+          namn: nyttNamn, sort: $("mSort")?.value.trim() ?? "",
           planterad: $("mPlanterad").value, skordManad: $("mSkordManad").value,
           skordFonster: $("mSkordFonster").value.trim(), jord: $("mJord").value.trim(), anteckning: $("mAnteckning").value.trim(),
           antal: $("mAntal").value, layout: $("mLayout").value,
@@ -5667,6 +5752,9 @@ document.addEventListener("input", (e) => {
   tillampaKartBakgrund();
 });
 document.addEventListener("change", async (e) => {
+  if (e.target.id === "oZon") {
+    $("oFamiljVarning").innerHTML = familjVarningHtml(e.target.value, $("oNamn").value.trim());
+  }
   if (e.target.id === "anteckningPlantaVal") {
     anteckningarSkrivValdId = e.target.value;
     const o = odlingar.find((x) => x.id === anteckningarSkrivValdId);

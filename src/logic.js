@@ -180,3 +180,69 @@ export function arBetroddAdress(ip, natverksLista) {
   const adress = normaliseraIp(ip);
   return (natverksLista ?? []).some((cidr) => ipINat(adress, cidr));
 }
+
+// Plant-family lookup for a crop-rotation heads-up: growing the same
+// family in the same bed too soon lets family-specific pests/disease
+// build up in the soil. Regex-matched against the free-text planting name
+// (there's no structured species field) - same technique as the client's
+// icon lookup (VAXT_IKONER in index.html), first match wins. A name that
+// matches nothing returns null rather than a guessed family: a wrong
+// guess is worse than no warning.
+export const VAXT_FAMILJER = {
+  nattskott:  { namn: "Nattskatteväxter", vilaAr: 3 },  // tomat, potatis, paprika, chili, aubergine
+  kal:        { namn: "Kål",              vilaAr: 3 },  // kål, broccoli, blomkål, rädisa, rova, rucola
+  gurkvaxter: { namn: "Gurkväxter",       vilaAr: 2 },  // gurka, pumpa, squash, zucchini, melon
+  baljvaxter: { namn: "Baljväxter",       vilaAr: 2 },  // ärt, böna
+  rotfrukter: { namn: "Rotfrukter",       vilaAr: 3 },  // morot, palsternacka, persilja, dill, selleri
+  lokvaxter:  { namn: "Lökväxter",        vilaAr: 2 },  // lök, purjolök, vitlök
+  amarant:    { namn: "Mangold/rödbeta/spenat", vilaAr: 2 },
+  korgblommiga: { namn: "Sallad m.fl. korgblommiga", vilaAr: 2 },
+  rosvaxter:  { namn: "Jordgubbar",       vilaAr: 2 },
+  kryddvaxter: { namn: "Kryddväxter (mynta-familjen)", vilaAr: 1 },  // basilika, mynta, timjan, rosmarin
+};
+
+// Swedish plurals often swap the trailing vowel rather than just append
+// (pumpa -> pumpor, rädisa -> rädisor, böna -> bönor, paprika -> paprikor,
+// rödbeta -> rödbetor) - a naive singular-only stem misses the plural form,
+// which matters here since the app's own suggested names (VANLIGA_SORTER
+// in index.html) already use several of those plurals. Both forms are
+// spelled out explicitly instead of a shorter, riskier stem.
+const VAXT_FAMILJ_MONSTER = [
+  [/tomat|potatis|paprika|paprikor|chili|aubergine/i, "nattskott"],
+  [/kål|broccoli|rädisa|rädisor|rova|rovor|rucola|ruccola/i, "kal"],
+  [/gurk|pumpa|pumpor|squash|zucchini|melon/i, "gurkvaxter"],
+  [/ärt|böna|bönor/i, "baljvaxter"],
+  [/morot|morötter|palsternacka|palsternackor|persilja|dill|selleri/i, "rotfrukter"],
+  [/lök/i, "lokvaxter"],
+  [/rödbeta|rödbetor|mangold|spenat/i, "amarant"],
+  [/sallad|sallat|solros/i, "korgblommiga"],
+  [/jordgubb/i, "rosvaxter"],
+  [/basilika|mynta|timjan|rosmarin/i, "kryddvaxter"],
+];
+
+export function vaxtfamiljFor(namn) {
+  if (!namn) return null;
+  for (const [monster, familj] of VAXT_FAMILJ_MONSTER) if (monster.test(namn)) return familj;
+  return null;
+}
+
+// Looks at a zone's own harvest history for the most recent entry in the
+// same family as `namn`, and says whether it's still inside that family's
+// recommended rest period. Returns null when there's nothing to warn
+// about - unknown family, or the rest period has already passed.
+export function skordFamiljVarning(zonHistorik, namn, nu = new Date()) {
+  const familj = vaxtfamiljFor(namn);
+  if (!familj) return null;
+  const info = VAXT_FAMILJER[familj];
+  let senast = null;
+  for (const post of zonHistorik ?? []) {
+    if (vaxtfamiljFor(post.namn) !== familj) continue;
+    const datum = new Date(post.arkiveradDatum);
+    if (Number.isNaN(datum.getTime())) continue;
+    if (!senast || datum > senast.datum) senast = { datum, namn: post.namn };
+  }
+  if (!senast) return null;
+  const arSedan = (nu - senast.datum) / (365.25 * 24 * 60 * 60 * 1000);
+  if (arSedan >= info.vilaAr) return null;
+  return { familj, familjNamn: info.namn, vilaAr: info.vilaAr, senastNamn: senast.namn, arSedan };
+}
