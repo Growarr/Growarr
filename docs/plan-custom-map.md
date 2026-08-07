@@ -1,7 +1,13 @@
 # Plan: custom garden map (background image + placeable objects)
 
-Status: **planned, not built.** This is the design we agreed on before
-writing any code, so the reasoning behind it doesn't get lost.
+Status: **parts 1-2 built** (background mode, aerial photo upload with
+opacity/rotation/scale/position). **Part 3 (the two-click distance
+calibration described below) was never built** - the map still only has
+the older, simpler "width in metres + compass direction" fields from
+before this plan existed, not per-photo pixel calibration. **Parts 4-5
+(the object library and object shadows) are still planned, not built.**
+This is the design agreed on before writing any code, so the reasoning
+behind it doesn't get lost.
 
 ## The goal
 

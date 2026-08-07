@@ -141,30 +141,51 @@ own API calls end up in the wrong place.
 | POST | `/api/zones/update` | Update a zone's position, size, height, soil |
 | POST | `/api/zones/delete` | Delete a zone |
 | POST | `/api/maps` | Add a garden map (tab) |
+| POST | `/api/maps/update` | Change a map's background mode/photo alignment |
 | POST | `/api/maps/delete` | Delete a map |
+| POST | `/api/maps/image` | Upload a map's aerial background photo |
+| POST | `/api/maps/image/delete` | Remove a map's background photo |
+| GET | `/api/map-image` | Serve a map's uploaded background photo |
 | GET / POST | `/api/widgets` | List / add custom dashboard blocks |
+| POST | `/api/widgets/update` | Update a dashboard block |
+| POST | `/api/widgets/reorder` | Reorder dashboard blocks |
+| POST | `/api/widgets/delete` | Delete a dashboard block |
 | GET | `/api/devices/status` | Current state of watched HA entities |
 | POST | `/api/devices` | Watch a new HA entity |
 | POST | `/api/devices/delete` | Stop watching an entity |
 | GET | `/api/ha-entities` | Full HA entity list, for autocomplete |
-| GET | `/api/camera` | Proxy a snapshot from an HA camera entity |
+| GET | `/api/camera` | Proxy a snapshot from an HA camera entity already shown in the panel |
 | GET | `/api/history` | Logged sensor history |
 | GET | `/api/watering` | Claude's watering insight |
 | POST | `/api/chat` | Chat with Claude, with optional photo |
 | GET / POST | `/api/settings` | Read / save settings |
+| GET | `/api/version` | Running version, and a newer one if main has already moved on |
 | POST | `/api/notifications` | Mark a notification handled |
 | POST | `/api/notifications/ai` | Let Claude prioritize the notification list |
 | POST | `/api/schedules` | Add a watering schedule |
 | POST | `/api/schedules/delete` | Delete a watering schedule |
 | GET | `/api/schedules/suggestions` | Claude's suggested schedules, based on sensor history |
+| GET | `/api/automations` | List HA automations, flagging which are linked to the garden |
+| POST | `/api/automations/link` | Link an existing HA automation to the garden |
+| POST | `/api/automations/unlink` | Unlink one |
+| POST | `/api/automations/toggle` | Turn a linked automation on/off |
+| POST | `/api/automations/draft` | Claude drafts a new automation from linked entities |
+| POST | `/api/automations/revise` | Claude edits an existing automation |
+| POST | `/api/automations/create` | Write a drafted/revised automation to Home Assistant |
+| POST | `/api/metrics/sync` | Export drying-trend metrics as HA sensors |
+| POST | `/api/login` | Log in (only exists when `APP_PASSWORD` is set) |
+| POST | `/api/logout` | Clear the login session |
 
 </details>
 
-## No login, by design
+## Login is optional
 
-The panel has no auth of its own, same model as the rest of a typical
-home-lab. Keep it behind your VPN, your LAN, or whatever Zero Trust layer
-already fronts your other self-hosted apps.
+By default the panel has no auth of its own, same model as the rest of a
+typical home-lab - keep it behind your VPN, your LAN, or whatever Zero
+Trust layer already fronts your other self-hosted apps. Set `APP_PASSWORD` if you want a login anyway (see the environment
+variables table above): one shared household password, a signed session
+cookie, and an optional `TRUSTED_NETWORKS` allowlist to skip it from
+specific addresses.
 
 ## What's next
 
