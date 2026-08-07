@@ -5,6 +5,21 @@
 // math and validation a subtle bug could otherwise break silently (the
 // drying-trend slope, quantity/height clamping).
 
+// Numeric version comparison ("0.1.10" > "0.1.9"), not a naive string
+// compare - "0.1.9" > "0.1.10" alphabetically otherwise (the '9' outranks
+// the '1'), which is backwards. Missing/non-numeric segments count as 0, and
+// two equal versions are not "newer".
+export function versionArNyare(kandidat, jamfortMed) {
+  const a = String(kandidat ?? "").split(".").map(Number);
+  const b = String(jamfortMed ?? "").split(".").map(Number);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const av = a[i] ?? 0, bv = b[i] ?? 0;
+    if (!Number.isFinite(av) || !Number.isFinite(bv)) return false;
+    if (av !== bv) return av > bv;
+  }
+  return false;
+}
+
 export function stockholmManad(d = new Date()) {
   const delar = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Stockholm", year: "numeric", month: "2-digit" }).formatToParts(d);
   const f = Object.fromEntries(delar.map((p) => [p.type, p.value]));

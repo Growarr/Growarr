@@ -12,7 +12,7 @@ import {
   stockholmManad, stockholmDatum, lokalTimme,
   rensaAntal, rensaLayout, rensaHojdM,
   torkTakt, TORR_GRANS, MIN_LUTNING, veckodagarForIntervall, enhetArFuktsensor,
-  normaliseraIp, arBetroddAdress,
+  normaliseraIp, arBetroddAdress, versionArNyare,
 } from "./src/logic.js";
 
 const PORT = process.env.PORT || 8097;
@@ -1624,7 +1624,13 @@ const server = createServer(async (req, res) => {
       return skickaJson(res, 200, status);
     }
     if (req.method === "GET" && p.endsWith("/api/version")) {
-      return skickaJson(res, 200, { version: APP_VERSION, senasteVersion: await hamtaSenasteVersion() });
+      const senaste = await hamtaSenasteVersion();
+      // Only reported when it's genuinely newer, not merely different - the
+      // check above is cached for an hour, so it can otherwise still be
+      // holding an older value than what's actually running right after a
+      // rapid string of pushes, and a plain "differs" comparison would then
+      // wrongly claim an older build as the "newer" one.
+      return skickaJson(res, 200, { version: APP_VERSION, senasteVersion: versionArNyare(senaste, APP_VERSION) ? senaste : null });
     }
     if (req.method === "GET" && p.endsWith("/api/settings")) {
       const { installningar } = await lasData();

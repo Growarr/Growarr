@@ -4,7 +4,7 @@ import {
   rensaAntal, rensaLayout, rensaHojdM, STANDARD_HOJD_M,
   torkTakt, veckodagarForIntervall, enhetArFuktsensor,
   stockholmManad, stockholmDatum, lokalTimme,
-  normaliseraIp, ipINat, arBetroddAdress,
+  normaliseraIp, ipINat, arBetroddAdress, versionArNyare,
 } from "../src/logic.js";
 
 describe("rensaAntal", () => {
@@ -176,5 +176,24 @@ describe("arBetroddAdress", () => {
   test("loopback works too, if explicitly listed", () => {
     assert.equal(arBetroddAdress("127.0.0.1", ["127.0.0.1/32"]), true);
     assert.equal(arBetroddAdress("::ffff:127.0.0.1", ["127.0.0.1/32"]), true);
+  });
+});
+
+describe("versionArNyare", () => {
+  test("a genuinely higher version is newer", () => {
+    assert.equal(versionArNyare("0.1.10", "0.1.9"), true);
+    assert.equal(versionArNyare("0.2.0", "0.1.9"), true);
+    assert.equal(versionArNyare("1.0.0", "0.9.9"), true);
+  });
+  test("not a naive string compare - 0.1.9 is not newer than 0.1.10", () => {
+    assert.equal(versionArNyare("0.1.9", "0.1.10"), false);
+  });
+  test("an equal or lower version is not newer", () => {
+    assert.equal(versionArNyare("0.1.9", "0.1.9"), false);
+    assert.equal(versionArNyare("0.1.8", "0.1.9"), false);
+  });
+  test("missing/non-numeric input is never newer", () => {
+    assert.equal(versionArNyare(null, "0.1.9"), false);
+    assert.equal(versionArNyare("not-a-version", "0.1.9"), false);
   });
 });

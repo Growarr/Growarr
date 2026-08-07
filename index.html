@@ -5345,8 +5345,10 @@ async function laddaInstallningar() {
     const res = await fetch(`${BAS}api/version`, { cache: "no-store" });
     const { version, senasteVersion } = await res.json();
     $("appVersion").textContent = `Growarr v${version}`;
+    // senasteVersion is only ever non-null from the server when it's
+    // genuinely newer - no need to re-check that here.
     const upd = $("appUppdatering");
-    if (senasteVersion && senasteVersion !== version) {
+    if (senasteVersion) {
       upd.textContent = `${t("ny_version_finns")} v${senasteVersion}`;
       upd.style.display = "block";
     } else {
