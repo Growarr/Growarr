@@ -3,10 +3,16 @@
 // sensorer, ventiler m.m. som HA-entiteter här den dagen ni har dem
 // installerade – ingen kodändring behövs, bara ange entity_id i panelen.
 import { createServer } from "node:http";
-import { readFile, writeFile, mkdir, unlink } from "node:fs/promises";
+import { readFile, writeFile, rename, mkdir, unlink, readdir } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
+import {
+  stockholmManad, stockholmDatum, lokalTimme,
+  rensaAntal, rensaLayout, rensaHojdM,
+  torkTakt, TORR_GRANS, MIN_LUTNING, veckodagarForIntervall, enhetArFuktsensor,
+} from "./src/logic.js";
 
 const PORT = process.env.PORT || 8097;
 const DATA_PATH = process.env.DATA_PATH || "/data/tradgard.json";
@@ -24,15 +30,21 @@ const ANTHROPIC_MODEL = "claude-sonnet-5";
 const KARTBILD_DIR = join(dirname(DATA_PATH), "maps");
 const PANEL_HTML = join(dirname(fileURLToPath(import.meta.url)), "index.html");
 const LOGO_PNG = join(dirname(fileURLToPath(import.meta.url)), "logo.png");
+// Read once at startup rather than per-request - the version only changes
+// when the container image itself is rebuilt.
+const APP_VERSION = JSON.parse(
+  readFileSync(join(dirname(fileURLToPath(import.meta.url)), "package.json"), "utf8"),
+).version;
+// Rolling daily backups of tradgard.json, in their own folder next to the
+// data file (same volume, no extra configuration needed). Protects against
+// a bad edit or a broken migration - not against the disk itself dying, that
+// needs a copy outside the box (e.g. the volume synced to other storage).
+const BACKUP_DIR = join(dirname(DATA_PATH), "backups");
+const BACKUP_RETENTION_DAYS = 30;
 
-function stockholmManad(d = new Date()) {
-  const delar = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Stockholm", year: "numeric", month: "2-digit" }).formatToParts(d);
-  const f = Object.fromEntries(delar.map((p) => [p.type, p.value]));
-  return `${f.year}-${f.month}`;
-}
-function lokalTimme(iso) {
-  return Number(new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Stockholm", hour: "2-digit", hour12: false }).format(new Date(iso)));
-}
+// stockholmManad, stockholmDatum, lokalTimme, rensaAntal, rensaLayout,
+// rensaHojdM, torkTakt, veckodagarForIntervall, enhetArFuktsensor: see
+// src/logic.js - pure logic, extracted so it can be unit tested.
 
 // ---- Lagring: zoner, odlingsjournal + bevakade HA-enheter ----
 async function lasData() {
@@ -50,33 +62,38 @@ async function lasData() {
 }
 async function skrivData(data) {
   await mkdir(dirname(DATA_PATH), { recursive: true });
-  await writeFile(DATA_PATH, JSON.stringify(data, null, 2) + "\n");
+  // Write to a temp file and rename it in, rather than writing the data file
+  // in place - a killed/restarted process mid-writeFile() could otherwise
+  // leave a half-written, corrupt tradgard.json behind. rename() on the same
+  // filesystem is atomic.
+  const tmp = `${DATA_PATH}.tmp`;
+  await writeFile(tmp, JSON.stringify(data, null, 2) + "\n");
+  await rename(tmp, DATA_PATH);
 }
-// En odlingspost är "en sort på en plats" och bär ett antal – t.ex. 6 gurkor
-// i en låda är én post med antal 6, inte sex poster. Taket på 200 finns bara
-// för att en felskrivning inte ska rita ut tiotusen ikoner på kartan.
-const MAX_ANTAL = 200;
-function rensaAntal(v) {
-  const n = Math.round(Number(v));
-  if (!Number.isFinite(n) || n < 1) return 1;
-  return Math.min(MAX_ANTAL, n);
-}
-// "klunga" = plantorna står samlade på sin punkt i zonen, "fyll" = de sprids
-// jämnt över hela ytan (en låda helt full med samma sort).
-function rensaLayout(v) {
-  return v === "fyll" ? "fyll" : "klunga";
+// Once a day: copy today's data file to backups/tradgard-YYYY-MM-DD.json and
+// clean up copies older than BACKUP_RETENTION_DAYS. Overwrites the same
+// day's backup on repeated restarts - that's intentional, it's today's
+// latest state that's worth being able to roll back to, not every single run.
+async function backupData() {
+  let innehall;
+  try {
+    innehall = await readFile(DATA_PATH);
+  } catch {
+    return; // nothing to back up yet
+  }
+  await mkdir(BACKUP_DIR, { recursive: true });
+  await writeFile(join(BACKUP_DIR, `tradgard-${stockholmDatum()}.json`), innehall);
+  const gransTid = Date.now() - BACKUP_RETENTION_DAYS * 24 * 3600 * 1000;
+  for (const namn of await readdir(BACKUP_DIR).catch(() => [])) {
+    const match = namn.match(/^tradgard-(\d{4}-\d{2}-\d{2})\.json$/);
+    if (match && new Date(`${match[1]}T00:00:00Z`).getTime() < gransTid) {
+      await unlink(join(BACKUP_DIR, namn)).catch(() => {});
+    }
+  }
 }
 // Utetemperaturen (SMHI) sparas i historiken under ett reserverat id, så den
 // ligger sida vid sida med sensorserierna utan att vara en "enhet".
 const UTE_SERIE = "__ute";
-// Zonens höjd över marken i meter – styr hur lång skugga den kastar i
-// solkartan. Ett växthus skuggar, en utplanterad bädd i praktiken inte.
-const STANDARD_HOJD_M = { vaxthus: 2.2, odlingslada: 0.4, utomhus: 0.15, inomhus: 0, annat: 0 };
-function rensaHojdM(v, typ) {
-  const n = Number(v);
-  if (!Number.isFinite(n) || n < 0) return STANDARD_HOJD_M[typ] ?? 0;
-  return Math.min(20, Math.round(n * 100) / 100);
-}
 
 let ko = Promise.resolve();
 function muteraData(fn) {
@@ -712,44 +729,7 @@ ${sammanfattning}`,
 let schemaAiCache = null; // { nyckel, tid, resultat }
 const SCHEMA_AI_CACHE_MS = 6 * 3600 * 1000;
 const VECKODAG_NAMN = ["söndag", "måndag", "tisdag", "onsdag", "torsdag", "fredag", "lördag"];
-const TORR_GRANS = 25;        // % moisture we want to water before reaching
-const MIN_MATPUNKTER = 6;     // fewer points than this and a trend line is noise
-const MIN_LUTNING = 0.7;      // %/day; anything flatter is not really drying out
-
-// Least-squares slope of value against time, in units per day. Returns null
-// when there is too little data for the answer to mean anything.
-function torkTakt(punkter) {
-  if (punkter.length < MIN_MATPUNKTER) return null;
-  const t0 = new Date(punkter[0].tid).getTime();
-  const xs = punkter.map((p) => (new Date(p.tid).getTime() - t0) / 86400000);
-  const ys = punkter.map((p) => Number(p.varde));
-  if (ys.some((y) => !Number.isFinite(y))) return null;
-  const n = xs.length;
-  const mx = xs.reduce((a, b) => a + b, 0) / n;
-  const my = ys.reduce((a, b) => a + b, 0) / n;
-  let tal = 0, namn = 0;
-  for (let i = 0; i < n; i++) { tal += (xs[i] - mx) * (ys[i] - my); namn += (xs[i] - mx) ** 2; }
-  if (namn === 0) return null;
-  return tal / namn; // negative means drying out
-}
-
-// Turn "water every N days" into concrete weekdays, spread across the week
-// rather than bunched together. 0 = Sunday, matching Date.getDay().
-function veckodagarForIntervall(intervall) {
-  if (intervall <= 1) return [0, 1, 2, 3, 4, 5, 6];
-  if (intervall === 2) return [1, 3, 5];
-  if (intervall === 3) return [1, 4];
-  if (intervall <= 5) return [1, 5];
-  return [3];
-}
-
-// The unit of measurement lives on the live Home Assistant state rather than
-// in our own data file, so this is a name-based guess. Kept small and
-// separate so the intent stays obvious.
-function enhetArFuktsensor(enhet) {
-  const namn = (enhet.namn ?? "").toLowerCase();
-  return namn.includes("fukt") || namn.includes("moist") || namn.includes("humid");
-}
+// TORR_GRANS, MIN_LUTNING, torkTakt, veckodagarForIntervall, enhetArFuktsensor: see src/logic.js
 
 // The arithmetic core: is this one zone drying out, and how fast? Shared by
 // the schedule suggestions (which skip zones already scheduled) and the HA
@@ -1054,6 +1034,7 @@ async function kollaSkordepaminnelser() {
 }
 const EN_DAG_MS = 24 * 3600 * 1000;
 setInterval(() => kollaSkordepaminnelser().catch((err) => console.warn("Skördepåminnelse-koll misslyckades:", err.message)), EN_DAG_MS);
+setInterval(() => backupData().catch((err) => console.warn("Säkerhetskopiering misslyckades:", err.message)), EN_DAG_MS);
 
 // ---- Historik för entiteter kopplade till zoner/odlingar ----
 // Pollar HA en gång i timmen för varje entitet som är kopplad till en zon
@@ -1125,6 +1106,22 @@ async function lasBody(req) {
   }
   return delar.length ? JSON.parse(Buffer.concat(delar).toString("utf8")) : {};
 }
+
+// A simple, process-global rate limit on the endpoints that call Claude.
+// There's no login separating clients, so this caps the whole installation
+// rather than any one person - the point is that an exposed port or a
+// broken client can't run up the Anthropic bill, not to throttle a single
+// household's normal use.
+const requestWindows = new Map(); // name -> timestamps within the window
+function withinRateLimit(name, max, windowMs) {
+  const nu = Date.now();
+  const tider = (requestWindows.get(name) ?? []).filter((t) => nu - t < windowMs);
+  if (tider.length >= max) { requestWindows.set(name, tider); return false; }
+  tider.push(nu);
+  requestWindows.set(name, tider);
+  return true;
+}
+const TOO_MANY_REQUESTS = { fel: "för många AI-förfrågningar just nu, försök igen om en stund" };
 
 // Matchar på slutet av sökvägen – robust oavsett om reverse-proxyn framför
 // strippar sitt prefix eller inte, samma mönster som i bostadsvakt-api och
@@ -1485,6 +1482,9 @@ const server = createServer(async (req, res) => {
       const status = await Promise.all(enheter.map(async (e) => ({ ...e, ...(await hamtaEntitetStatus(e.entityId)) })));
       return skickaJson(res, 200, status);
     }
+    if (req.method === "GET" && p.endsWith("/api/version")) {
+      return skickaJson(res, 200, { version: APP_VERSION });
+    }
     if (req.method === "GET" && p.endsWith("/api/settings")) {
       const { installningar } = await lasData();
       return skickaJson(res, 200, installningar);
@@ -1541,12 +1541,14 @@ const server = createServer(async (req, res) => {
     // ANTHROPIC_API_KEY saknas eller anropet misslyckas.
     if (req.method === "POST" && p.endsWith("/api/notifications/ai")) {
       const { kandidater } = await lasBody(req);
+      if (!withinRateLimit("notifikationer", 20, EN_TIMME_MS)) return skickaJson(res, 429, { ...TOO_MANY_REQUESTS, notiser: kandidater });
       return skickaJson(res, 200, await hamtaAiNotiser(kandidater));
     }
     if (req.method === "GET" && p.endsWith("/api/schedules/suggestions")) {
       return skickaJson(res, 200, await hamtaAiSchemaforslag());
     }
     if (req.method === "POST" && p.endsWith("/api/chat")) {
+      if (!withinRateLimit("chat", 30, EN_TIMME_MS)) return skickaJson(res, 429, TOO_MANY_REQUESTS);
       const { meddelanden } = await lasBody(req);
       return skickaJson(res, 200, await svaraChatt(meddelanden));
     }
@@ -1576,3 +1578,4 @@ server.listen(PORT, () => console.log(`growarr lyssnar på :${PORT}, data i ${DA
 migreraData().catch((err) => console.warn("Migrering misslyckades:", err.message));
 kollaSkordepaminnelser().catch((err) => console.warn("Skördepåminnelse-koll misslyckades:", err.message));
 loggaHistorik().catch((err) => console.warn("Historik-loggning misslyckades:", err.message));
+backupData().catch((err) => console.warn("Säkerhetskopiering misslyckades:", err.message)); // once at startup, so a mid-day restart doesn't wait a full day

@@ -1,0 +1,24 @@
+name: Test
+
+# Runs the unit tests (node:test, no dependencies) on every push and pull
+# request, so a broken drying-trend calculation or quantity/height clamp
+# fails here instead of silently in someone's greenhouse.
+on:
+  push:
+    branches: [main]
+  pull_request: {}
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - run: node --check server.js && node --check src/logic.js
+
+      - run: npm test

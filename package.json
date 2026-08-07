@@ -4,7 +4,8 @@
   "description": "A self-hosted garden map with a frost watch (SMHI + ntfy) and a Home Assistant-connected planting journal.",
   "type": "module",
   "scripts": {
-    "frost": "node src/frost.js"
+    "frost": "node src/frost.js",
+    "test": "node --test"
   },
   "engines": {
     "node": ">=22"
