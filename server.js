@@ -1374,9 +1374,17 @@ const server = createServer(async (req, res) => {
       const data = await muteraData((d) => {
         const renTyp = rensaObjektTyp(typ);
         const standard = OBJEKT_TYPER[renTyp];
+        const karta = kartaId || d.kartor[0]?.id || "";
+        // Samma utstaggring som nya toppnivå-zoner får: annars hamnar varje
+        // nytt objekt man klickar fram i paletten rakt ovanpå det förra, mitt
+        // på kartan - ett långt staket rakt genom ett träd är svårt att ens
+        // se är två separata objekt.
+        const n = d.objekt.filter((o) => o.kartaId === karta).length;
+        const standardX = 0.2 + (n % 3) * 0.3;
+        const standardY = 0.25 + Math.floor(n / 3) * 0.32;
         d.objekt.push({
-          id: randomUUID(), kartaId: kartaId || d.kartor[0]?.id || "", typ: renTyp,
-          x: x ?? 0.5, y: y ?? 0.5, bredd: standard.bredd, hojd: standard.hojd, rotation: 0,
+          id: randomUUID(), kartaId: karta, typ: renTyp,
+          x: x ?? standardX, y: y ?? standardY, bredd: standard.bredd, hojd: standard.hojd, rotation: 0,
         });
       });
       return skickaJson(res, 200, data);
