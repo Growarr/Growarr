@@ -1377,6 +1377,7 @@ const server = createServer(async (req, res) => {
     }
     // Draft only - nothing is written to Home Assistant until /create.
     if (req.method === "POST" && p.endsWith("/api/automations/draft")) {
+      if (!withinRateLimit("automationer", 15, EN_TIMME_MS)) return skickaJson(res, 429, TOO_MANY_REQUESTS);
       const { beskrivning } = await lasBody(req);
       if (!beskrivning?.trim()) return skickaJson(res, 400, { fel: "beskrivning saknas" });
       const resultat = await utkastAutomation(beskrivning.trim());
@@ -1386,6 +1387,7 @@ const server = createServer(async (req, res) => {
     // "make it wait 10 minutes instead of 5" edits the real config rather
     // than drafting a brand new automation from nothing.
     if (req.method === "POST" && p.endsWith("/api/automations/revise")) {
+      if (!withinRateLimit("automationer", 15, EN_TIMME_MS)) return skickaJson(res, 429, TOO_MANY_REQUESTS);
       const { entityId, beskrivning } = await lasBody(req);
       if (!entityId || !beskrivning?.trim()) return skickaJson(res, 400, { fel: "entityId och beskrivning krävs" });
       const resultat = await revideraAutomation(entityId, beskrivning.trim());
