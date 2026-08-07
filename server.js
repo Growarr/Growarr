@@ -97,9 +97,10 @@ async function lasData() {
       widgets: d.widgets ?? [], installningar: d.installningar ?? {}, historik: d.historik ?? [],
       notiser: d.notiser ?? [], scheman: d.scheman ?? [],
       tradgardsAutomationer: d.tradgardsAutomationer ?? [], objekt: d.objekt ?? [],
+      skordat: d.skordat ?? [],
     };
   } catch {
-    return { kartor: [], zoner: [], odlingar: [], enheter: [], widgets: [], installningar: {}, historik: [], notiser: [], scheman: [], tradgardsAutomationer: [], objekt: [] };
+    return { kartor: [], zoner: [], odlingar: [], enheter: [], widgets: [], installningar: {}, historik: [], notiser: [], scheman: [], tradgardsAutomationer: [], objekt: [], skordat: [] };
   }
 }
 async function skrivData(data) {
@@ -1317,6 +1318,46 @@ const server = createServer(async (req, res) => {
     if (req.method === "POST" && p.endsWith("/api/plantings/delete")) {
       const { id } = await lasBody(req);
       const data = await muteraData((d) => { d.odlingar = d.odlingar.filter((o) => o.id !== id); });
+      return skickaJson(res, 200, data);
+    }
+    // Harvesting archives a planting instead of deleting it - the delete
+    // endpoint above stays a real, permanent removal for correcting a
+    // mistaken entry. The archive is what lets a zone's detail panel show
+    // what grew there in a previous season, and how much actually came out
+    // of it (skordMangd, filled in afterward via harvest/update - free
+    // text, since a real harvest gets reported as "4 kg" or "not much this
+    // year", not always a clean number).
+    if (req.method === "POST" && p.endsWith("/api/plantings/harvest")) {
+      const { id } = await lasBody(req);
+      const data = await muteraData((d) => {
+        const i = d.odlingar.findIndex((o) => o.id === id);
+        if (i === -1) return;
+        const o = d.odlingar[i];
+        const zon = d.zoner.find((z) => z.id === o.zonId);
+        d.skordat.push({
+          id: o.id, namn: o.namn, antal: o.antal, jord: o.jord, anteckning: o.anteckning,
+          planterad: o.planterad, skordFonster: o.skordFonster, skordManad: o.skordManad,
+          // Snapshotted, not looked up live - stays readable even if the
+          // zone is later renamed or deleted, rather than the archive
+          // entry orphaning silently.
+          zonId: o.zonId || "", zonNamn: zon?.namn || "",
+          skordMangd: "", arkiveradDatum: new Date().toISOString(),
+        });
+        d.odlingar.splice(i, 1);
+      });
+      return skickaJson(res, 200, data);
+    }
+    if (req.method === "POST" && p.endsWith("/api/plantings/harvest/update")) {
+      const { id, skordMangd } = await lasBody(req);
+      const data = await muteraData((d) => {
+        const a = d.skordat.find((x) => x.id === id);
+        if (a && skordMangd !== undefined) a.skordMangd = String(skordMangd).slice(0, 100);
+      });
+      return skickaJson(res, 200, data);
+    }
+    if (req.method === "POST" && p.endsWith("/api/plantings/harvest/delete")) {
+      const { id } = await lasBody(req);
+      const data = await muteraData((d) => { d.skordat = d.skordat.filter((a) => a.id !== id); });
       return skickaJson(res, 200, data);
     }
     if (req.method === "POST" && p.endsWith("/api/zones/update")) {

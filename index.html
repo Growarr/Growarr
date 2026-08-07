@@ -747,6 +747,14 @@ try {
   .ta-bort-knapp:hover { background:color-mix(in srgb, var(--err) 14%, var(--surface2));
     border-color:color-mix(in srgb, var(--err) 42%, var(--border)); color:var(--err);
     transform:none; box-shadow:none; }
+  /* Samma neutrala grundutseende som .ta-bort-knapp, men grön hover i
+     stället för röd - skörda är en vanlig, positiv handling, inte en
+     destruktiv en, så den ska inte se ut som "ta bort". */
+  .skorda-knapp { background:var(--surface2); color:var(--muted); border:1px solid var(--border);
+    box-shadow:none; font-size:var(--fs-xs); padding:9px 16px; }
+  .skorda-knapp:hover { background:color-mix(in srgb, var(--accent) 16%, var(--surface2));
+    border-color:color-mix(in srgb, var(--accent) 45%, var(--border)); color:var(--accent);
+    transform:none; box-shadow:none; }
   /* Confirm dialog: the reverse of the pattern above. Here the destructive
      choice is the one the user already committed to by opening this dialog,
      so it gets the clear, solid treatment - "Cancel" is the safe default. */
@@ -1820,6 +1828,7 @@ let odlingar = [];
 let zoner = [];
 let kartor = [];
 let objekt = []; // trad/hus/vag/staket/skjul/damm - kartutsmyckning, inga zoner
+let skordat = []; // arkiverade odlingar - vad har växt var, och hur mycket det gav
 let aktivKartaId = null;
 let widgets = [];
 let senasteVader = null;
@@ -1866,7 +1875,8 @@ const SPRAK_TEXT = {
     sektioner_i_zonen: "Sektioner inuti zonen",
     inga_sektioner: "Inga sektioner – t.ex. odlingslådor eller bänkar inne i zonen.",
     ny_sektion_placeholder: "Ny sektion, t.ex. Odlingslåda 1",
-    lagg_till: "Lägg till", spara: "Spara", avmarkera: "Avmarkera", ta_bort: "Ta bort",
+    lagg_till: "Lägg till", spara: "Spara", avmarkera: "Avmarkera", ta_bort: "Ta bort", skorda: "Skörda",
+    tidigare_odlat_har: "Tidigare odlat här", skordad_mangd_placeholder: "t.ex. 4 kg",
     hojd_over_marken: "Höjd över marken (m) – styr hur lång skugga zonen kastar i solkartan",
     jord: "Jord", jord_placeholder_zon: "t.ex. näringsrik potatisjord + kompost",
     jord_placeholder_planta: "t.ex. kruka med kaktusjord",
@@ -1959,7 +1969,8 @@ const SPRAK_TEXT = {
     sektioner_i_zonen: "Sections inside this zone",
     inga_sektioner: "No sections. These are things like raised beds or benches inside the zone.",
     ny_sektion_placeholder: "New section, e.g. Raised bed 1",
-    lagg_till: "Add", spara: "Save", avmarkera: "Deselect", ta_bort: "Delete",
+    lagg_till: "Add", spara: "Save", avmarkera: "Deselect", ta_bort: "Delete", skorda: "Harvest",
+    tidigare_odlat_har: "Previously grown here", skordad_mangd_placeholder: "e.g. 4 kg",
     hojd_over_marken: "Height above ground (m), sets how long a shadow the zone casts on the sun map",
     jord: "Soil", jord_placeholder_zon: "e.g. rich potting soil + compost",
     jord_placeholder_planta: "e.g. pot with cactus soil",
@@ -2203,10 +2214,11 @@ async function laddaOdlingar() {
     zoner = data.zoner ?? [];
     kartor = data.kartor ?? [];
     objekt = data.objekt ?? [];
+    skordat = data.skordat ?? [];
     widgets = data.widgets ?? [];
     notiserHanterade = data.notiser ?? [];
     scheman = data.scheman ?? [];
-  } catch { odlingar = []; zoner = []; kartor = []; objekt = []; widgets = []; notiserHanterade = []; scheman = []; }
+  } catch { odlingar = []; zoner = []; kartor = []; objekt = []; skordat = []; widgets = []; notiserHanterade = []; scheman = []; }
   // Håll aktiv flik giltig även om kartan tagits bort i en annan flik/enhet.
   if (!kartor.some((k) => k.id === aktivKartaId)) aktivKartaId = kartor[0]?.id ?? null;
   renderaKartaFlikar();
@@ -4460,6 +4472,28 @@ function zonSektionerHtml(z) {
   </div>`;
 }
 
+// Växelbruk: vad har växt i just den här zonen tidigare, och hur mycket
+// det gav. Bara arkiverade odlingar (se Skörda-knappen i odlingens egen
+// detaljpanel) - inte kopplat till "inga plantor ännu" ovan. Visas bara om
+// det faktiskt finns något, ingen tom sektion för en bädd utan historik än.
+function zonSkordatHtml(z) {
+  const lista = skordat.filter((a) => a.zonId === z.id)
+    .sort((a, b) => new Date(b.arkiveradDatum) - new Date(a.arkiveradDatum));
+  if (!lista.length) return "";
+  return `<div class="modal-entiteter">
+    <label class="lbl">${t("tidigare_odlat_har")}</label>
+    <div class="plant-lista">${lista.map((a) => `
+      <div class="plant-rad">
+        <span class="plant-ikon">${ikonForVaxt(a.namn)}</span>
+        <span class="namn">${esc(a.namn)}</span>
+        <span class="varde">${antalFor(a)} st · ${esc((a.arkiveradDatum || "").slice(0, 10))}</span>
+        <input type="text" class="skordad-mangd" data-id="${esc(a.id)}" maxlength="100"
+          placeholder="${t("skordad_mangd_placeholder")}" value="${esc(a.skordMangd ?? "")}" style="width:90px">
+        ${redigerarLayout ? `<button class="ta-bort skordad-ta-bort" data-id="${esc(a.id)}" title="${t("ta_bort")}" style="position:static">×</button>` : ""}
+      </div>`).join("")}</div>
+  </div>`;
+}
+
 // Plantor i en zon, direkt i detaljpanelen – lägga till går alltid, men
 // borttagning kräver att Redigera är påslaget så man inte råkar radera.
 // Antalet anges alltid, och "Fyll hela ytan" sprider sorten över lådan i
@@ -4791,6 +4825,7 @@ function renderaDetaljPanel() {
       ${detaljHistorikHtml(z.enhetIds)}
       ${zonPlantorHtml(z)}
       ${zonSektionerHtml(z)}
+      ${zonSkordatHtml(z)}
       <div class="modal-entiteter">
         <label class="lbl">${t("detaljer")}</label>
         <div class="skapa-rad" style="margin-top:12px">
@@ -4851,6 +4886,7 @@ function renderaDetaljPanel() {
         <div class="falt"><label class="lbl">${t("anteckning")}</label><textarea id="mAnteckning" placeholder="${t("anteckning_placeholder")}">${esc(o.anteckning ?? "")}</textarea></div>
         <div class="detalj-knapprad">
           <button id="mSparaBtn">${t("spara")}</button>
+          <button class="skorda-knapp" id="mSkordaBtn" data-id="${esc(o.id)}">${t("skorda")}</button>
           <button class="ta-bort-knapp" id="mTaBortBtn" data-typ="odling" data-id="${esc(o.id)}">${t("ta_bort")}</button>
         </div>
         <div class="status" id="mStatus"></div>
@@ -4883,6 +4919,13 @@ document.addEventListener("click", async (e) => {
     await laddaOdlingar();
     return;
   }
+  const skordadTaBort = e.target.closest(".skordad-ta-bort");
+  if (skordadTaBort) {
+    await fetch(`${BAS}api/plantings/harvest/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: skordadTaBort.dataset.id }) });
+    await laddaOdlingar();
+    if (valtMal?.typ === "zon") renderaDetaljPanel();
+    return;
+  }
   const enhetTaBort = e.target.closest(".enhet-ta-bort");
   if (enhetTaBort) {
     await fetch(`${BAS}api/devices/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: enhetTaBort.dataset.id }) });
@@ -4910,6 +4953,22 @@ document.addEventListener("click", async (e) => {
   const objektTaBort = e.target.closest(".objekt-ta-bort");
   if (objektTaBort) {
     await fetch(`${BAS}api/objects/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: objektTaBort.dataset.id }) });
+    await laddaOdlingar();
+    return;
+  }
+
+  // Skörda: arkiverar odlingen (se /api/plantings/harvest) i stället för
+  // att ta bort den. Instant, ingen bekräftelsedialog - någon som står i
+  // trädgården med smutsiga händer vill ha ett enda klick, inte ett
+  // formulär. Skördad mängd fylls i efteråt, direkt i zonens "Tidigare
+  // odlat här"-lista.
+  const mSkorda = e.target.closest("#mSkordaBtn");
+  if (mSkorda) {
+    await fetch(`${BAS}api/plantings/harvest`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: mSkorda.dataset.id }),
+    });
+    avmarkeraMal();
     await laddaOdlingar();
     return;
   }
@@ -5614,6 +5673,15 @@ document.addEventListener("change", async (e) => {
     $("anteckningTextVal").value = o?.anteckning ?? "";
     $("anteckningSkrivStatus").textContent = "";
     $("anteckningSkrivStatus").className = "status";
+    return;
+  }
+  if (e.target.classList.contains("skordad-mangd")) {
+    await fetch(`${BAS}api/plantings/harvest/update`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: e.target.dataset.id, skordMangd: e.target.value }),
+    });
+    const a = skordat.find((x) => x.id === e.target.dataset.id);
+    if (a) a.skordMangd = e.target.value; // undviker att panelen ritas om och tar bort fokus mitt i
     return;
   }
   const cfg = BAKGRUND_REGLAGE[e.target.id];
