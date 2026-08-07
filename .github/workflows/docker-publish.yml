@@ -6,11 +6,21 @@ name: Publish Docker image
 # compose up --build needed.
 #
 # Also bumps package.json's patch version on every push (not on a manual
-# workflow_dispatch re-run) and commits that back to main, before building -
-# so the running app always knows exactly which build it is (see the version
-# line in Settings). Still 0.x.x, not full releases: see "Start versioning
-# at 0.x instead of 1.x". The bump commit's [skip ci] marker stops GitHub
-# from creating a workflow run for it, so this can't loop on itself.
+# workflow_dispatch re-run), tags that commit v<version>, and cuts a GitHub
+# release for it with auto-generated notes - so every push is a real,
+# browsable release, not just a number that changed. Still 0.x.x, not a
+# stability promise: see "Start versioning at 0.x instead of 1.x" - v0.x
+# releases are marked "Pre-release" automatically, which stops the moment a
+# v1.x version is set by hand.
+#
+# The version bump is committed back to main before building, so the running
+# app always knows exactly which build it is (see the version line in
+# Settings). Its [skip ci] marker stops GitHub from creating a workflow run
+# for that commit, so this can't loop on itself - and since it's pushed with
+# the job's own GITHUB_TOKEN, the tag push right after it doesn't trigger
+# release.yml either (GitHub already skips that for you). release.yml still
+# exists for the rare case of hand-pushing a tag yourselves, e.g. a v1.0.0
+# cut with your own git credentials.
 on:
   push:
     branches: [main]
@@ -25,8 +35,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Bump patch version
+      - name: Bump patch version and tag it
         if: github.event_name == 'push'
+        id: bump
         run: |
           set -eu
           CURRENT=$(node -p "require('./package.json').version")
@@ -41,7 +52,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git commit -am "chore: bump version to $NEW [skip ci]"
+          git tag "v$NEW"
           git push
+          git push origin "v$NEW"
+          echo "version=$NEW" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -59,11 +73,33 @@ jobs:
       - name: Lowercase image path
         run: echo "IMAGE=$(echo 'ghcr.io/${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
 
+      # :latest always moves; the version tag (only on a real push, not a
+      # manual workflow_dispatch re-run) is what a docker-compose.yml pins to
+      # for a known-good build instead of always tracking whatever's newest.
+      - name: Determine image tags
+        run: |
+          {
+            echo "TAGS<<EOF"
+            echo "${{ env.IMAGE }}:latest"
+            if [ -n "${{ steps.bump.outputs.version }}" ]; then
+              echo "${{ env.IMAGE }}:v${{ steps.bump.outputs.version }}"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_ENV"
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: ${{ env.IMAGE }}:latest
+          tags: ${{ env.TAGS }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Create GitHub release
+        if: steps.bump.outputs.version != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.bump.outputs.version }}
+          generate_release_notes: true
+          prerelease: ${{ startsWith(steps.bump.outputs.version, '0.') }}

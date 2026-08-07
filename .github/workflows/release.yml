@@ -1,9 +1,11 @@
 name: Release
 
-# Runs only when a version tag is pushed (e.g. v0.1.0), on top of the
-# existing docker-publish.yml which keeps :latest fresh on every push to
-# main. This is what lets a docker-compose.yml pin a known-good version
-# instead of always tracking whatever is newest.
+# docker-publish.yml now tags and releases automatically on every push to
+# main, so this workflow rarely fires - GitHub doesn't trigger it for that
+# automatic tag push (made with the job's own GITHUB_TOKEN). It still
+# exists for the one case that isn't automatic: hand-pushing a tag
+# yourselves with your own git credentials, e.g. to cut a deliberate
+# v1.0.0 outside the routine patch-bump sequence.
 #
 # v0.x releases are marked "Pre-release" on GitHub automatically: semver's
 # own meaning for a 0.x version is "anything may still change", which
