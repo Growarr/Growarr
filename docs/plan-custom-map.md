@@ -1,13 +1,25 @@
 # Plan: custom garden map (background image + placeable objects)
 
-Status: **parts 1-2 built** (background mode, aerial photo upload with
-opacity/rotation/scale/position). **Part 3 (the two-click distance
-calibration described below) was never built** - the map still only has
-the older, simpler "width in metres + compass direction" fields from
-before this plan existed, not per-photo pixel calibration. **Parts 4-5
-(the object library and object shadows) are still planned, not built.**
-This is the design agreed on before writing any code, so the reasoning
-behind it doesn't get lost.
+Status: **parts 1-2 and 4 built.** Background mode, aerial photo upload
+with opacity/rotation/scale/position, and a starter object library (tree,
+house, path, fence, shed, pond - drag, resize, rotate, snap) are all
+shipped. **Part 3 (the two-click distance calibration described below) was
+never built** - the map still only has the older, simpler "width in metres
++ compass direction" fields from before this plan existed, not per-photo
+pixel calibration. **Part 5 (objects casting real shade in the sun map) is
+still planned, not built** - a natural next step once objects carry a
+real-world height, deliberately left out of the first pass. This is the
+design agreed on before writing any code, so the reasoning behind it
+doesn't get lost.
+
+The built object library deliberately diverges from this doc in two ways,
+both confirmed with the user first: it's flat CSS shapes (circles, rounded
+rectangles, thin strips), not custom SVG artwork - the existing zones
+turned out to already be plain styled divs, not SVG, so this matches that
+more closely than a bespoke icon set would have. And it's a small 6-type
+starter set, not the ~18-type table below - more types are easy to add
+later once the mechanism (place/drag/resize/rotate/snap) is proven, same
+incremental spirit as this doc's own build order.
 
 ## The goal
 
@@ -143,14 +155,17 @@ Each step is useful on its own, so it's fine to stop anywhere.
    work.
 5. **Object shadows in the sun map.** The biggest functional win.
 
-## Open questions before step 4
+## Open questions before step 4 (resolved)
 
-- **Mobile.** Placing and rotating objects with a finger on a phone will be
-  fiddly. My suggestion: editing is a desktop mode (which "Edit layout"
-  effectively already is), while the result of course displays properly on
-  mobile. Worth confirming before we build.
-- **How many objects in the first pass.** Twelve well-drawn ones beat forty
-  mediocre ones. The list above can be trimmed.
+- **Mobile.** Resolved: editing is desktop-only (a min-width breakpoint
+  hides the object palette and rotate handle below it), the placed result
+  still renders fine on mobile.
+- **How many objects in the first pass.** Resolved: 6 (tree, house, path,
+  fence, shed, pond), not the full ~18-type table above. More can be added
+  later.
+
+Still genuinely open, not addressed by the object library work:
+
 - **The map's own dimensions.** The scene is a fixed 1000x700 units today.
   A long, narrow property may need its own aspect ratio per map.
 

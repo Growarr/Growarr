@@ -5,6 +5,7 @@ import {
   torkTakt, veckodagarForIntervall, enhetArFuktsensor,
   stockholmManad, stockholmDatum, lokalTimme,
   normaliseraIp, ipINat, arBetroddAdress, versionArNyare,
+  OBJEKT_TYPER, rensaObjektTyp, snappaRotation,
 } from "../src/logic.js";
 
 describe("rensaAntal", () => {
@@ -195,5 +196,39 @@ describe("versionArNyare", () => {
   test("missing/non-numeric input is never newer", () => {
     assert.equal(versionArNyare(null, "0.1.9"), false);
     assert.equal(versionArNyare("not-a-version", "0.1.9"), false);
+  });
+});
+
+describe("rensaObjektTyp", () => {
+  test("accepts every known object type", () => {
+    for (const typ of Object.keys(OBJEKT_TYPER)) assert.equal(rensaObjektTyp(typ), typ);
+  });
+  test("falls back to tree for anything unrecognized", () => {
+    assert.equal(rensaObjektTyp("spaceship"), "tree");
+    assert.equal(rensaObjektTyp(undefined), "tree");
+    assert.equal(rensaObjektTyp(""), "tree");
+  });
+});
+
+describe("snappaRotation", () => {
+  test("snaps to the nearest 15° step by default", () => {
+    assert.equal(snappaRotation(7), 0);
+    assert.equal(snappaRotation(8), 15);
+    assert.equal(snappaRotation(44), 45);
+  });
+  test("wraps to 0 rather than 360 when rounding up past the top", () => {
+    assert.equal(snappaRotation(358), 0);
+  });
+  test("negative input normalizes into 0-359 first", () => {
+    assert.equal(snappaRotation(-8), 345); // -8 == 352 mod 360, nearest step is 345
+    assert.equal(snappaRotation(-22), 345); // -22 == 338 mod 360, nearest step is 345
+  });
+  test("respects a custom step", () => {
+    assert.equal(snappaRotation(40, 90), 0);
+    assert.equal(snappaRotation(50, 90), 90);
+  });
+  test("non-numeric input is treated as 0", () => {
+    assert.equal(snappaRotation(NaN), 0);
+    assert.equal(snappaRotation(undefined), 0);
   });
 });

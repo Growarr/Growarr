@@ -314,6 +314,18 @@ try {
   .karta-redigera-btn:hover { color:var(--text); border-color:var(--accent); transform:none; box-shadow:none; }
   .karta-redigera-btn.aktiv { background:color-mix(in srgb, var(--warn) 20%, var(--surface2)); color:var(--warn);
     border-color:color-mix(in srgb, var(--warn) 50%, var(--border)); }
+  /* Kartobjektpaletten är avsiktligt en skrivbordsfunktion (se
+     docs/plan-custom-map.md): att peka och rotera små former med fingret på
+     en telefon är knöligt, och Redigera layout är redan i praktiken ett
+     skrivbordsflöde. Resultatet syns fint på mobil - bara redigeringen är
+     stängd där. */
+  .objekt-palett { display:none; align-items:center; gap:8px; flex-wrap:wrap; margin:-6px 0 16px; }
+  .objekt-palett.synlig { display:flex; }
+  @media (max-width:899px) { .objekt-palett.synlig { display:none; } }
+  .objekt-palett-etikett { font-size:var(--fs-2xs); color:var(--muted); font-weight:600; }
+  .objekt-palett-knapp { background:var(--surface2); color:var(--muted); border:1px solid var(--border); box-shadow:none;
+    font-size:var(--fs-xs); font-weight:600; padding:7px 14px; border-radius:99px; }
+  .objekt-palett-knapp:hover { color:var(--text); border-color:var(--accent); transform:none; box-shadow:none; }
   @media (max-width:720px) {
     .karta-header { gap:8px; }
     .karta-redigera-btn { padding:7px 11px 7px 10px; font-size:var(--fs-2xs); gap:5px; }
@@ -417,10 +429,11 @@ try {
   .karta-zoom .zoom-niva { width:auto; min-width:48px; padding:0 8px; border-radius:99px; font-size:var(--fs-2xs);
     font-weight:650; font-variant-numeric:tabular-nums; }
 
-  /* Snapplinjer: dyker upp när en dragen zon är nära i linje med en annan
-     zons sparade position, så det går att rada upp lådor/växthus prydligt
-     utan att behöva pixelmäta för hand. Rena visuella hjälplinjer, sparar
-     inget själva – se zonSnappning() i dragMove(). */
+  /* Snapplinjer: dyker upp när en dragen zon eller ett kartobjekt är nära i
+     linje med en annan zons/objekts sparade position, så det går att rada
+     upp lådor/växthus/träd prydligt utan att behöva pixelmäta för hand.
+     Rena visuella hjälplinjer, sparar inget själva – se kartaSnappning() i
+     dragMove(). */
   .snap-linje { position:absolute; background:var(--accent); pointer-events:none; z-index:6;
     box-shadow:0 0 6px color-mix(in srgb, var(--accent) 70%, transparent); }
   .snap-linje-v { top:-2000px; bottom:-2000px; width:2px; transform:translateX(-1px); }
@@ -557,6 +570,39 @@ try {
   .vand-btn { background:var(--surface2); border:1px solid var(--border); box-shadow:none; color:var(--muted);
     width:22px; height:22px; padding:0; border-radius:6px; font-size:var(--fs-2xs); line-height:1; flex:0 0 auto;
     display:flex; align-items:center; justify-content:center; cursor:pointer; }
+
+  /* Kartobjekt (träd, hus, väg, staket, skjul, damm) - kartutsmyckning,
+     inte zoner. Enkla platta CSS-former i samma anda som .zon-kort, ingen
+     egen SVG-konst; se docs/plan-custom-map.md. transform-origin:center så
+     att rotate() i den inline transformen (efter translate(-50%,-50%) som
+     centrerar rutan på sin x/y-punkt) roterar kring rutans egen mitt. */
+  .objekt { position:absolute; transform-origin:center; touch-action:none;
+    transition:box-shadow .12s ease; z-index:1; }
+  .objekt.dragging { z-index:10; cursor:grabbing; box-shadow:0 22px 44px -12px rgba(0,0,0,.55); transition:none; }
+  .objekt.vald { box-shadow:0 0 0 2px var(--accent); }
+  .karta-canvas.redigerar .objekt { cursor:grab; }
+  /* Monokrom, dämpad palett - inte en regnbåge av accentfärger. Samma
+     hierarki som referensbilden (mörk, solid tomtruta mot ljusare/streckade
+     grannrutor): hus/skjul är mest solida (byggd struktur, läses först),
+     träd/damm dämpat mittemellan (naturliga inslag), väg/staket smälter
+     nästan in i bakgrunden (tunn infrastruktur). Allt byggt på --text/
+     --surface/--border/--muted, så det följer med automatiskt i ljust och
+     mörkt läge - ingen egen hex-färg att hålla synkad mellan lägena. */
+  .objekt-house { border-radius:var(--r-sm); background:color-mix(in srgb, var(--text) 80%, transparent); }
+  .objekt-shed { border-radius:var(--r-sm); background:color-mix(in srgb, var(--text) 45%, transparent); }
+  .objekt-tree { border-radius:50%; background:color-mix(in srgb, var(--text) 25%, var(--surface2));
+    border:1px solid var(--border); }
+  .objekt-pond { border-radius:50%; background:var(--surface); border:1px solid var(--border); }
+  .objekt-path { border-radius:4px; background:var(--surface2); border:1px solid var(--border); }
+  .objekt-fence { border-radius:2px; background:transparent; border:1px dashed var(--muted); }
+  .objekt-rotera-handtag { position:absolute; left:50%; top:-22px; transform:translateX(-50%);
+    width:14px; height:14px; border-radius:50%; cursor:grab; z-index:6; touch-action:none;
+    background:var(--surface); border:2px solid var(--accent); }
+  .objekt-ta-bort { position:absolute; top:-9px; right:-9px; width:18px; height:18px; z-index:6;
+    background:var(--surface2); border:1px solid var(--border); box-shadow:none; color:var(--muted); cursor:pointer;
+    font-size:var(--fs-2xs); border-radius:50%; padding:0; display:flex; align-items:center; justify-content:center;
+    line-height:1; touch-action:none; }
+  .objekt-ta-bort:hover { color:var(--err); border-color:var(--err); transform:none; }
   .vand-btn:hover { color:var(--text); border-color:var(--accent); transform:none; }
   .sektion-vand { background:rgba(255,255,255,.3); border:0; color:#fff; width:16px; height:16px; font-size:var(--fs-3xs); }
   /* I redigeringsläge kan plantgrupperna dras – annars är de bara klickbara */
@@ -1279,6 +1325,15 @@ try {
               <span id="redigeraLayoutText" data-i18n="redigera_layout">Redigera layout</span>
             </button>
           </div>
+          <div class="objekt-palett" id="objektPalett">
+            <span class="objekt-palett-etikett" data-i18n="objekt_lagg_till">Lägg till:</span>
+            <button class="objekt-palett-knapp" data-objekt-typ="tree" data-i18n="objekt_tree">Träd</button>
+            <button class="objekt-palett-knapp" data-objekt-typ="house" data-i18n="objekt_house">Hus</button>
+            <button class="objekt-palett-knapp" data-objekt-typ="path" data-i18n="objekt_path">Väg</button>
+            <button class="objekt-palett-knapp" data-objekt-typ="fence" data-i18n="objekt_fence">Staket</button>
+            <button class="objekt-palett-knapp" data-objekt-typ="shed" data-i18n="objekt_shed">Skjul</button>
+            <button class="objekt-palett-knapp" data-objekt-typ="pond" data-i18n="objekt_pond">Damm</button>
+          </div>
           <input type="file" id="kartaBildFil" accept="image/*" style="display:none">
           <div class="karta-flikar" id="kartaFlikar"></div>
           <div class="sol-rad" id="solRad" style="display:none">
@@ -1758,6 +1813,7 @@ function ikonForVaxt(namn) {
 let odlingar = [];
 let zoner = [];
 let kartor = [];
+let objekt = []; // trad/hus/vag/staket/skjul/damm - kartutsmyckning, inga zoner
 let aktivKartaId = null;
 let widgets = [];
 let senasteVader = null;
@@ -1871,6 +1927,7 @@ const SPRAK_TEXT = {
     fraga_radgivare: "Fråga trädgårdsrådgivaren", ta_bort_bild: "Ta bort bild",
     om_growarr: "Om Growarr", ny_version_finns: "En nyare version finns:",
     logga_in: "Logga in", logga_in_hjalp: "Samma lösenord för hela hushållet.", losenord: "Lösenord", logga_ut: "Logga ut",
+    objekt_lagg_till: "Lägg till:", objekt_tree: "Träd", objekt_house: "Hus", objekt_path: "Väg", objekt_fence: "Staket", objekt_shed: "Skjul", objekt_pond: "Damm",
     cookie_problem: "Lösenordet stämde, men webbläsaren sparade inte sessionen - vanligt i inbyggda webbläsare (t.ex. i Home Assistant-appen). Öppna länken i Safari/Chrome direkt i stället.",
   },
   en: {
@@ -1955,6 +2012,7 @@ const SPRAK_TEXT = {
     fraga_radgivare: "Ask the garden adviser", ta_bort_bild: "Remove image",
     om_growarr: "About Growarr", ny_version_finns: "A newer version is available:",
     logga_in: "Log in", logga_in_hjalp: "Same password for the whole household.", losenord: "Password", logga_ut: "Log out",
+    objekt_lagg_till: "Add:", objekt_tree: "Tree", objekt_house: "House", objekt_path: "Path", objekt_fence: "Fence", objekt_shed: "Shed", objekt_pond: "Pond",
     cookie_problem: "The password was right, but the browser didn't save the session - common in embedded browsers (e.g. inside the Home Assistant app). Try opening the link directly in Safari/Chrome instead.",
   },
 };
@@ -2138,10 +2196,11 @@ async function laddaOdlingar() {
     odlingar = data.odlingar ?? [];
     zoner = data.zoner ?? [];
     kartor = data.kartor ?? [];
+    objekt = data.objekt ?? [];
     widgets = data.widgets ?? [];
     notiserHanterade = data.notiser ?? [];
     scheman = data.scheman ?? [];
-  } catch { odlingar = []; zoner = []; kartor = []; widgets = []; notiserHanterade = []; scheman = []; }
+  } catch { odlingar = []; zoner = []; kartor = []; objekt = []; widgets = []; notiserHanterade = []; scheman = []; }
   // Håll aktiv flik giltig även om kartan tagits bort i en annan flik/enhet.
   if (!kartor.some((k) => k.id === aktivKartaId)) aktivKartaId = kartor[0]?.id ?? null;
   renderaKartaFlikar();
@@ -2398,6 +2457,18 @@ function sektionHtml(sektion, grupper, i) {
       ${redigerarLayout ? `<div class="storlek-handtag" data-id="${esc(sektion.id)}" title="Dra för att ändra storlek"></div>` : ""}
     </div>`;
 }
+// Kartobjekt (träd, hus, väg, staket, skjul, damm) - inte zoner, ingen
+// klick-för-att-markera-detaljpanel, bara utsmyckning som går att dra,
+// storleksändra och rotera i redigeringsläget. Renderas före zonerna i
+// kartaScen (se renderaKarta) så de hamnar bakom dem i dokumentordningen.
+function objektHtml(o) {
+  return `<div class="objekt objekt-${esc(o.typ)}" data-id="${esc(o.id)}"
+      style="left:${o.x * 100}%; top:${o.y * 100}%; width:${o.bredd}px; height:${o.hojd}px; transform:translate(-50%,-50%) rotate(${o.rotation ?? 0}deg)">
+    ${redigerarLayout ? `<div class="objekt-rotera-handtag" data-id="${esc(o.id)}" title="Dra för att rotera"></div>
+      <div class="storlek-handtag" data-id="${esc(o.id)}" title="Dra för att ändra storlek"></div>
+      <button class="objekt-ta-bort" data-id="${esc(o.id)}" title="Ta bort">×</button>` : ""}
+  </div>`;
+}
 function renderaKarta() {
   if (dragState) return; // rendera inte om under en pågående dragning – då styr pointermove DOM:en direkt
   // Bara zonerna på den aktiva kartfliken ritas ut.
@@ -2422,13 +2493,16 @@ function renderaKarta() {
     }
   }
   const toppzoner = synligaZoner.filter((z) => !z.foralderId || !synligaIder.has(z.foralderId));
+  // Renderas oavsett om det finns zoner eller inte - träd/vägar är
+  // kartutsmyckning, inte kopplat till "inga zoner ännu"-meddelandet nedan.
+  const objektMarkup = objekt.filter((o) => o.kartaId === aktivKartaId).map(objektHtml).join("");
   // Tomtexten ligger i ramen, inte i scenen – scenen är ett fast modellrum
   // som zoomas, och en centrerad text i den skulle hamna utanför bilden.
   $("kartaTom").style.display = toppzoner.length ? "none" : "";
   if (!toppzoner.length) {
-    $("kartaScen").innerHTML = "";
+    $("kartaScen").innerHTML = objektMarkup;
   } else {
-    $("kartaScen").innerHTML = toppzoner.map((z, i) => {
+    $("kartaScen").innerHTML = objektMarkup + toppzoner.map((z, i) => {
       const lista = grupper.get(z.id) ?? [];
       const sektioner = sektionerPer.get(z.id) ?? [];
       const { x, y } = zonPosition(z, i);
@@ -2755,8 +2829,10 @@ function zoomaFranKnapp(faktor) {
 // heller inte kortens egen translate(-50%,-50%) – därav halva måtten.
 function kartaInnehallsRam() {
   // .zon-pin också – kompakt läge ritar inga .zon-kort-canvas alls, och utan
-  // dem skulle passaKarta() tro att kartan är tom och inte zooma till innehållet.
-  const kort = [...$("kartaScen").querySelectorAll(".zon-kort-canvas, .zon-pin")];
+  // dem skulle passaKarta() tro att kartan är tom och inte zooma till
+  // innehållet. .objekt också, annars klipps ett träd/hus placerat utanför
+  // zonernas egen yta av den automatiska zoomen.
+  const kort = [...$("kartaScen").querySelectorAll(".zon-kort-canvas, .zon-pin, .objekt")];
   if (!kort.length) return null;
   let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
   for (const el of kort) {
@@ -2911,10 +2987,32 @@ document.addEventListener("pointerdown", (e) => {
   }
   if (aktivaPekare.size > 2) return;
 
-  if (redigerarLayout && !e.target.closest(".zon-ta-bort, .sektion-ta-bort, .vand-btn")) {
-    // Storleksändring: dra hörnhandtaget på en zon eller sektion
+  if (redigerarLayout && !e.target.closest(".zon-ta-bort, .sektion-ta-bort, .vand-btn, .objekt-ta-bort")) {
+    // Rotation: dra det lilla handtaget upptill på ett kartobjekt.
+    const rotera = e.target.closest(".objekt-rotera-handtag");
+    if (rotera) {
+      const objEl = rotera.closest(".objekt");
+      if (objEl) {
+        const r = objEl.getBoundingClientRect();
+        startaDrag(e, {
+          typ: "objekt-rotation", id: rotera.dataset.id, el: objEl,
+          centerX: r.left + r.width / 2, centerY: r.top + r.height / 2,
+        }, rotera);
+      }
+      return;
+    }
+    // Storleksändring: dra hörnhandtaget på en zon, sektion eller kartobjekt
     const storlek = e.target.closest(".storlek-handtag");
     if (storlek) {
+      const objEl = storlek.closest(".objekt");
+      if (objEl) {
+        startaDrag(e, {
+          typ: "objekt-storlek", id: storlek.dataset.id, el: objEl,
+          startB: objEl.getBoundingClientRect().width / kartaZoom,
+          startH: objEl.getBoundingClientRect().height / kartaZoom,
+        }, storlek);
+        return;
+      }
       const el = storlek.closest(".zon-sektion") || storlek.closest(".zon-kort-canvas");
       if (el) {
         const arSektion = el.classList.contains("zon-sektion");
@@ -2938,6 +3036,13 @@ document.addEventListener("pointerdown", (e) => {
     const sektion = e.target.closest(".zon-sektion");
     if (sektion) {
       startaDrag(e, { typ: "sektion", id: sektion.dataset.id, el: sektion, container: sektion.parentElement }, sektion);
+      return;
+    }
+    // Kartobjekt: hela rutan går att dra, inte bara ett handtag - samma
+    // resonemang som för zonkortet nedan.
+    const objektEl = e.target.closest(".objekt");
+    if (objektEl) {
+      startaDrag(e, { typ: "objekt", id: objektEl.dataset.id, el: objektEl, container: $("kartaScen") }, objektEl);
       return;
     }
     // Hela zonkortet går att dra, inte bara ✥ – ett litet handtag är lätt att
@@ -3005,6 +3110,28 @@ function dragMove(e) {
     else dragState.el.querySelector(".zon-yta").style.height = `${h}px`;
     return;
   }
+  if (dragState.typ === "objekt-storlek") {
+    // Ett kartobjekt är en enda ruta, ingen inre .zon-yta att storleksändra separat.
+    const b = Math.max(16, Math.round(dragState.startB + (e.clientX - dragState.startX) / kartaZoom));
+    const h = Math.max(16, Math.round(dragState.startH + (e.clientY - dragState.startY) / kartaZoom));
+    dragState.b = b; dragState.h = h;
+    dragState.el.style.width = `${b}px`;
+    dragState.el.style.height = `${h}px`;
+    return;
+  }
+  if (dragState.typ === "objekt-rotation") {
+    // Vinkeln räknas direkt från objektets mitt till pekaren (atan2), inte
+    // som en delta från startvinkeln - handtaget sitter alltid "upptill" på
+    // det roterade objektet, så det finns inget att ackumulera. +90 skiftar
+    // 0° till att peka rakt upp (handtagets viloläge), matchande hur
+    // snappaRotation() i src/logic.js definierar 0°.
+    let grader = Math.atan2(e.clientY - dragState.centerY, e.clientX - dragState.centerX) * 180 / Math.PI + 90;
+    grader = ((grader % 360) + 360) % 360;
+    if (!e.shiftKey) grader = snappaRotationKlient(grader);
+    dragState.rotation = grader;
+    dragState.el.style.transform = `translate(-50%,-50%) rotate(${grader}deg)`;
+    return;
+  }
   // Under själva dragningen begränsas ingenting – objektet ska följa fingret
   // hela vägen, även ut ur sin låda och ut i tomrummet runt trädgården.
   // Var det till slut hamnar avgörs av vad det släpps över (se dragEnd).
@@ -3012,31 +3139,43 @@ function dragMove(e) {
   if (!rect.width || !rect.height) return;
   dragState.x = (e.clientX - rect.left) / rect.width;
   dragState.y = (e.clientY - rect.top) / rect.height;
-  if (dragState.typ === "zon") zonSnappning(dragState, rect);
+  if (dragState.typ === "zon" || dragState.typ === "objekt") kartaSnappning(dragState, rect);
   dragState.el.style.left = `${dragState.x * 100}%`;
   dragState.el.style.top = `${dragState.y * 100}%`;
 }
 
-// Fri zon-dragning i sig gör det svårt att pixelmäta fram samma rad/kolumn
-// för hand. Så fort den dragna zonens mitt är nära en annan zons mitt (på
-// samma karta, fristående, inte den man drar) snappas den exakt dit och en
-// ledlinje tänds – släpper man sparas det redan snäppta läget, inget extra
-// steg krävs. Räknar med zonPosition() precis som renderaKarta() gör, så
-// även zoner som ALDRIG flyttats än (bara ligger på sin standardplats i
-// rutnätet) fortfarande går att rada upp mot – annars fick man först dra
-// iväg en zon en helt onödig gång bara för att ge den ett "riktigt" x/y
-// innan nästa kunde snäppa mot den.
+// Samma logik som snappaRotation() i src/logic.js (testad där) - servern
+// och panelen delar inget modulsystem i den här appen, så det här är en
+// medveten, liten duplicering snarare än ett försök att importera den.
+function snappaRotationKlient(grader, steg = 15) {
+  return (Math.round(grader / steg) * steg) % 360;
+}
+
+// Fri zon/objekt-dragning i sig gör det svårt att pixelmäta fram samma
+// rad/kolumn för hand. Så fort den dragna zonens eller objektets mitt är
+// nära en annan zons/objekts mitt (på samma karta, fristående, inte den
+// man drar) snappas den exakt dit och en ledlinje tänds – släpper man
+// sparas det redan snäppta läget, inget extra steg krävs. Räknar med
+// zonPosition() precis som renderaKarta() gör, så även zoner som ALDRIG
+// flyttats än (bara ligger på sin standardplats i rutnätet) fortfarande
+// går att rada upp mot – annars fick man först dra iväg en zon en helt
+// onödig gång bara för att ge den ett "riktigt" x/y innan nästa kunde
+// snäppa mot den. Objekt har alltid ett riktigt x/y redan från skapandet,
+// så de behöver ingen motsvarande fallback-position.
 const SNAP_TROSKEL_PX = 7;
-function zonSnappning(s, rect) {
+function kartaSnappning(s, rect) {
   const troskelX = SNAP_TROSKEL_PX / rect.width, troskelY = SNAP_TROSKEL_PX / rect.height;
   const toppzoner = zoner.filter((z) => z.kartaId === aktivKartaId && !z.foralderId);
+  const kandidater = [
+    ...toppzoner.map((z, i) => ({ id: z.id, ...zonPosition(z, i) })),
+    ...objekt.filter((o) => o.kartaId === aktivKartaId).map((o) => ({ id: o.id, x: o.x, y: o.y })),
+  ];
   let snappadX = null, snappadY = null;
-  toppzoner.forEach((z, i) => {
-    if (z.id === s.id) return;
-    const { x, y } = zonPosition(z, i);
-    if (snappadX == null && Math.abs(x - s.x) < troskelX) snappadX = x;
-    if (snappadY == null && Math.abs(y - s.y) < troskelY) snappadY = y;
-  });
+  for (const k of kandidater) {
+    if (k.id === s.id) continue;
+    if (snappadX == null && Math.abs(k.x - s.x) < troskelX) snappadX = k.x;
+    if (snappadY == null && Math.abs(k.y - s.y) < troskelY) snappadY = k.y;
+  }
   if (snappadX != null) s.x = snappadX;
   if (snappadY != null) s.y = snappadY;
   visaSnapLinjer(snappadX, snappadY);
@@ -3098,6 +3237,13 @@ async function dragEnd(e) {
   setTimeout(() => { nyligenDragen = false; }, 120);
   if (s.typ === "panorera") return; // panorering är bara vy, inget att spara
   if (s.typ === "storlek") return sparaZon(s.id, { bredd: s.b, hojd: s.h });
+  if (s.typ === "objekt-storlek") return sparaObjekt(s.id, { bredd: s.b, hojd: s.h });
+  if (s.typ === "objekt-rotation") return sparaObjekt(s.id, { rotation: s.rotation });
+  if (s.typ === "objekt") {
+    // Inga behållare att byta för kartobjekt, bara en position att spara -
+    // klämd till scenens yta, ingen anledning att kunna dra ut ett träd i tomrummet.
+    return sparaObjekt(s.id, { x: Math.min(1, Math.max(0, s.x)), y: Math.min(1, Math.max(0, s.y)) });
+  }
 
   if (s.typ === "planta") {
     // Släpps plantan i en annan låda flyttar den dit; utanför alla lådor
@@ -3960,6 +4106,15 @@ async function sparaZon(id, patch) {
   await laddaOdlingar();
   if (valtMal?.typ === "zon" && valtMal.id === id) renderaDetaljPanel();
 }
+// /api/objects/update rör bara fält som faktiskt skickas, till skillnad
+// från sparaZon() - inget behöver återskickas oförändrat här.
+async function sparaObjekt(id, patch) {
+  await fetch(`${BAS}api/objects/update`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, ...patch }),
+  });
+  await laddaOdlingar();
+}
 async function sparaOdling(id, patch) {
   const o = odlingar.find((x) => x.id === id);
   if (!o) return;
@@ -4746,6 +4901,12 @@ document.addEventListener("click", async (e) => {
     await laddaOdlingar();
     return;
   }
+  const objektTaBort = e.target.closest(".objekt-ta-bort");
+  if (objektTaBort) {
+    await fetch(`${BAS}api/objects/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: objektTaBort.dataset.id }) });
+    await laddaOdlingar();
+    return;
+  }
 
   // Popup: spara jord/anteckning
   // Deleting straight from the detail panel. This previously required Edit
@@ -5328,8 +5489,18 @@ $("redigeraLayoutBtn").addEventListener("click", () => {
   btn.classList.toggle("aktiv", redigerarLayout);
   $("redigeraLayoutText").textContent = redigerarLayout ? t("klar_las_positioner") : t("redigera_layout");
   $("tradgardKarta").classList.toggle("redigerar", redigerarLayout);
+  $("objektPalett").classList.toggle("synlig", redigerarLayout);
   renderaKarta();
   renderaDetaljPanel(); // ta bort-knapparna på plantor styrs av redigeringsläget
+});
+$("objektPalett").addEventListener("click", async (e) => {
+  const knapp = e.target.closest(".objekt-palett-knapp");
+  if (!knapp || !aktivKartaId) return;
+  await fetch(`${BAS}api/objects`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ kartaId: aktivKartaId, typ: knapp.dataset.objektTyp, x: 0.5, y: 0.5 }),
+  });
+  await laddaOdlingar();
 });
 
 async function laddaInstallningar() {

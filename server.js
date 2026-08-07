@@ -13,6 +13,7 @@ import {
   rensaAntal, rensaLayout, rensaHojdM,
   torkTakt, TORR_GRANS, MIN_LUTNING, veckodagarForIntervall, enhetArFuktsensor,
   normaliseraIp, arBetroddAdress, versionArNyare,
+  OBJEKT_TYPER, rensaObjektTyp,
 } from "./src/logic.js";
 
 const PORT = process.env.PORT || 8097;
@@ -88,10 +89,10 @@ async function lasData() {
       kartor: d.kartor ?? [], zoner: d.zoner ?? [], odlingar: d.odlingar ?? [], enheter: d.enheter ?? [],
       widgets: d.widgets ?? [], installningar: d.installningar ?? {}, historik: d.historik ?? [],
       notiser: d.notiser ?? [], scheman: d.scheman ?? [],
-      tradgardsAutomationer: d.tradgardsAutomationer ?? [],
+      tradgardsAutomationer: d.tradgardsAutomationer ?? [], objekt: d.objekt ?? [],
     };
   } catch {
-    return { kartor: [], zoner: [], odlingar: [], enheter: [], widgets: [], installningar: {}, historik: [], notiser: [], scheman: [], tradgardsAutomationer: [] };
+    return { kartor: [], zoner: [], odlingar: [], enheter: [], widgets: [], installningar: {}, historik: [], notiser: [], scheman: [], tradgardsAutomationer: [], objekt: [] };
   }
 }
 async function skrivData(data) {
@@ -1364,6 +1365,44 @@ const server = createServer(async (req, res) => {
           hojdM: rensaHojdM(undefined, typ || "annat"),
         });
       });
+      return skickaJson(res, 200, data);
+    }
+    // Map-dressing objects (trees, houses, paths...) - not zones, can't
+    // hold plantings, purely visual context. See docs/plan-custom-map.md.
+    if (req.method === "POST" && p.endsWith("/api/objects")) {
+      const { kartaId, typ, x, y } = await lasBody(req);
+      const data = await muteraData((d) => {
+        const renTyp = rensaObjektTyp(typ);
+        const standard = OBJEKT_TYPER[renTyp];
+        d.objekt.push({
+          id: randomUUID(), kartaId: kartaId || d.kartor[0]?.id || "", typ: renTyp,
+          x: x ?? 0.5, y: y ?? 0.5, bredd: standard.bredd, hojd: standard.hojd, rotation: 0,
+        });
+      });
+      return skickaJson(res, 200, data);
+    }
+    if (req.method === "POST" && p.endsWith("/api/objects/update")) {
+      const { id, x, y, bredd, hojd, rotation } = await lasBody(req);
+      const data = await muteraData((d) => {
+        const obj = d.objekt.find((o) => o.id === id);
+        if (!obj) return;
+        if (x !== undefined) obj.x = x;
+        if (y !== undefined) obj.y = y;
+        if (bredd !== undefined) obj.bredd = bredd;
+        if (hojd !== undefined) obj.hojd = hojd;
+        // Sanitized, not force-snapped: the client already snaps to 15° while
+        // dragging unless a modifier key is held, so free rotation values
+        // reaching here are intentional, not a bug to correct.
+        if (rotation !== undefined) {
+          const n = Number(rotation);
+          obj.rotation = Number.isFinite(n) ? ((n % 360) + 360) % 360 : (obj.rotation ?? 0);
+        }
+      });
+      return skickaJson(res, 200, data);
+    }
+    if (req.method === "POST" && p.endsWith("/api/objects/delete")) {
+      const { id } = await lasBody(req);
+      const data = await muteraData((d) => { d.objekt = d.objekt.filter((o) => o.id !== id); });
       return skickaJson(res, 200, data);
     }
     if (req.method === "POST" && p.endsWith("/api/maps")) {

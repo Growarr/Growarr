@@ -64,6 +64,36 @@ export function rensaHojdM(v, typ) {
   return Math.min(20, Math.round(n * 100) / 100);
 }
 
+// Map-dressing objects (trees, houses, paths...) placed on the garden map,
+// distinct from zones. This vocabulary starts in English - unlike zones'
+// legacy Swedish typ values (vaxthus, odlingslada, ...), which stay as
+// they are; existing Swedish internals migrate gradually, this is new.
+// bredd/hojd are starting sizes in the map's own scene units, not
+// real-world metres - a real-world height (for casting shade) is a later,
+// separate step, not built yet.
+export const OBJEKT_TYPER = {
+  tree: { bredd: 50, hojd: 50 },
+  house: { bredd: 120, hojd: 90 },
+  path: { bredd: 200, hojd: 30 },
+  fence: { bredd: 150, hojd: 8 },
+  shed: { bredd: 70, hojd: 60 },
+  pond: { bredd: 80, hojd: 60 },
+};
+export function rensaObjektTyp(v) {
+  return OBJEKT_TYPER[v] ? v : "tree";
+}
+
+// Snaps a rotation angle to the nearest multiple of steg degrees, wrapping
+// correctly at the 0/360 boundary - e.g. 358° with a 15° step lands on 0°,
+// not -8° or 345°, which a naive Math.round(v/steg)*steg without first
+// normalizing into [0, 360) would get wrong.
+export function snappaRotation(grader, steg = 15) {
+  const n = Number(grader);
+  if (!Number.isFinite(n)) return 0;
+  const normaliserad = ((n % 360) + 360) % 360;
+  return (Math.round(normaliserad / steg) * steg) % 360;
+}
+
 export const TORR_GRANS = 25;        // % moisture we want to water before reaching
 export const MIN_MATPUNKTER = 6;     // fewer points than this and a trend line is noise
 export const MIN_LUTNING = 0.7;      // %/day; anything flatter is not really drying out
