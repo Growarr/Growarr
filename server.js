@@ -52,21 +52,28 @@ const APP_VERSION = JSON.parse(
 // Whether a newer build has already landed on main - every push bumps the
 // version and rebuilds :latest (see docker-publish.yml), so this is really
 // "has your Watchtower/redeploy caught up yet" rather than anything you'd
-// act on by hand. Cached for an hour: nobody needs this to the minute, and
-// it's one unauthenticated GitHub request per check otherwise.
+// act on by hand. Cached for 10 minutes, not an hour: a full hour was found
+// to go stale during a run of several releases within the same hour,
+// showing "up to date" against an old cached answer even though main had
+// moved on again since. raw.githubusercontent.com is a CDN, not the rate-
+// limited api.github.com, so checking more often than once an hour is fine.
 let senasteVersionCache = null; // { tid, version }
-const SENASTE_VERSION_CACHE_MS = 3600 * 1000;
+const SENASTE_VERSION_CACHE_MS = 10 * 60 * 1000;
 async function hamtaSenasteVersion() {
   if (senasteVersionCache && Date.now() - senasteVersionCache.tid < SENASTE_VERSION_CACHE_MS) return senasteVersionCache.version;
   try {
     const res = await fetch("https://raw.githubusercontent.com/Growarr/growarr/main/package.json", {
       headers: { "User-Agent": "growarr (github.com/Growarr/growarr)" },
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.warn(`[version] kunde inte läsa senaste version från GitHub: HTTP ${res.status}`);
+      return null;
+    }
     const { version } = await res.json();
     senasteVersionCache = { tid: Date.now(), version };
     return version;
-  } catch {
+  } catch (err) {
+    console.warn(`[version] kunde inte läsa senaste version från GitHub: ${err.message}`);
     return null;
   }
 }
