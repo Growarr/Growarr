@@ -1444,7 +1444,7 @@ try {
     <div class="lagg-till-zon">
       <div><label class="lbl">Ntfy-ämne</label><input type="text" id="nNtfy" placeholder="t.ex. samma som Bostadsvakt"></div>
       <div><label class="lbl">HA-webhook-URL</label><input type="text" id="nWebhook" placeholder="https://.../api/webhook/..."></div>
-      <button id="nSparaBtn">${t("spara")}</button>
+      <button id="nSparaBtn" data-i18n="spara">Spara</button>
     </div>
     <div class="status" id="nStatus"></div>
   </div>
@@ -1468,7 +1468,7 @@ try {
         </select>
       </div>
       <div><label class="lbl">Kartans bredd i meter</label><input type="number" id="sBredd" min="1" max="500" step="1" value="20"></div>
-      <button id="sSparaBtn">${t("spara")}</button>
+      <button id="sSparaBtn" data-i18n="spara">Spara</button>
     </div>
     <div class="status" id="sStatus"></div>
   </div>
@@ -1487,6 +1487,12 @@ try {
     </div>
     <p class="lbl" style="margin-top:10px" id="eHint"></p>
     <div class="status" id="eStatus"></div>
+  </div>
+
+  <div class="card">
+    <h2 data-i18n="om_growarr">Om Growarr</h2>
+    <p class="lbl" id="appVersion"></p>
+    <p class="lbl" data-i18n="version_hjalp">Uppdateras automatiskt vid varje ny version på main.</p>
   </div>
 
 </div>
@@ -1844,6 +1850,7 @@ const SPRAK_TEXT = {
     enhet_namn_placeholder: "fylls i automatiskt, går att ändra",
     sprak_hjalp: "Appens språk. Svenska är standard; delar som ännu inte översatts visas på svenska.",
     fraga_radgivare: "Fråga trädgårdsrådgivaren", ta_bort_bild: "Ta bort bild",
+    om_growarr: "Om Growarr", version_hjalp: "Uppdateras automatiskt vid varje ny version på main.",
   },
   en: {
     nav_oversikt: "Overview", nav_anteckningar: "Notes", nav_historik: "History",
@@ -1925,6 +1932,7 @@ const SPRAK_TEXT = {
     enhet_namn_placeholder: "filled in automatically, editable",
     sprak_hjalp: "The app's language. Swedish is the default; anything not translated yet falls back to Swedish.",
     fraga_radgivare: "Ask the garden adviser", ta_bort_bild: "Remove image",
+    om_growarr: "About Growarr", version_hjalp: "Updates automatically with every new version on main.",
   },
 };
 // A key missing from BOTH languages falls through as its own name, which is
@@ -5302,6 +5310,11 @@ async function laddaInstallningar() {
     $("sNorr").value = String(installningar.norrGrader ?? 0);
     $("sBredd").value = String(installningar.kartaBreddM ?? 20);
   } catch { /* ok att inte kunna hämta – fälten blir bara tomma */ }
+  try {
+    const res = await fetch(`${BAS}api/version`, { cache: "no-store" });
+    const { version } = await res.json();
+    $("appVersion").textContent = `Growarr v${version}`;
+  } catch { /* ok att inte kunna hämta – raden blir bara tom */ }
 }
 
 $("sSparaBtn").addEventListener("click", async () => {
