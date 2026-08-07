@@ -1133,8 +1133,15 @@ async function migreraData() {
 }
 
 // ---- HTTP ----
+// Cache-Control: no-store alone wasn't always enough - reported: the plain
+// page URL kept showing an old build even well after a redeploy, worked
+// around by manually appending a throwaway path segment to force a fresh
+// fetch each time. Adding the older Pragma/Expires pair too, since some
+// intermediate caches (a reverse proxy, a CDN) only honor those and ignore
+// Cache-Control entirely.
+const INGEN_CACHE = { "Cache-Control": "no-store", "Pragma": "no-cache", "Expires": "0" };
 function skickaJson(res, status, body) {
-  res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+  res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", ...INGEN_CACHE });
   res.end(JSON.stringify(body));
 }
 // Bilder i chatten skickas som base64 i JSON-kroppen, så taket är tilltaget –
@@ -1257,14 +1264,14 @@ const server = createServer(async (req, res) => {
       const { losenord } = await lasBody(req);
       if (!losenordStammer(losenord)) return skickaJson(res, 401, { fel: "fel lösenord" });
       res.writeHead(200, {
-        "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store",
+        "Content-Type": "application/json; charset=utf-8", ...INGEN_CACHE,
         "Set-Cookie": `${SESSION_COOKIE}=${skapaSessionCookie()}; HttpOnly; ${sessionCookieAttribut(req)}; Max-Age=${Math.floor(SESSION_GILTIG_MS / 1000)}; Path=/`,
       });
       return res.end(JSON.stringify({ ok: true }));
     }
     if (req.method === "POST" && p.endsWith("/api/logout")) {
       res.writeHead(200, {
-        "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store",
+        "Content-Type": "application/json; charset=utf-8", ...INGEN_CACHE,
         "Set-Cookie": `${SESSION_COOKIE}=; HttpOnly; ${sessionCookieAttribut(req)}; Max-Age=0; Path=/`,
       });
       return res.end(JSON.stringify({ ok: true }));
@@ -1634,7 +1641,7 @@ const server = createServer(async (req, res) => {
       if (!kopplad) return skickaJson(res, 403, { fel: "den kameran är inte kopplad i panelen" });
       const bild = await hamtaKamerabild(entityId);
       if (!bild) return skickaJson(res, 404, { fel: "kunde inte hämta kamerabild" });
-      res.writeHead(200, { "Content-Type": bild.typ, "Cache-Control": "no-store" });
+      res.writeHead(200, { "Content-Type": bild.typ, ...INGEN_CACHE });
       return res.end(bild.data);
     }
     if (req.method === "POST" && p.endsWith("/api/zones/delete")) {
@@ -1766,7 +1773,7 @@ const server = createServer(async (req, res) => {
     }
     if (req.method === "GET" && !p.includes("/api/")) {
       const html = await readFile(PANEL_HTML, "utf8");
-      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", ...INGEN_CACHE });
       return res.end(html);
     }
     skickaJson(res, 404, { fel: "okänd endpoint" });
