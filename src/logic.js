@@ -123,14 +123,15 @@ export function ipINat(ip, cidr) {
   return (adress & mask) === (nat & mask);
 }
 
-// Loopback (same machine) is always trusted, regardless of TRUSTED_NETWORKS -
-// nothing outside the host can ever connect via 127.0.0.1/::1. Anything else
-// needs an explicit, operator-configured CIDR: there's no default LAN range,
-// since a Docker bridge network's own private-range address (e.g. a reverse
-// proxy container's IP) would otherwise look identical to a trusted home
-// network and quietly defeat the whole point.
+// No default trust at all, not even loopback - an operator-configured CIDR
+// is the only way in. Loopback feels safe ("nothing outside the host can
+// connect via 127.0.0.1") but isn't: a reverse proxy running on the same
+// host - the normal setup here, with network_mode: host - forwards real,
+// outside traffic to Growarr over 127.0.0.1, which would make every request
+// look local and silently bypass the login for everyone. Same reasoning as
+// not guessing a default LAN range: a plausible-looking default that's
+// wrong is worse than no default.
 export function arBetroddAdress(ip, natverksLista) {
   const adress = normaliseraIp(ip);
-  if (adress === "127.0.0.1" || adress === "::1") return true;
   return (natverksLista ?? []).some((cidr) => ipINat(adress, cidr));
 }

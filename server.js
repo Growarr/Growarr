@@ -29,11 +29,12 @@ const ANTHROPIC_MODEL = "claude-sonnet-5";
 // keep working exactly as before. Set it to require a single shared
 // household password. TRUSTED_NETWORKS (comma-separated CIDRs, e.g.
 // "192.168.1.0/24") skips the login for requests from those addresses -
-// nothing is trusted by default beyond loopback itself, since guessing a
-// "safe" default LAN range wrong (e.g. a reverse-proxy container's own
-// private-range address) would quietly defeat the whole point. Behind a
-// reverse proxy, the address Growarr sees is the proxy's, not the real
-// client's - this only helps when reaching the container directly.
+// nothing is trusted by default, not even loopback: a reverse proxy on the
+// same host (the normal setup here, with network_mode: host) forwards real,
+// outside traffic to Growarr over 127.0.0.1 too, which would make every
+// request look local and silently let everyone straight in. Behind a
+// reverse proxy in general, the address Growarr sees is the proxy's, not
+// the real client's - this only helps when reaching the container directly.
 const APP_PASSWORD = process.env.APP_PASSWORD || "";
 const TRUSTED_NETWORKS = (process.env.TRUSTED_NETWORKS || "").split(",").map((s) => s.trim()).filter(Boolean);
 // Background images live as files next to the data file, never inside it.

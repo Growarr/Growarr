@@ -159,17 +159,22 @@ describe("ipINat", () => {
 });
 
 describe("arBetroddAdress", () => {
-  test("loopback is always trusted, even with an empty trusted-networks list", () => {
-    assert.equal(arBetroddAdress("127.0.0.1", []), true);
-    assert.equal(arBetroddAdress("::1", []), true);
-    assert.equal(arBetroddAdress("::ffff:127.0.0.1", []), true);
+  test("no default trust at all with an empty trusted-networks list - not even loopback", () => {
+    // A reverse proxy on the same host forwards real, outside traffic to
+    // Growarr over 127.0.0.1 too, so loopback can't be assumed safe.
+    assert.equal(arBetroddAdress("127.0.0.1", []), false);
+    assert.equal(arBetroddAdress("::1", []), false);
+    assert.equal(arBetroddAdress("192.168.1.50", []), false);
   });
   test("no default LAN range - an ordinary private address is untrusted unless listed", () => {
-    assert.equal(arBetroddAdress("192.168.1.50", []), false);
     assert.equal(arBetroddAdress("192.168.1.50", ["10.0.0.0/8"]), false);
   });
-  test("matches once the operator lists the network", () => {
+  test("matches once the operator explicitly lists the network", () => {
     assert.equal(arBetroddAdress("192.168.1.50", ["192.168.1.0/24"]), true);
     assert.equal(arBetroddAdress("::ffff:192.168.1.50", ["192.168.1.0/24"]), true);
+  });
+  test("loopback works too, if explicitly listed", () => {
+    assert.equal(arBetroddAdress("127.0.0.1", ["127.0.0.1/32"]), true);
+    assert.equal(arBetroddAdress("::ffff:127.0.0.1", ["127.0.0.1/32"]), true);
   });
 });
