@@ -1183,6 +1183,24 @@ function lasCookie(req, namn) {
   const del = rad.split(";").map((s) => s.trim()).find((s) => s.startsWith(`${namn}=`));
   return del ? decodeURIComponent(del.slice(namn.length + 1)) : null;
 }
+// SameSite=Lax is never sent on a cross-site request, and embedding Growarr
+// as an <iframe> panel (e.g. inside Home Assistant's own dashboard) makes
+// every request cross-site by definition - the login would accept the
+// password and then immediately look logged out again on the very next
+// request. SameSite=None fixes that, but browsers require Secure to go with
+// it, which only works over HTTPS - so this only upgrades when the request
+// actually arrived over HTTPS (directly, or via X-Forwarded-Proto from a
+// reverse proxy terminating TLS), and falls back to the old Lax/no-Secure
+// behavior otherwise, so plain HTTP on the LAN keeps working exactly as
+// before. Trusting a client-supplied X-Forwarded-Proto header here is safe:
+// worst case a spoofed value makes the server claim HTTPS on a plain HTTP
+// connection, but the browser itself decides whether the connection is
+// actually secure and simply won't store/send a Secure cookie if it isn't -
+// nobody else's session is put at risk by a bad header.
+function sessionCookieAttribut(req) {
+  const sakert = req.socket.encrypted || req.headers["x-forwarded-proto"] === "https";
+  return sakert ? "SameSite=None; Secure" : "SameSite=Lax";
+}
 
 // A simple, process-global rate limit on the endpoints that call Claude.
 // There's no login separating clients, so this caps the whole installation
@@ -1232,14 +1250,14 @@ const server = createServer(async (req, res) => {
       if (!losenordStammer(losenord)) return skickaJson(res, 401, { fel: "fel lösenord" });
       res.writeHead(200, {
         "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store",
-        "Set-Cookie": `${SESSION_COOKIE}=${skapaSessionCookie()}; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(SESSION_GILTIG_MS / 1000)}; Path=/`,
+        "Set-Cookie": `${SESSION_COOKIE}=${skapaSessionCookie()}; HttpOnly; ${sessionCookieAttribut(req)}; Max-Age=${Math.floor(SESSION_GILTIG_MS / 1000)}; Path=/`,
       });
       return res.end(JSON.stringify({ ok: true }));
     }
     if (req.method === "POST" && p.endsWith("/api/logout")) {
       res.writeHead(200, {
         "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store",
-        "Set-Cookie": `${SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Max-Age=0; Path=/`,
+        "Set-Cookie": `${SESSION_COOKIE}=; HttpOnly; ${sessionCookieAttribut(req)}; Max-Age=0; Path=/`,
       });
       return res.end(JSON.stringify({ ok: true }));
     }
