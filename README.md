@@ -88,10 +88,12 @@ image: ghcr.io/growarr/growarr:v0.1.0 # instead of :latest
 | `NTFY_TOPIC` | No | Push notifications via [ntfy.sh](https://ntfy.sh) (can also be set later in the UI) |
 | `WEBHOOK_URL` | No | Forward notifications to a Home Assistant webhook instead/as well |
 | `ANTHROPIC_API_KEY` | No | Unlocks Claude's watering insight, photo chat, and notification prioritization |
+| `APP_PASSWORD` | No | Requires a login (one shared household password) to use the panel at all; unset by default, so existing installs keep working with no login |
+| `TRUSTED_NETWORKS` | No | Comma-separated CIDRs (e.g. `192.168.1.0/24`) that skip the login when `APP_PASSWORD` is set. Nothing is trusted by default beyond `127.0.0.1`/`::1` - and this only helps when reaching the container directly, not through a reverse proxy, which would make every request look like it came from the proxy's own address |
 
-Everything except `PORT` also has a matching field in Settings, so you can
-skip straight to `docker compose up -d` with a blank `.env` and fill the
-rest in through the UI.
+Everything except `PORT`, `APP_PASSWORD` and `TRUSTED_NETWORKS` also has a
+matching field in Settings, so you can skip straight to `docker compose up
+-d` with a blank `.env` and fill the rest in through the UI.
 
 </details>
 

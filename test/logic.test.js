@@ -4,6 +4,7 @@ import {
   rensaAntal, rensaLayout, rensaHojdM, STANDARD_HOJD_M,
   torkTakt, veckodagarForIntervall, enhetArFuktsensor,
   stockholmManad, stockholmDatum, lokalTimme,
+  normaliseraIp, ipINat, arBetroddAdress,
 } from "../src/logic.js";
 
 describe("rensaAntal", () => {
@@ -120,5 +121,55 @@ describe("date/time helpers (Europe/Stockholm, DST is UTC+2 in August)", () => {
   });
   test("lokalTimme converts to the local hour", () => {
     assert.equal(lokalTimme("2026-08-06T10:00:00Z"), 12);
+  });
+});
+
+describe("normaliseraIp", () => {
+  test("strips the IPv4-mapped IPv6 prefix Node reports on dual-stack sockets", () => {
+    assert.equal(normaliseraIp("::ffff:192.168.1.5"), "192.168.1.5");
+  });
+  test("leaves plain IPv4 and other addresses alone", () => {
+    assert.equal(normaliseraIp("192.168.1.5"), "192.168.1.5");
+    assert.equal(normaliseraIp("::1"), "::1");
+  });
+  test("empty/missing input becomes an empty string", () => {
+    assert.equal(normaliseraIp(""), "");
+    assert.equal(normaliseraIp(undefined), "");
+  });
+});
+
+describe("ipINat", () => {
+  test("matches an address inside the network's range", () => {
+    assert.equal(ipINat("192.168.1.5", "192.168.0.0/16"), true);
+    assert.equal(ipINat("10.0.5.9", "10.0.0.0/8"), true);
+  });
+  test("rejects an address outside the range", () => {
+    assert.equal(ipINat("192.168.1.5", "10.0.0.0/8"), false);
+    assert.equal(ipINat("192.169.1.5", "192.168.0.0/16"), false);
+  });
+  test("a bare IP with no /bits is an exact (/32) match", () => {
+    assert.equal(ipINat("192.168.1.5", "192.168.1.5"), true);
+    assert.equal(ipINat("192.168.1.6", "192.168.1.5"), false);
+  });
+  test("never matches anything that isn't plain IPv4, on either side", () => {
+    assert.equal(ipINat("::1", "0.0.0.0/0"), false);
+    assert.equal(ipINat("192.168.1.5", "::1/128"), false);
+    assert.equal(ipINat("not-an-ip", "10.0.0.0/8"), false);
+  });
+});
+
+describe("arBetroddAdress", () => {
+  test("loopback is always trusted, even with an empty trusted-networks list", () => {
+    assert.equal(arBetroddAdress("127.0.0.1", []), true);
+    assert.equal(arBetroddAdress("::1", []), true);
+    assert.equal(arBetroddAdress("::ffff:127.0.0.1", []), true);
+  });
+  test("no default LAN range - an ordinary private address is untrusted unless listed", () => {
+    assert.equal(arBetroddAdress("192.168.1.50", []), false);
+    assert.equal(arBetroddAdress("192.168.1.50", ["10.0.0.0/8"]), false);
+  });
+  test("matches once the operator lists the network", () => {
+    assert.equal(arBetroddAdress("192.168.1.50", ["192.168.1.0/24"]), true);
+    assert.equal(arBetroddAdress("::ffff:192.168.1.50", ["192.168.1.0/24"]), true);
   });
 });

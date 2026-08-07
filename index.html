@@ -154,6 +154,13 @@ try {
   .skapa-rad { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   @media (max-width:560px) { .skapa-rad { grid-template-columns:1fr; } }
 
+  .login-vy { min-height:100dvh; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .login-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r);
+    box-shadow:var(--shadow); padding:32px; max-width:340px; width:100%; text-align:center; }
+  .login-card img { width:52px; height:52px; margin-bottom:12px; }
+  .login-card h1 { font-size:1.1rem; margin-bottom:6px; }
+  .login-card input { margin:18px 0 12px; }
+  .login-card button { width:100%; }
   .app-shell { display:flex; align-items:stretch; min-height:100dvh; }
   .sidebar { width:76px; flex:0 0 auto; background:var(--surface); border-right:1px solid var(--border);
     display:flex; flex-direction:column; align-items:center; gap:14px; padding:22px 0;
@@ -265,7 +272,7 @@ try {
   .widget-ta-bort:hover:not(:disabled) { color:var(--err) !important; }
 
   label.lbl { display:block; font-size:var(--fs-2xs); color:var(--muted); margin-bottom:6px; font-weight:500; }
-  input[type=text], input[type=date], input[type=month], input[type=number], select {
+  input[type=text], input[type=password], input[type=date], input[type=month], input[type=number], select {
     width:100%; padding:10px 12px; border-radius:var(--r-sm); border:1px solid var(--border);
     background:var(--surface2); color:var(--text); font-size:var(--fs-sm); font-family:inherit;
     transition:border-color .15s, box-shadow .15s; }
@@ -1177,7 +1184,18 @@ try {
 </head>
 <body>
 
-<div class="app-shell">
+<div class="wrap login-vy" id="loginVy" style="display:none">
+  <div class="login-card">
+    <img src="logo.png" alt="Growarr">
+    <h1 data-i18n="logga_in">Logga in</h1>
+    <p class="lbl" data-i18n="logga_in_hjalp">Samma lösenord för hela hushållet.</p>
+    <input type="password" id="loginLosenord" autocomplete="current-password" data-i18n-placeholder="losenord" placeholder="Lösenord">
+    <button id="loginBtn" data-i18n="logga_in">Logga in</button>
+    <div class="status err" id="loginStatus" style="display:none"></div>
+  </div>
+</div>
+
+<div class="app-shell" id="appShell">
 <nav class="sidebar">
   <div class="brand-mark" title="Growarr"><img src="logo.png" alt="Growarr"></div>
   <button class="side-btn" id="navDashboardBtn" data-i18n-title="nav_oversikt">
@@ -1493,6 +1511,7 @@ try {
     <h2 data-i18n="om_growarr">Om Growarr</h2>
     <p class="lbl" id="appVersion"></p>
     <p class="lbl" data-i18n="version_hjalp">Uppdateras automatiskt vid varje ny version på main.</p>
+    <button id="logoutBtn" class="ta-bort-knapp" style="margin-top:14px" data-i18n="logga_ut">Logga ut</button>
   </div>
 
 </div>
@@ -1851,6 +1870,7 @@ const SPRAK_TEXT = {
     sprak_hjalp: "Appens språk. Svenska är standard; delar som ännu inte översatts visas på svenska.",
     fraga_radgivare: "Fråga trädgårdsrådgivaren", ta_bort_bild: "Ta bort bild",
     om_growarr: "Om Growarr", version_hjalp: "Uppdateras automatiskt vid varje ny version på main.",
+    logga_in: "Logga in", logga_in_hjalp: "Samma lösenord för hela hushållet.", losenord: "Lösenord", logga_ut: "Logga ut",
   },
   en: {
     nav_oversikt: "Overview", nav_anteckningar: "Notes", nav_historik: "History",
@@ -1933,6 +1953,7 @@ const SPRAK_TEXT = {
     sprak_hjalp: "The app's language. Swedish is the default; anything not translated yet falls back to Swedish.",
     fraga_radgivare: "Ask the garden adviser", ta_bort_bild: "Remove image",
     om_growarr: "About Growarr", version_hjalp: "Updates automatically with every new version on main.",
+    logga_in: "Log in", logga_in_hjalp: "Same password for the whole household.", losenord: "Password", logga_ut: "Log out",
   },
 };
 // A key missing from BOTH languages falls through as its own name, which is
@@ -6063,7 +6084,56 @@ async function skickaChatt() {
   chattVantar = false; renderaChatt();
 }
 
+// ---- Inloggning (visas bara om servern kräver det, dvs. APP_PASSWORD är satt) ----
+async function kontrolleraInloggning() {
+  try {
+    const res = await fetch(`${BAS}api/settings`, { cache: "no-store" });
+    if (res.status === 401) { visaInloggning(); return false; }
+    return true;
+  } catch {
+    return true; // nätverksstrul - låt den vanliga uppstarten hantera och visa sitt eget fel
+  }
+}
+function visaInloggning() {
+  $("appShell").style.display = "none";
+  $("loginVy").style.display = "flex";
+  $("loginLosenord").focus();
+}
+async function loggaIn() {
+  const st = $("loginStatus");
+  const losenord = $("loginLosenord").value;
+  if (!losenord) return;
+  st.style.display = "none";
+  $("loginBtn").disabled = true;
+  try {
+    const res = await fetch(`${BAS}api/login`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ losenord }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      st.textContent = data.fel || "Kunde inte logga in.";
+      st.style.display = "block";
+      return;
+    }
+    location.reload();
+  } catch (e) {
+    st.textContent = "Kunde inte nå servern: " + e.message;
+    st.style.display = "block";
+  } finally {
+    $("loginBtn").disabled = false;
+  }
+}
+async function loggaUt() {
+  await fetch(`${BAS}api/logout`, { method: "POST" }).catch(() => {});
+  location.reload();
+}
+$("loginBtn").addEventListener("click", loggaIn);
+$("loginLosenord").addEventListener("keydown", (e) => { if (e.key === "Enter") loggaIn(); });
+$("logoutBtn").addEventListener("click", loggaUt);
+
 (async () => {
+  if (!(await kontrolleraInloggning())) return;
   await laddaVader();
   await laddaBevattning();
   await laddaOdlingar();

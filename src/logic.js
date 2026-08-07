@@ -87,3 +87,50 @@ export function enhetArFuktsensor(enhet) {
   const namn = (enhet.namn ?? "").toLowerCase();
   return namn.includes("fukt") || namn.includes("moist") || namn.includes("humid");
 }
+
+// Node reports an IPv4 connection's remote address as an IPv4-mapped IPv6
+// address (e.g. "::ffff:192.168.1.5") whenever the socket is dual-stack,
+// which is the common case in Docker. Strip that prefix so CIDR matching
+// only ever has to deal with plain IPv4.
+export function normaliseraIp(ip) {
+  return ip?.startsWith("::ffff:") ? ip.slice(7) : (ip ?? "");
+}
+
+// A dotted-quad IPv4 address as a single 32-bit unsigned integer, or null if
+// it isn't one (IPv6, garbage, etc.) - null rather than throwing, since a
+// network address that doesn't parse should just never match anything.
+function ipv4Till32Bit(ip) {
+  const delar = String(ip).split(".");
+  if (delar.length !== 4) return null;
+  const tal = delar.map(Number);
+  if (tal.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return null;
+  return ((tal[0] << 24) | (tal[1] << 16) | (tal[2] << 8) | tal[3]) >>> 0;
+}
+
+// IPv4-only CIDR containment (e.g. is "192.168.1.5" inside "192.168.0.0/16"?).
+// A bare IP with no "/bits" is treated as a /32 (an exact match). Anything
+// that isn't plain IPv4 - either side - never matches; there's no IPv6 CIDR
+// support here, only the always-trusted "::1" loopback case in
+// arBetroddAdress below.
+export function ipINat(ip, cidr) {
+  const [natIp, bitStr] = String(cidr).split("/");
+  const bits = bitStr === undefined ? 32 : Number(bitStr);
+  if (!Number.isInteger(bits) || bits < 0 || bits > 32) return false;
+  const adress = ipv4Till32Bit(ip);
+  const nat = ipv4Till32Bit(natIp);
+  if (adress === null || nat === null) return false;
+  const mask = bits === 0 ? 0 : (0xFFFFFFFF << (32 - bits)) >>> 0;
+  return (adress & mask) === (nat & mask);
+}
+
+// Loopback (same machine) is always trusted, regardless of TRUSTED_NETWORKS -
+// nothing outside the host can ever connect via 127.0.0.1/::1. Anything else
+// needs an explicit, operator-configured CIDR: there's no default LAN range,
+// since a Docker bridge network's own private-range address (e.g. a reverse
+// proxy container's IP) would otherwise look identical to a trusted home
+// network and quietly defeat the whole point.
+export function arBetroddAdress(ip, natverksLista) {
+  const adress = normaliseraIp(ip);
+  if (adress === "127.0.0.1" || adress === "::1") return true;
+  return (natverksLista ?? []).some((cidr) => ipINat(adress, cidr));
+}

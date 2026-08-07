@@ -7,11 +7,12 @@ import { readFile, writeFile, rename, mkdir, unlink, readdir } from "node:fs/pro
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash, createHmac, timingSafeEqual } from "node:crypto";
 import {
   stockholmManad, stockholmDatum, lokalTimme,
   rensaAntal, rensaLayout, rensaHojdM,
   torkTakt, TORR_GRANS, MIN_LUTNING, veckodagarForIntervall, enhetArFuktsensor,
+  normaliseraIp, arBetroddAdress,
 } from "./src/logic.js";
 
 const PORT = process.env.PORT || 8097;
@@ -24,6 +25,17 @@ const NTFY_TOPIC = process.env.NTFY_TOPIC || "";
 const WEBHOOK_URL = process.env.WEBHOOK_URL || "";
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || "";
 const ANTHROPIC_MODEL = "claude-sonnet-5";
+// Unset (the default) means no login is required at all - existing installs
+// keep working exactly as before. Set it to require a single shared
+// household password. TRUSTED_NETWORKS (comma-separated CIDRs, e.g.
+// "192.168.1.0/24") skips the login for requests from those addresses -
+// nothing is trusted by default beyond loopback itself, since guessing a
+// "safe" default LAN range wrong (e.g. a reverse-proxy container's own
+// private-range address) would quietly defeat the whole point. Behind a
+// reverse proxy, the address Growarr sees is the proxy's, not the real
+// client's - this only helps when reaching the container directly.
+const APP_PASSWORD = process.env.APP_PASSWORD || "";
+const TRUSTED_NETWORKS = (process.env.TRUSTED_NETWORKS || "").split(",").map((s) => s.trim()).filter(Boolean);
 // Background images live as files next to the data file, never inside it.
 // tradgard.json is re-read on every API request, so a megabyte of base64 in
 // there would slow the whole app down; a separate file costs nothing.
@@ -1109,6 +1121,47 @@ async function lasBody(req) {
   return delar.length ? JSON.parse(Buffer.concat(delar).toString("utf8")) : {};
 }
 
+// ---- Login (optional - see APP_PASSWORD above) ----
+// Comparing fixed-length SHA-256 digests of both sides with a timing-safe
+// function, rather than the raw strings - a plain === leaks how many
+// leading characters matched through response timing.
+function losenordStammer(inskickat) {
+  if (!APP_PASSWORD) return false;
+  const a = createHash("sha256").update(String(inskickat ?? "")).digest();
+  const b = createHash("sha256").update(APP_PASSWORD).digest();
+  return timingSafeEqual(a, b);
+}
+const SESSION_COOKIE = "growarr_session";
+const SESSION_GILTIG_MS = 90 * 24 * 3600 * 1000; // 90 dagar
+// Signed with a secret derived from the password itself, so there's nothing
+// extra to configure - and rotating the shared password automatically
+// invalidates every existing session, which is exactly the behavior you
+// want. No server-side session storage either: the cookie carries its own
+// expiry and signature, so a login survives the container restarting (this
+// app rebuilds and redeploys on every push to main - a session that didn't
+// survive that would be useless).
+function sessionHemlighet() {
+  return createHash("sha256").update(`growarr-session:${APP_PASSWORD}`).digest();
+}
+function skapaSessionCookie() {
+  const utgang = String(Date.now() + SESSION_GILTIG_MS);
+  const sig = createHmac("sha256", sessionHemlighet()).update(utgang).digest("hex");
+  return `${utgang}.${sig}`;
+}
+function giltigSessionCookie(varde) {
+  if (!varde) return false;
+  const [utgang, sig] = varde.split(".");
+  if (!utgang || !sig || Number(utgang) < Date.now()) return false;
+  const forvantad = createHmac("sha256", sessionHemlighet()).update(utgang).digest("hex");
+  const a = Buffer.from(sig, "hex"), b = Buffer.from(forvantad, "hex");
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+function lasCookie(req, namn) {
+  const rad = req.headers.cookie ?? "";
+  const del = rad.split(";").map((s) => s.trim()).find((s) => s.startsWith(`${namn}=`));
+  return del ? decodeURIComponent(del.slice(namn.length + 1)) : null;
+}
+
 // A simple, process-global rate limit on the endpoints that call Claude.
 // There's no login separating clients, so this caps the whole installation
 // rather than any one person - the point is that an exposed port or a
@@ -1132,6 +1185,32 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url, "http://intern");
   const p = url.pathname.replace(/\/+$/, "") || "/";
   try {
+    // The page itself (index.html, logo.png) is always reachable - it's
+    // static markup with no secrets in it, and it has to load unauthenticated
+    // for the login screen inside it to have something to render into. Only
+    // the API is gated, and /api/login is its own necessary exception.
+    if (APP_PASSWORD && p.includes("/api/") && !p.endsWith("/api/login")) {
+      const betrodd = arBetroddAdress(normaliseraIp(req.socket.remoteAddress ?? ""), TRUSTED_NETWORKS);
+      const inloggad = betrodd || giltigSessionCookie(lasCookie(req, SESSION_COOKIE));
+      if (!inloggad) return skickaJson(res, 401, { fel: "inloggning krävs" });
+    }
+    if (req.method === "POST" && p.endsWith("/api/login")) {
+      if (!withinRateLimit("login", 10, EN_TIMME_MS)) return skickaJson(res, 429, { fel: "för många inloggningsförsök, försök igen om en stund" });
+      const { losenord } = await lasBody(req);
+      if (!losenordStammer(losenord)) return skickaJson(res, 401, { fel: "fel lösenord" });
+      res.writeHead(200, {
+        "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store",
+        "Set-Cookie": `${SESSION_COOKIE}=${skapaSessionCookie()}; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(SESSION_GILTIG_MS / 1000)}; Path=/`,
+      });
+      return res.end(JSON.stringify({ ok: true }));
+    }
+    if (req.method === "POST" && p.endsWith("/api/logout")) {
+      res.writeHead(200, {
+        "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store",
+        "Set-Cookie": `${SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Max-Age=0; Path=/`,
+      });
+      return res.end(JSON.stringify({ ok: true }));
+    }
     if (req.method === "GET" && p.endsWith("/api/plantings")) {
       return skickaJson(res, 200, await lasData());
     }
