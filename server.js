@@ -1441,7 +1441,15 @@ const server = createServer(async (req, res) => {
       return skickaJson(res, 200, data);
     }
     if (req.method === "GET" && p.endsWith("/api/camera")) {
-      const bild = await hamtaKamerabild(url.searchParams.get("entityId") || "");
+      const entityId = url.searchParams.get("entityId") || "";
+      // Without this check, any camera. entity_id in the whole HA install
+      // could be requested here, not just ones actually shown in the panel
+      // (as a linked device or a camera widget) - same principle as the
+      // automation endpoints never trusting an unchecked entity_id.
+      const { enheter, widgets } = await lasData();
+      const kopplad = enheter.some((e) => e.entityId === entityId) || widgets.some((w) => w.typ === "kamera" && w.entityId === entityId);
+      if (!kopplad) return skickaJson(res, 403, { fel: "den kameran är inte kopplad i panelen" });
+      const bild = await hamtaKamerabild(entityId);
       if (!bild) return skickaJson(res, 404, { fel: "kunde inte hämta kamerabild" });
       res.writeHead(200, { "Content-Type": bild.typ, "Cache-Control": "no-store" });
       return res.end(bild.data);
