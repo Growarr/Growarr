@@ -1213,8 +1213,18 @@ const server = createServer(async (req, res) => {
     // the API is gated, and /api/login is its own necessary exception.
     if (APP_PASSWORD && p.includes("/api/") && !p.endsWith("/api/login")) {
       const betrodd = arBetroddAdress(normaliseraIp(req.socket.remoteAddress ?? ""), TRUSTED_NETWORKS);
-      const inloggad = betrodd || giltigSessionCookie(lasCookie(req, SESSION_COOKIE));
-      if (!inloggad) return skickaJson(res, 401, { fel: "inloggning krävs" });
+      const cookieVarde = lasCookie(req, SESSION_COOKIE);
+      const inloggad = betrodd || giltigSessionCookie(cookieVarde);
+      if (!inloggad) {
+        // Logged with docker logs in mind - "ingen cookie" (client never sent
+        // one, e.g. an in-app browser refusing to store it) and "cookie
+        // ogiltig/utgången" (sent one, but it didn't verify) point at
+        // different problems, and the User-Agent usually reveals whether
+        // it's a normal browser or an embedded webview.
+        const orsak = !cookieVarde ? "ingen cookie skickades" : "cookien var ogiltig eller utgången";
+        console.warn(`[login] nekad åtkomst till ${p} från ${req.socket.remoteAddress ?? "okänd adress"} (${orsak}) - User-Agent: ${req.headers["user-agent"] ?? "(saknas)"}`);
+        return skickaJson(res, 401, { fel: "inloggning krävs" });
+      }
     }
     if (req.method === "POST" && p.endsWith("/api/login")) {
       if (!withinRateLimit("login", 10, EN_TIMME_MS)) return skickaJson(res, 429, { fel: "för många inloggningsförsök, försök igen om en stund" });

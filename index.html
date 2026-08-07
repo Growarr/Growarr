@@ -1871,6 +1871,7 @@ const SPRAK_TEXT = {
     fraga_radgivare: "Fråga trädgårdsrådgivaren", ta_bort_bild: "Ta bort bild",
     om_growarr: "Om Growarr", ny_version_finns: "En nyare version finns:",
     logga_in: "Logga in", logga_in_hjalp: "Samma lösenord för hela hushållet.", losenord: "Lösenord", logga_ut: "Logga ut",
+    cookie_problem: "Lösenordet stämde, men webbläsaren sparade inte sessionen - vanligt i inbyggda webbläsare (t.ex. i Home Assistant-appen). Öppna länken i Safari/Chrome direkt i stället.",
   },
   en: {
     nav_oversikt: "Overview", nav_anteckningar: "Notes", nav_historik: "History",
@@ -1954,6 +1955,7 @@ const SPRAK_TEXT = {
     fraga_radgivare: "Ask the garden adviser", ta_bort_bild: "Remove image",
     om_growarr: "About Growarr", ny_version_finns: "A newer version is available:",
     logga_in: "Log in", logga_in_hjalp: "Same password for the whole household.", losenord: "Password", logga_ut: "Log out",
+    cookie_problem: "The password was right, but the browser didn't save the session - common in embedded browsers (e.g. inside the Home Assistant app). Try opening the link directly in Safari/Chrome instead.",
   },
 };
 // A key missing from BOTH languages falls through as its own name, which is
@@ -6092,18 +6094,36 @@ async function skickaChatt() {
 }
 
 // ---- Inloggning (visas bara om servern kräver det, dvs. APP_PASSWORD är satt) ----
+// A flag survives the reload loggaIn() triggers on success (page state
+// itself doesn't), so a 401 right after a "successful" login can be told
+// apart from a plain "never logged in yet" 401 - the first means the login
+// worked but the browser didn't keep the cookie (a webview blocking
+// storage is the usual cause), which needs a very different message than
+// "enter your password".
+const INLOGGNING_FORSOKT_NYCKEL = "growarrInloggningsforsokt";
 async function kontrolleraInloggning() {
   try {
     const res = await fetch(`${BAS}api/settings`, { cache: "no-store" });
-    if (res.status === 401) { visaInloggning(); return false; }
+    if (res.status === 401) {
+      const justForsokt = sessionStorage.getItem(INLOGGNING_FORSOKT_NYCKEL);
+      sessionStorage.removeItem(INLOGGNING_FORSOKT_NYCKEL);
+      visaInloggning(justForsokt === "1");
+      return false;
+    }
+    sessionStorage.removeItem(INLOGGNING_FORSOKT_NYCKEL);
     return true;
   } catch {
     return true; // nätverksstrul - låt den vanliga uppstarten hantera och visa sitt eget fel
   }
 }
-function visaInloggning() {
+function visaInloggning(sessionenSparadesInte) {
   $("appShell").style.display = "none";
   $("loginVy").style.display = "flex";
+  if (sessionenSparadesInte) {
+    const st = $("loginStatus");
+    st.textContent = t("cookie_problem");
+    st.style.display = "block";
+  }
   $("loginLosenord").focus();
 }
 async function loggaIn() {
@@ -6123,6 +6143,7 @@ async function loggaIn() {
       st.style.display = "block";
       return;
     }
+    sessionStorage.setItem(INLOGGNING_FORSOKT_NYCKEL, "1");
     location.reload();
   } catch (e) {
     st.textContent = "Kunde inte nå servern: " + e.message;
