@@ -492,8 +492,14 @@ try {
   .zon-drag { cursor:grab; background:var(--surface2); border:1px solid var(--border); box-shadow:none;
     color:var(--muted); width:26px; height:26px; padding:0; display:flex; align-items:center; justify-content:center;
     border-radius:8px; font-size:var(--fs-xs); line-height:1; flex:0 0 auto; touch-action:none; pointer-events:none; }
+  /* pointer-events:none - inget klickbart i den (bara text), men den täcker
+     hela scenen (inset:0) och satt ovanpå allt annat i dokumentordningen
+     skulle den annars stjäla varje pekhändelse från kartobjekt när det inte
+     finns några zoner än, vilket gjorde att en dragning av t.ex. ett träd
+     träffade tomrummet bakom och panorerade kartan i stället - trädet
+     verkade "hoppa" när det i själva verket aldrig rörde sig, bara kameran. */
   .karta-tom { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-    text-align:center; padding:20px; color:var(--muted); font-size:var(--fs-sm); }
+    text-align:center; padding:20px; color:var(--muted); font-size:var(--fs-sm); pointer-events:none; }
   /* Zonkortet är en neutral, ljus platta – identiteten ligger i "ytan"
      nedan, som ritas uppifrån beroende på zontyp. Betydligt lugnare än
      tidigare färgade gradient-kort. */
