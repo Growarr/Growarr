@@ -144,6 +144,10 @@ try {
     display:flex; align-items:center; justify-content:center; }
   .notis-klar:hover { color:var(--ok); border-color:var(--ok); transform:none; }
   .notis-avvisa:hover { color:var(--err); border-color:var(--err); transform:none; }
+  .notis-sa-igen { margin-top:6px; padding:4px 10px; font-size:var(--fs-2xs); border-radius:999px;
+    background:color-mix(in srgb, var(--accent) 14%, var(--surface2)); border:1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+    color:var(--accent); box-shadow:none; }
+  .notis-sa-igen:hover { background:color-mix(in srgb, var(--accent) 24%, var(--surface2)); transform:none; }
 
   .modal-bred { max-width:620px; }
   .skapa-flikar { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
@@ -1558,10 +1562,13 @@ try {
 
   <div class="card">
     <h2 data-i18n="kartans_lage">Kartans läge i verkligheten (för solkartan)</h2>
-    <p class="lbl" style="margin-bottom:12px">Solkartan räknar ut solens bana från trädgårdens koordinater och ritar
-      skuggorna som växthus och lådor kastar. För att skuggorna ska peka åt rätt håll och bli rätt långa behöver den
-      veta hur kartan är vriden och hur stor den är i verkligheten.</p>
+    <p class="lbl" style="margin-bottom:12px">Koordinaterna styr väderprognosen, frostvarningen och solkartan.
+      Utanför Norden används automatiskt en global väderkälla istället för SMHI. Solkartan räknar dessutom ut
+      solens bana från koordinaterna och ritar skuggorna som växthus och lådor kastar - för att de ska peka åt
+      rätt håll och bli rätt långa behöver den även veta hur kartan är vriden och hur stor den är i verkligheten.</p>
     <div class="lagg-till-zon">
+      <div><label class="lbl">Latitud</label><input type="number" id="sLat" step="0.0001" min="-90" max="90" placeholder="t.ex. 59.85"></div>
+      <div><label class="lbl">Longitud</label><input type="number" id="sLon" step="0.0001" min="-180" max="180" placeholder="t.ex. 17.63"></div>
       <div><label class="lbl">Vad pekar uppåt på kartan? (kompassgrader)</label>
         <select id="sNorr">
           <option value="0">Norr (0°)</option>
@@ -3883,6 +3890,7 @@ function renderaNotiser() {
       <div class="info">
         <div class="titel">${esc(n.titel)}</div>
         <div class="text">${formatAiText(n.text)}</div>
+        ${n.id.startsWith("sadd-") ? `<button class="notis-sa-igen" data-id="${esc(n.id)}">🌱 Så igen</button>` : ""}
       </div>
       <div class="notis-atgarder">
         <button class="notis-klar" data-id="${esc(n.id)}" title="Markera som klar">✓</button>
@@ -3924,10 +3932,30 @@ async function hanteraNotis(id, atgard) {
     });
   } catch { /* återkommer av sig själv nästa laddning om det inte sparades */ }
 }
+// Ett tryck, ingen dialog - samma princip som Skörda-knappen: den som står
+// i trädgården vill inte fylla i ett formulär igen för något som redan är
+// planterat en gång. Kopierar namn/sort/zon/antal/layout, dagens datum som
+// planteringsdatum, och markerar påminnelsen klar.
+async function saIgenFranNotis(notisId) {
+  const match = notisId.match(/^sadd-(.+)-p\d+$/); // planterings-id:n är UUID:n och innehåller bindestreck, går inte att bara split("-")
+  const o = match && odlingar.find((x) => x.id === match[1]);
+  if (o) {
+    await fetch(`${BAS}api/plantings`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        namn: o.namn, sort: o.sort, zonId: o.zonId, antal: o.antal, layout: o.layout,
+        planterad: new Date().toISOString().slice(0, 10),
+      }),
+    });
+    await laddaOdlingar();
+  }
+  hanteraNotis(notisId, "klar"); // borttagen/skördad sen dess, eller nu klar - i båda fallen ska påminnelsen försvinna
+}
 $("notisBtn").addEventListener("click", () => {
   $("notisPanel").classList.toggle("oppen");
 });
 document.addEventListener("click", (e) => {
+  if (e.target.closest(".notis-sa-igen")) { saIgenFranNotis(e.target.closest(".notis-sa-igen").dataset.id); return; }
   if (e.target.closest(".notis-klar")) { hanteraNotis(e.target.closest(".notis-klar").dataset.id, "klar"); return; }
   if (e.target.closest(".notis-avvisa")) { hanteraNotis(e.target.closest(".notis-avvisa").dataset.id, "avvisad"); return; }
   // Klick utanför panelen och bortom bell-knappen stänger den, precis som
@@ -5888,6 +5916,8 @@ async function laddaInstallningar() {
     $("nWebhook").value = installningar.webhookUrl ?? "";
     $("sNorr").value = String(installningar.norrGrader ?? 0);
     $("sBredd").value = String(installningar.kartaBreddM ?? 20);
+    $("sLat").value = installningar.geoLat ?? "";
+    $("sLon").value = installningar.geoLon ?? "";
   } catch { /* ok att inte kunna hämta – fälten blir bara tomma */ }
   try {
     const res = await fetch(`${BAS}api/version`, { cache: "no-store" });
@@ -5914,11 +5944,13 @@ $("sSparaBtn").addEventListener("click", async () => {
       body: JSON.stringify({
         ntfyTopic: $("nNtfy").value.trim(), webhookUrl: $("nWebhook").value.trim(),
         norrGrader: $("sNorr").value, kartaBreddM: $("sBredd").value,
+        geoLat: $("sLat").value.trim(), geoLon: $("sLon").value.trim(),
       }),
     });
     installningar = await res.json();
     solTimmarCache = null;
     renderaSol();
+    await laddaVader(); // platsen kan ha ändrats - visa den nya prognosen direkt, inte efter en omladdning
     st.textContent = "Sparat."; st.className = "status ok";
   } catch (e) { st.textContent = "Kunde inte spara: " + e.message; st.className = "status err"; }
   finally { $("sSparaBtn").disabled = false; }

@@ -9,13 +9,14 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID, createHash, createHmac, timingSafeEqual } from "node:crypto";
 import {
-  stockholmManad, stockholmDatum, lokalTimme,
+  stockholmManad, stockholmDatum,
   rensaAntal, rensaLayout, rensaHojdM,
   torkTakt, TORR_GRANS, MIN_LUTNING, veckodagarForIntervall, enhetArFuktsensor,
   normaliseraIp, arBetroddAdress, versionArNyare,
   OBJEKT_TYPER, rensaObjektTyp,
   vaxtinfoFor, saddPeriodAktuell,
 } from "./src/logic.js";
+import { hamtaVader as hamtaVaderFran } from "./src/vader.js";
 
 const PORT = process.env.PORT || 8097;
 const DATA_PATH = process.env.DATA_PATH || "/data/tradgard.json";
@@ -155,57 +156,24 @@ function muteraData(fn) {
   return resultat;
 }
 
-// ---- Väder (SMHI, gratis, ingen nyckel) ----
-let vaderCache = null; // { tid, resultat }
+// ---- Väder (SMHI i Norden, Open-Meteo på övriga platser - se src/vader.js
+// för varför två källor och hur de normaliseras till samma form) ----
+// Plats kan sättas i Inställningar (installningar.geoLat/geoLon), med
+// GEO_LAT/GEO_LON som startvärde om inget annat är valt - samma
+// override-mönster som skickaNotis() använder för ntfy/webhook.
+const vaderCache = new Map(); // "lat,lon" -> { tid, resultat }
 const VADER_CACHE_MS = 30 * 60 * 1000;
 
 async function hamtaVader() {
-  if (!GEO_LAT || !GEO_LON) return { fel: "GEO_LAT och/eller GEO_LON är inte konfigurerat." };
-  if (vaderCache && Date.now() - vaderCache.tid < VADER_CACHE_MS) return vaderCache.resultat;
-
-  // SMHI stängde av gamla pmp3g-API:t 31 mars 2026 – snow1g ersatte det, med
-  // ett annat svarsformat ("time" istället för "validTime", platt "data"-
-  // objekt istället för en parameters-array).
-  const url = `https://opendata-download-metfcst.smhi.se/api/category/snow1g/version/1/geotype/point/lon/${GEO_LON}/lat/${GEO_LAT}/data.json`;
-  const res = await fetch(url, { headers: { "User-Agent": "growarr (github.com/Growarr/growarr)" } });
-  if (!res.ok) return { fel: `SMHI svarade ${res.status}` };
-  const data = await res.json();
-
-  // Grupperar timprognosen till en per-dag-sammanfattning (min/max temp,
-  // mest sannolika nederbörd) för de kommande fem dagarna. Väderikonen för
-  // dagen tas från den timme som ligger närmast kl 12 lokal tid – bättre
-  // representativ bild av dagen än t.ex. en tidig morgontimme.
-  const perDag = new Map();
-  for (const t of data.timeSeries) {
-    const dag = t.time.slice(0, 10);
-    const temp = t.data?.air_temperature;
-    const nederbord = t.data?.precipitation_amount_mean;
-    const symbol = t.data?.symbol_code;
-    if (temp == null) continue;
-    const diffFran12 = Math.abs(lokalTimme(t.time) - 12);
-    const post = perDag.get(dag) ?? { dag, min: temp, max: temp, nederbord: 0, symbol, symbolDiff: Infinity };
-    post.min = Math.min(post.min, temp);
-    post.max = Math.max(post.max, temp);
-    post.nederbord += nederbord ?? 0;
-    if (symbol != null && diffFran12 < post.symbolDiff) { post.symbol = symbol; post.symbolDiff = diffFran12; }
-    perDag.set(dag, post);
-  }
-  const dagar = [...perDag.values()].slice(0, 5).map((d) => ({
-    dag: d.dag, min: Math.round(d.min), max: Math.round(d.max), nederbord: Math.round(d.nederbord * 10) / 10, symbol: d.symbol ?? null,
-  }));
-  // Temperaturen närmast nu behövs som utereferens när panelen räknar ut hur
-  // mycket varmare eller kallare varje zon ligger än prognosen (se
-  // frostkalibreringen i index.html).
-  const nu = Date.now();
-  let narmast = null, narmastDiff = Infinity;
-  for (const t of data.timeSeries) {
-    if (t.data?.air_temperature == null) continue;
-    const diff = Math.abs(new Date(t.time).getTime() - nu);
-    if (diff < narmastDiff) { narmastDiff = diff; narmast = t.data.air_temperature; }
-  }
-  // Koordinaterna följer med så panelen kan räkna ut solens bana lokalt
-  const resultat = { dagar, nu: narmast, lat: Number(GEO_LAT), lon: Number(GEO_LON) };
-  vaderCache = { tid: Date.now(), resultat };
+  const { installningar } = await lasData();
+  const lat = installningar.geoLat || GEO_LAT;
+  const lon = installningar.geoLon || GEO_LON;
+  if (!lat || !lon) return { fel: "Plats (latitud/longitud) är inte konfigurerad - ange den i Inställningar." };
+  const nyckel = `${lat},${lon}`;
+  const cachat = vaderCache.get(nyckel);
+  if (cachat && Date.now() - cachat.tid < VADER_CACHE_MS) return cachat.resultat;
+  const resultat = await hamtaVaderFran(lat, lon);
+  if (!resultat.fel) vaderCache.set(nyckel, { tid: Date.now(), resultat });
   return resultat;
 }
 
@@ -1820,11 +1788,22 @@ const server = createServer(async (req, res) => {
       // Only touches fields actually sent, rather than rebuilding the whole
       // object each time - the language toggle posts just { sprak }, and
       // must not blank ntfyTopic/webhookUrl in the process (or vice versa).
-      const { ntfyTopic, webhookUrl, norrGrader, kartaBreddM, sprak } = await lasBody(req);
+      const { ntfyTopic, webhookUrl, norrGrader, kartaBreddM, sprak, geoLat, geoLon } = await lasBody(req);
       const data = await muteraData((d) => {
         const install = d.installningar ?? {};
         if (ntfyTopic !== undefined) install.ntfyTopic = ntfyTopic || "";
         if (webhookUrl !== undefined) install.webhookUrl = webhookUrl || "";
+        // Var trädgården ligger - styr väderprognos, frostkalibrering och
+        // solkartan. Tomt värde rensar tillbaka till GEO_LAT/GEO_LON (om
+        // satta) snarare än att låsa fast en felskriven koordinat för gott.
+        if (geoLat !== undefined) {
+          const lat = Number(geoLat);
+          install.geoLat = geoLat === "" ? "" : (Number.isFinite(lat) && lat >= -90 && lat <= 90 ? lat : install.geoLat ?? "");
+        }
+        if (geoLon !== undefined) {
+          const lon = Number(geoLon);
+          install.geoLon = geoLon === "" ? "" : (Number.isFinite(lon) && lon >= -180 && lon <= 180 ? lon : install.geoLon ?? "");
+        }
         // Kompassriktningen som pekar uppåt på kartan, och hur många meter
         // kartan är bred – tillsammans ger de skuggorna rätt håll och längd.
         if (norrGrader !== undefined) {

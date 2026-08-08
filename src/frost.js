@@ -1,9 +1,12 @@
-// Checks SMHI's forecast (free, no key needed) for frost risk over the next
-// day, and sends a push via ntfy if the lowest expected temperature falls
-// below the threshold. Runs for free on GitHub Actions. Note: SMHI's "t" is
-// air temperature 2m up, not ground temperature - ground frost can occur a
+// Checks the forecast (SMHI where it has coverage, Open-Meteo elsewhere -
+// see src/vader.js) for frost risk over the next day, and sends a push via
+// ntfy if the lowest expected temperature falls below the threshold. Runs
+// for free on GitHub Actions. Note: forecast temperature is air
+// temperature 2m up, not ground temperature - ground frost can occur a
 // couple of degrees above 0°C on clear, still nights, hence the default
 // 3°C threshold instead of 0°C.
+import { hamtaTimvader } from "./vader.js";
+
 const LAT = process.env.GEO_LAT;
 const LON = process.env.GEO_LON;
 const THRESHOLD = Number(process.env.FROST_THRESHOLD ?? 3);
@@ -13,7 +16,12 @@ const HOURS_AHEAD = 36;
 
 // Missing coordinates are not an error, just an unconfigured watch. A
 // nightly scheduled job that fails every day is just noise in the Actions
-// log (and emails about failed runs), so skip quietly instead.
+// log (and emails about failed runs), so skip quietly instead. Note this
+// stays repo-secret-driven even though the live app's location can now be
+// changed in Settings - bridging this GitHub Actions job to a self-hosted
+// container's Settings would mean the container being reachable from the
+// internet, which most installs (behind a home router/reverse proxy)
+// aren't. Update the repo secrets by hand if the garden's location changes.
 if (!LAT || !LON) {
   console.log("Skipping: GEO_LAT and GEO_LON are not set as repo secrets.");
   console.log("Set them under Settings -> Secrets and variables -> Actions to enable the frost watch,");
@@ -21,23 +29,7 @@ if (!LAT || !LON) {
   process.exit(0);
 }
 
-// SMHI retired the old pmp3g API on 2026-03-31; snow1g replaced it, with a
-// different response shape ("time" instead of "validTime", a flat "data"
-// object instead of a parameters array).
-const url = `https://opendata-download-metfcst.smhi.se/api/category/snow1g/version/1/geotype/point/lon/${LON}/lat/${LAT}/data.json`;
-const res = await fetch(url, { headers: { "User-Agent": "growarr (github.com/Growarr/growarr)" } });
-if (!res.ok) {
-  console.error(`SMHI responded ${res.status}`);
-  process.exit(1);
-}
-const data = await res.json();
-const now = Date.now();
-const upcoming = data.timeSeries
-  .map((t) => ({
-    time: new Date(t.time),
-    temp: t.data?.air_temperature,
-  }))
-  .filter((p) => p.temp != null && p.time.getTime() >= now && p.time.getTime() <= now + HOURS_AHEAD * 3600 * 1000);
+const upcoming = await hamtaTimvader(LAT, LON, HOURS_AHEAD);
 
 if (!upcoming.length) {
   console.log("No forecast data for the coming day, skipping.");
@@ -45,7 +37,7 @@ if (!upcoming.length) {
 }
 
 const lowest = upcoming.reduce((a, b) => (b.temp < a.temp ? b : a));
-console.log(`Lowest expected temperature over the next ${HOURS_AHEAD}h: ${lowest.temp}°C (${lowest.time.toISOString()})`);
+console.log(`Lowest expected temperature over the next ${HOURS_AHEAD}h: ${lowest.temp}°C (${lowest.tid.toISOString()})`);
 
 if (lowest.temp > THRESHOLD) {
   console.log(`No frost risk (threshold ${THRESHOLD}°C), sending no notification.`);
@@ -55,7 +47,7 @@ if (lowest.temp > THRESHOLD) {
 // Notification content stays in Swedish, same as the rest of the app's
 // user-facing text: this is a push notification read by the household, not
 // something a repo visitor sees.
-const timeText = lowest.time.toLocaleString("sv-SE", { weekday: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Stockholm" });
+const timeText = lowest.tid.toLocaleString("sv-SE", { weekday: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Stockholm" });
 const title = "❄️ Frostrisk i trädgården";
 const message = `Ner mot ${lowest.temp}°C ${timeText}. Täck ömtåliga plantor i tid.`;
 
