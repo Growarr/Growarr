@@ -42,6 +42,10 @@ const TRUSTED_NETWORKS = (process.env.TRUSTED_NETWORKS || "").split(",").map((s)
 // tradgard.json is re-read on every API request, so a megabyte of base64 in
 // there would slow the whole app down; a separate file costs nothing.
 const KARTBILD_DIR = join(dirname(DATA_PATH), "maps");
+// Same reasoning as KARTBILD_DIR above: photos attached to a zone or
+// planting live as loose files, tradgard.json only ever holds the metadata
+// (id, what it's attached to, when it was added).
+const PHOTOS_DIR = join(dirname(DATA_PATH), "photos");
 const PANEL_HTML = join(dirname(fileURLToPath(import.meta.url)), "index.html");
 const LOGO_PNG = join(dirname(fileURLToPath(import.meta.url)), "logo.png");
 // Read once at startup rather than per-request - the version only changes
@@ -97,10 +101,10 @@ async function lasData() {
       widgets: d.widgets ?? [], installningar: d.installningar ?? {}, historik: d.historik ?? [],
       notiser: d.notiser ?? [], scheman: d.scheman ?? [],
       tradgardsAutomationer: d.tradgardsAutomationer ?? [], objekt: d.objekt ?? [],
-      skordat: d.skordat ?? [],
+      skordat: d.skordat ?? [], foton: d.foton ?? [],
     };
   } catch {
-    return { kartor: [], zoner: [], odlingar: [], enheter: [], widgets: [], installningar: {}, historik: [], notiser: [], scheman: [], tradgardsAutomationer: [], objekt: [], skordat: [] };
+    return { kartor: [], zoner: [], odlingar: [], enheter: [], widgets: [], installningar: {}, historik: [], notiser: [], scheman: [], tradgardsAutomationer: [], objekt: [], skordat: [], foton: [] };
   }
 }
 async function skrivData(data) {
@@ -1317,7 +1321,13 @@ const server = createServer(async (req, res) => {
     }
     if (req.method === "POST" && p.endsWith("/api/plantings/delete")) {
       const { id } = await lasBody(req);
-      const data = await muteraData((d) => { d.odlingar = d.odlingar.filter((o) => o.id !== id); });
+      let borttagnaFoton = [];
+      const data = await muteraData((d) => {
+        d.odlingar = d.odlingar.filter((o) => o.id !== id);
+        borttagnaFoton = d.foton.filter((f) => f.malTyp === "odling" && f.malId === id);
+        d.foton = d.foton.filter((f) => !(f.malTyp === "odling" && f.malId === id));
+      });
+      await Promise.all(borttagnaFoton.map((f) => unlink(join(PHOTOS_DIR, `${f.id}.jpg`)).catch(() => {})));
       return skickaJson(res, 200, data);
     }
     // Harvesting archives a planting instead of deleting it - the delete
@@ -1553,6 +1563,45 @@ const server = createServer(async (req, res) => {
         return skickaJson(res, 404, { fel: "ingen bild för den kartan" });
       }
     }
+    // Foton kopplade till en zon eller planting - "före/efter", eller bara
+    // ett minne av hur det såg ut. Samma mönster som kart-bakgrundsbilden
+    // ovan (fil på disk, bara metadata i tradgard.json), men en zon/planting
+    // kan ha flera, så metadatan är en lista i toppnivå (d.foton) i stället
+    // för ett enda flagg-fält.
+    if (req.method === "POST" && p.endsWith("/api/photos")) {
+      const { malTyp, malId, data: bildData } = await lasBody(req);
+      if ((malTyp !== "zon" && malTyp !== "odling") || !malId || typeof bildData !== "string") {
+        return skickaJson(res, 400, { fel: "malTyp, malId och data krävs" });
+      }
+      const buffert = Buffer.from(bildData, "base64");
+      if (buffert.length > 8 * 1024 * 1024) return skickaJson(res, 413, { fel: "bilden är för stor" });
+      const id = randomUUID();
+      await mkdir(PHOTOS_DIR, { recursive: true });
+      await writeFile(join(PHOTOS_DIR, `${id}.jpg`), buffert);
+      const data = await muteraData((d) => {
+        d.foton.push({ id, malTyp, malId, skapad: new Date().toISOString() });
+      });
+      return skickaJson(res, 200, data);
+    }
+    if (req.method === "POST" && p.endsWith("/api/photos/delete")) {
+      const { id } = await lasBody(req);
+      await unlink(join(PHOTOS_DIR, `${id}.jpg`)).catch(() => {});
+      const data = await muteraData((d) => {
+        d.foton = d.foton.filter((f) => f.id !== id);
+      });
+      return skickaJson(res, 200, data);
+    }
+    if (req.method === "GET" && p.endsWith("/api/photo")) {
+      const id = url.searchParams.get("id") ?? "";
+      if (!/^[A-Za-z0-9-]+$/.test(id)) return skickaJson(res, 400, { fel: "ogiltigt id" });
+      try {
+        const bild = await readFile(join(PHOTOS_DIR, `${id}.jpg`));
+        res.writeHead(200, { "Content-Type": "image/jpeg", "Cache-Control": "public, max-age=31536000" });
+        return res.end(bild);
+      } catch {
+        return skickaJson(res, 404, { fel: "inget foto med det id:t" });
+      }
+    }
     // Vattningsscheman: bara en lista veckodagar per zon - ingen faktisk
     // ventil/pump finns att styra än (se README:s Roadmap), så ett schema
     // ger en påminnelse i notiscentret på schemalagda dagar i stället för
@@ -1687,6 +1736,7 @@ const server = createServer(async (req, res) => {
     }
     if (req.method === "POST" && p.endsWith("/api/zones/delete")) {
       const { id } = await lasBody(req);
+      let borttagnaFoton = [];
       const data = await muteraData((d) => {
         const borttagen = d.zoner.find((z) => z.id === id);
         d.zoner = d.zoner.filter((z) => z.id !== id);
@@ -1699,9 +1749,13 @@ const server = createServer(async (req, res) => {
             if (z.y == null) z.y = 0.5;
           }
         }
-        // Odlingar i borttagen zon blir "okategoriserade" istället för att pekas ut i tomma intet.
+        // Odlingar i borttagen zon blir "okategoriserade" istället för att pekas ut i tomma intet
+        // - deras egna foton rörs inte, bara zonens.
         for (const o of d.odlingar) if (o.zonId === id) o.zonId = "";
+        borttagnaFoton = d.foton.filter((f) => f.malTyp === "zon" && f.malId === id);
+        d.foton = d.foton.filter((f) => !(f.malTyp === "zon" && f.malId === id));
       });
+      await Promise.all(borttagnaFoton.map((f) => unlink(join(PHOTOS_DIR, `${f.id}.jpg`)).catch(() => {})));
       return skickaJson(res, 200, data);
     }
     if (req.method === "POST" && p.endsWith("/api/devices")) {

@@ -7,6 +7,7 @@ import {
   normaliseraIp, ipINat, arBetroddAdress, versionArNyare,
   OBJEKT_TYPER, rensaObjektTyp, snappaRotation,
   VAXT_FAMILJER, vaxtfamiljFor, skordFamiljVarning,
+  VAXT_DATABAS, vaxtinfoFor,
 } from "../src/logic.js";
 
 describe("rensaAntal", () => {
@@ -257,6 +258,42 @@ describe("vaxtfamiljFor", () => {
     // Legitimate compounds still work: these really are what they contain.
     assert.equal(vaxtfamiljFor("Sockerärt"), "baljvaxter");
     assert.equal(vaxtfamiljFor("Purjolök"), "lokvaxter");
+  });
+});
+
+describe("vaxtinfoFor", () => {
+  test("every entry in VAXT_DATABAS has all five care-info fields filled in", () => {
+    for (const [nyckel, info] of Object.entries(VAXT_DATABAS)) {
+      for (const falt of ["visningsnamn", "vatten", "sol", "avstand_cm", "sasong", "svarighet"]) {
+        assert.ok(info[falt] !== undefined && info[falt] !== "", `${nyckel} saknar ${falt}`);
+      }
+    }
+  });
+  test("a known name resolves to the right entry", () => {
+    const v = vaxtinfoFor("Tomat");
+    assert.equal(v.nyckel, "tomat");
+    assert.equal(v.visningsnamn, "Tomat");
+    assert.equal(v.avstand_cm, 50);
+  });
+  test("plural/inflected forms already proven tricky elsewhere still resolve", () => {
+    assert.equal(vaxtinfoFor("Morötter").nyckel, "morot");
+    assert.equal(vaxtinfoFor("Rädisor").nyckel, "radisa");
+    assert.equal(vaxtinfoFor("Bönor").nyckel, "bona");
+  });
+  test("purjolök/vitlök resolve to their own entries, not the generic onion", () => {
+    assert.equal(vaxtinfoFor("Purjolök").nyckel, "purjolok");
+    assert.equal(vaxtinfoFor("Vitlök").nyckel, "vitlok");
+    assert.equal(vaxtinfoFor("Gul lök").nyckel, "lok");
+  });
+  test("an unrecognized name has no card - never a guess", () => {
+    assert.equal(vaxtinfoFor("Marsianska bönplantor från Xylo"), null);
+    assert.equal(vaxtinfoFor(""), null);
+    assert.equal(vaxtinfoFor(undefined), null);
+  });
+  test("the same compound-name false positives fixed in vaxtfamiljFor don't leak in here either", () => {
+    assert.equal(vaxtinfoFor("Jordärtskocka"), null);
+    assert.equal(vaxtinfoFor("Kronärtskocka"), null);
+    assert.equal(vaxtinfoFor("Potatislök"), null);
   });
 });
 

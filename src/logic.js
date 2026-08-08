@@ -262,3 +262,94 @@ export function skordFamiljVarning(zonHistorik, namn, nu = new Date()) {
   if (arSedan >= info.vilaAr) return null;
   return { familj, familjNamn: info.namn, vilaAr: info.vilaAr, senastNamn: senast.namn, arSedan };
 }
+
+// A small, curated care-info lookup - not an external plant database (this
+// app has zero npm dependencies and stays fully self-hosted/offline), just
+// enough per species for a beginner to not have to guess. Covers every name
+// in VANLIGA_SORTER (index.html) plus a handful of other common crops.
+// vatten/sol/svarighet are coarse three-level scales on purpose - a real
+// soil-moisture number belongs to a sensor reading, not a static fact.
+export const VAXT_DATABAS = {
+  tomat: { visningsnamn: "Tomat", vatten: "hog", sol: "sol", avstand_cm: 50,
+    sasong: "Så inomhus mars–april, plantera ut efter frostrisk (juni), skörda aug–sep", svarighet: "medel" },
+  potatis: { visningsnamn: "Potatis", vatten: "medel", sol: "sol", avstand_cm: 30,
+    sasong: "Sätt april–maj, skörda jul–sep", svarighet: "latt" },
+  paprika: { visningsnamn: "Paprika/chili", vatten: "hog", sol: "sol", avstand_cm: 40,
+    sasong: "Så inomhus feb–mars, plantera ut i juni, skörda aug–okt", svarighet: "svar" },
+  aubergine: { visningsnamn: "Aubergine", vatten: "hog", sol: "sol", avstand_cm: 45,
+    sasong: "Så inomhus feb–mars, plantera ut i juni (helst växthus), skörda aug–sep", svarighet: "svar" },
+  gurka: { visningsnamn: "Gurka", vatten: "hog", sol: "sol", avstand_cm: 40,
+    sasong: "Så inomhus april, plantera ut eller så direkt i juni, skörda jul–sep", svarighet: "medel" },
+  zucchini: { visningsnamn: "Zucchini/squash", vatten: "hog", sol: "sol", avstand_cm: 80,
+    sasong: "Så inomhus april–maj eller direkt i juni, skörda jul–sep", svarighet: "latt" },
+  pumpa: { visningsnamn: "Pumpa", vatten: "hog", sol: "sol", avstand_cm: 100,
+    sasong: "Så inomhus april–maj, plantera ut i juni, skörda sep–okt", svarighet: "medel" },
+  art: { visningsnamn: "Ärt", vatten: "medel", sol: "sol", avstand_cm: 10,
+    sasong: "Så direkt april–maj, skörda jun–aug", svarighet: "latt" },
+  bona: { visningsnamn: "Böna", vatten: "medel", sol: "sol", avstand_cm: 15,
+    sasong: "Så direkt efter frostrisk (juni), skörda jul–sep", svarighet: "latt" },
+  morot: { visningsnamn: "Morot", vatten: "medel", sol: "sol", avstand_cm: 5,
+    sasong: "Så direkt april–juni, skörda jul–okt", svarighet: "latt" },
+  radisa: { visningsnamn: "Rädisa", vatten: "medel", sol: "sol", avstand_cm: 4,
+    sasong: "Så direkt från april, klar på 3–4 veckor - så om flera gånger", svarighet: "latt" },
+  rodbeta: { visningsnamn: "Rödbeta", vatten: "medel", sol: "sol", avstand_cm: 10,
+    sasong: "Så direkt april–juni, skörda jul–okt", svarighet: "latt" },
+  purjolok: { visningsnamn: "Purjolök", vatten: "medel", sol: "sol", avstand_cm: 15,
+    sasong: "Så inomhus mars, plantera ut i juni, skörda sep–nov", svarighet: "medel" },
+  vitlok: { visningsnamn: "Vitlök", vatten: "lag", sol: "sol", avstand_cm: 10,
+    sasong: "Sätt i oktober för övervintring, eller tidigt på våren, skörda jul–aug", svarighet: "latt" },
+  lok: { visningsnamn: "Lök", vatten: "lag", sol: "sol", avstand_cm: 10,
+    sasong: "Sätt sättlök april–maj, skörda aug–sep", svarighet: "latt" },
+  kal: { visningsnamn: "Kål", vatten: "hog", sol: "sol", avstand_cm: 50,
+    sasong: "Så inomhus mars–april, plantera ut i maj–juni, skörda aug–okt", svarighet: "medel" },
+  sallad: { visningsnamn: "Sallad", vatten: "hog", sol: "halvskugga", avstand_cm: 25,
+    sasong: "Så direkt eller inomhus från april, klar 6–8 veckor senare - så om flera gånger", svarighet: "latt" },
+  spenat: { visningsnamn: "Spenat", vatten: "medel", sol: "halvskugga", avstand_cm: 10,
+    sasong: "Så direkt mars–april och igen aug–sep, klar 4–6 veckor senare", svarighet: "latt" },
+  dill: { visningsnamn: "Dill", vatten: "medel", sol: "sol", avstand_cm: 15,
+    sasong: "Så direkt från april, så om varannan vecka för jämn skörd", svarighet: "latt" },
+  basilika: { visningsnamn: "Basilika", vatten: "medel", sol: "sol", avstand_cm: 20,
+    sasong: "Så inomhus april, ställ ut efter frostrisk i juni - känslig för kyla", svarighet: "medel" },
+  jordgubbe: { visningsnamn: "Jordgubbe", vatten: "medel", sol: "sol", avstand_cm: 30,
+    sasong: "Plantera vår eller höst, full skörd andra året, skörda jun–jul", svarighet: "latt" },
+};
+
+// A couple of real Swedish crop names are compounds that would otherwise
+// misfire against the patterns below (same class of bug already found and
+// fixed in VAXT_FAMILJ_MONSTER - see that comment for why a word-boundary
+// regex would make things worse, not better). Jordärtskocka/Kronärtskocka
+// contain "ärt" but aren't peas; Potatislök contains "potatis" but is an
+// onion. None of the three are in this curated list, so the correct result
+// is simply "no card" - checked first, before the generic patterns.
+const VAXT_DATABAS_UNDANTAG = [/jordärtskocka|kronärtskocka|potatislök/i];
+
+const VAXT_DATABAS_MONSTER = [
+  [/tomat/i, "tomat"],
+  [/potatis/i, "potatis"],
+  [/paprika|paprikor|chili/i, "paprika"],
+  [/aubergine/i, "aubergine"],
+  [/gurk/i, "gurka"],
+  [/zucchini|squash/i, "zucchini"],
+  [/pumpa|pumpor/i, "pumpa"],
+  [/böna|bönor/i, "bona"],
+  [/morot|morötter/i, "morot"],
+  [/rädisa|rädisor/i, "radisa"],
+  [/rödbeta|rödbetor/i, "rodbeta"],
+  [/purjolök/i, "purjolok"],
+  [/vitlök/i, "vitlok"],
+  [/lök/i, "lok"],
+  [/kål/i, "kal"],
+  [/sallad|sallat/i, "sallad"],
+  [/spenat/i, "spenat"],
+  [/dill/i, "dill"],
+  [/basilika/i, "basilika"],
+  [/jordgubb/i, "jordgubbe"],
+  [/ärt/i, "art"],
+];
+
+export function vaxtinfoFor(namn) {
+  if (!namn) return null;
+  if (VAXT_DATABAS_UNDANTAG.some((monster) => monster.test(namn))) return null;
+  for (const [monster, nyckel] of VAXT_DATABAS_MONSTER) if (monster.test(namn)) return { nyckel, ...VAXT_DATABAS[nyckel] };
+  return null;
+}

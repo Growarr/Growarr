@@ -213,6 +213,17 @@ try {
   .vader-dag .nb { font-size:var(--fs-2xs); color:var(--muted); margin-top:4px; }
   .frost-varning { font-size:var(--fs-xs); color:var(--warn); margin-top:12px; }
   .familj-varning { font-size:var(--fs-xs); color:var(--warn); margin-top:8px; }
+  .vaxtinfo-kort { font-size:var(--fs-xs); color:var(--muted); margin-top:8px; background:var(--surface2);
+    border-radius:var(--r-sm); padding:10px 12px; display:flex; flex-direction:column; gap:4px; }
+  .vaxtinfo-rad { display:flex; gap:14px; flex-wrap:wrap; }
+  .vaxtinfo-svarighet { font-weight:600; color:var(--text); }
+  .foto-galleri { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  .foto-tumnagel { width:64px; height:64px; padding:0; border:1px solid var(--border); border-radius:var(--r-sm);
+    overflow:hidden; background:var(--surface2); cursor:pointer; }
+  .foto-tumnagel img { width:100%; height:100%; object-fit:cover; display:block; }
+  .foto-lagg-till { width:64px; height:64px; border:1px dashed var(--border); border-radius:var(--r-sm);
+    background:transparent; color:var(--muted); font-size:1.4rem; cursor:pointer; }
+  .foto-lagg-till:hover { border-color:var(--accent); color:var(--accent); }
   .insikt { display:flex; align-items:center; gap:12px; margin-top:4px; font-size:var(--fs-sm);
     padding-top:14px; border-top:1px solid var(--border); }
   .insikt .ikon { font-size:1.6rem; flex:0 0 auto; }
@@ -1350,6 +1361,7 @@ try {
             <button class="objekt-palett-knapp" data-objekt-typ="pond" data-i18n="objekt_pond">Damm</button>
           </div>
           <input type="file" id="kartaBildFil" accept="image/*" style="display:none">
+          <input type="file" id="fotoFil" accept="image/*" style="display:none">
           <div class="karta-flikar" id="kartaFlikar"></div>
           <div class="sol-rad" id="solRad" style="display:none">
             <span class="sol-tid" id="solTid">12:00</span>
@@ -1525,6 +1537,12 @@ try {
   </div>
 
   <div class="card">
+    <h2 data-i18n="kom_igang_rubrik">Kom igång</h2>
+    <p class="lbl" style="margin-bottom:12px" data-i18n="kom_igang_hjalp">Guiden som visas första gången du öppnar Growarr - namnger en karta, en zon och en planta åt dig.</p>
+    <button id="visaGuideBtn" data-i18n="visa_guiden_igen">Visa guiden igen</button>
+  </div>
+
+  <div class="card">
     <h2 data-i18n="installningar_notiser">Notiser (skördepåminnelser)</h2>
     <p class="lbl" style="margin-bottom:10px">Skickas när en odling når sin skördemånad. Ntfy-ämnet och webhooken sparas
       här i panelen – ingen SSH eller docker-compose behövs. (Den separata nattliga frostvarningen på GitHub Actions
@@ -1672,6 +1690,7 @@ try {
       <div class="skapa-rad" style="margin-top:12px; grid-template-columns:1fr">
         <div><label class="lbl" data-i18n="sort">Sort</label><input type="text" id="oSort" maxlength="60" data-i18n-placeholder="sort_placeholder" placeholder="t.ex. Sungold"></div>
       </div>
+      <div id="oVaxtinfo"></div>
       <div class="familj-varning" id="oFamiljVarning"></div>
       <div class="skapa-rad" style="margin-top:12px">
         <div><label class="lbl">${t("antal_st")}</label><input type="number" id="oAntal" min="1" max="200" value="1"></div>
@@ -1730,6 +1749,10 @@ try {
       <div class="status" id="wStatus"></div>
     </div>
   </div>
+</div>
+
+<div class="modal-bakgrund" id="guideBakgrund" style="display:none">
+  <div class="modal modal-bred" id="guideInnehall"></div>
 </div>
 
 <script>
@@ -1904,11 +1927,91 @@ function familjVarningHtml(zonId, namn) {
   return `⚠️ ${esc(v.familjNamn)} (${esc(v.senastNamn)}) odlades här ${sedan} – rekommenderad vila är ${v.vilaAr} år.`;
 }
 
+// Mirrors VAXT_DATABAS/vaxtinfoFor in src/logic.js (kept manually in sync,
+// same reason as VAXT_FAMILJER above). A small curated care-info lookup,
+// not an external plant database - this app has zero npm dependencies and
+// stays self-hosted/offline.
+const VAXT_DATABAS = {
+  tomat: { visningsnamn: "Tomat", vatten: "hog", sol: "sol", avstand_cm: 50,
+    sasong: "Så inomhus mars–april, plantera ut efter frostrisk (juni), skörda aug–sep", svarighet: "medel" },
+  potatis: { visningsnamn: "Potatis", vatten: "medel", sol: "sol", avstand_cm: 30,
+    sasong: "Sätt april–maj, skörda jul–sep", svarighet: "latt" },
+  paprika: { visningsnamn: "Paprika/chili", vatten: "hog", sol: "sol", avstand_cm: 40,
+    sasong: "Så inomhus feb–mars, plantera ut i juni, skörda aug–okt", svarighet: "svar" },
+  aubergine: { visningsnamn: "Aubergine", vatten: "hog", sol: "sol", avstand_cm: 45,
+    sasong: "Så inomhus feb–mars, plantera ut i juni (helst växthus), skörda aug–sep", svarighet: "svar" },
+  gurka: { visningsnamn: "Gurka", vatten: "hog", sol: "sol", avstand_cm: 40,
+    sasong: "Så inomhus april, plantera ut eller så direkt i juni, skörda jul–sep", svarighet: "medel" },
+  zucchini: { visningsnamn: "Zucchini/squash", vatten: "hog", sol: "sol", avstand_cm: 80,
+    sasong: "Så inomhus april–maj eller direkt i juni, skörda jul–sep", svarighet: "latt" },
+  pumpa: { visningsnamn: "Pumpa", vatten: "hog", sol: "sol", avstand_cm: 100,
+    sasong: "Så inomhus april–maj, plantera ut i juni, skörda sep–okt", svarighet: "medel" },
+  art: { visningsnamn: "Ärt", vatten: "medel", sol: "sol", avstand_cm: 10,
+    sasong: "Så direkt april–maj, skörda jun–aug", svarighet: "latt" },
+  bona: { visningsnamn: "Böna", vatten: "medel", sol: "sol", avstand_cm: 15,
+    sasong: "Så direkt efter frostrisk (juni), skörda jul–sep", svarighet: "latt" },
+  morot: { visningsnamn: "Morot", vatten: "medel", sol: "sol", avstand_cm: 5,
+    sasong: "Så direkt april–juni, skörda jul–okt", svarighet: "latt" },
+  radisa: { visningsnamn: "Rädisa", vatten: "medel", sol: "sol", avstand_cm: 4,
+    sasong: "Så direkt från april, klar på 3–4 veckor - så om flera gånger", svarighet: "latt" },
+  rodbeta: { visningsnamn: "Rödbeta", vatten: "medel", sol: "sol", avstand_cm: 10,
+    sasong: "Så direkt april–juni, skörda jul–okt", svarighet: "latt" },
+  purjolok: { visningsnamn: "Purjolök", vatten: "medel", sol: "sol", avstand_cm: 15,
+    sasong: "Så inomhus mars, plantera ut i juni, skörda sep–nov", svarighet: "medel" },
+  vitlok: { visningsnamn: "Vitlök", vatten: "lag", sol: "sol", avstand_cm: 10,
+    sasong: "Sätt i oktober för övervintring, eller tidigt på våren, skörda jul–aug", svarighet: "latt" },
+  lok: { visningsnamn: "Lök", vatten: "lag", sol: "sol", avstand_cm: 10,
+    sasong: "Sätt sättlök april–maj, skörda aug–sep", svarighet: "latt" },
+  kal: { visningsnamn: "Kål", vatten: "hog", sol: "sol", avstand_cm: 50,
+    sasong: "Så inomhus mars–april, plantera ut i maj–juni, skörda aug–okt", svarighet: "medel" },
+  sallad: { visningsnamn: "Sallad", vatten: "hog", sol: "halvskugga", avstand_cm: 25,
+    sasong: "Så direkt eller inomhus från april, klar 6–8 veckor senare - så om flera gånger", svarighet: "latt" },
+  spenat: { visningsnamn: "Spenat", vatten: "medel", sol: "halvskugga", avstand_cm: 10,
+    sasong: "Så direkt mars–april och igen aug–sep, klar 4–6 veckor senare", svarighet: "latt" },
+  dill: { visningsnamn: "Dill", vatten: "medel", sol: "sol", avstand_cm: 15,
+    sasong: "Så direkt från april, så om varannan vecka för jämn skörd", svarighet: "latt" },
+  basilika: { visningsnamn: "Basilika", vatten: "medel", sol: "sol", avstand_cm: 20,
+    sasong: "Så inomhus april, ställ ut efter frostrisk i juni - känslig för kyla", svarighet: "medel" },
+  jordgubbe: { visningsnamn: "Jordgubbe", vatten: "medel", sol: "sol", avstand_cm: 30,
+    sasong: "Plantera vår eller höst, full skörd andra året, skörda jun–jul", svarighet: "latt" },
+};
+const VAXT_DATABAS_UNDANTAG = [/jordärtskocka|kronärtskocka|potatislök/i];
+const VAXT_DATABAS_MONSTER = [
+  [/tomat/i, "tomat"], [/potatis/i, "potatis"], [/paprika|paprikor|chili/i, "paprika"],
+  [/aubergine/i, "aubergine"], [/gurk/i, "gurka"], [/zucchini|squash/i, "zucchini"],
+  [/pumpa|pumpor/i, "pumpa"], [/böna|bönor/i, "bona"], [/morot|morötter/i, "morot"],
+  [/rädisa|rädisor/i, "radisa"], [/rödbeta|rödbetor/i, "rodbeta"], [/purjolök/i, "purjolok"],
+  [/vitlök/i, "vitlok"], [/lök/i, "lok"], [/kål/i, "kal"], [/sallad|sallat/i, "sallad"],
+  [/spenat/i, "spenat"], [/dill/i, "dill"], [/basilika/i, "basilika"], [/jordgubb/i, "jordgubbe"],
+  [/ärt/i, "art"],
+];
+function vaxtinfoFor(namn) {
+  if (!namn) return null;
+  if (VAXT_DATABAS_UNDANTAG.some((m) => m.test(namn))) return null;
+  for (const [monster, nyckel] of VAXT_DATABAS_MONSTER) if (monster.test(namn)) return { nyckel, ...VAXT_DATABAS[nyckel] };
+  return null;
+}
+const VATTEN_IKON = { lag: "💧", medel: "💧💧", hog: "💧💧💧" };
+const SOL_IKON = { sol: "☀️ Full sol", halvskugga: "⛅ Halvskugga", skugga: "☁️ Skugga" };
+const SVARIGHET_TEXT = { latt: "Lätt", medel: "Medel", svar: "Kräver erfarenhet" };
+// Neutral info card, not a warning - reuses the same live-update wiring as
+// familjVarningHtml but with plain text color, no --warn styling.
+function vaxtinfoHtml(namn) {
+  const v = vaxtinfoFor(namn);
+  if (!v) return "";
+  return `<div class="vaxtinfo-kort">
+    <div class="vaxtinfo-rad"><span>${VATTEN_IKON[v.vatten]}</span><span>${SOL_IKON[v.sol]}</span><span>↔ ${v.avstand_cm} cm mellan plantor</span></div>
+    <div class="vaxtinfo-rad"><span>${esc(v.sasong)}</span></div>
+    <div class="vaxtinfo-rad"><span class="vaxtinfo-svarighet">${SVARIGHET_TEXT[v.svarighet]}</span></div>
+  </div>`;
+}
+
 let odlingar = [];
 let zoner = [];
 let kartor = [];
 let objekt = []; // trad/hus/vag/staket/skjul/damm - kartutsmyckning, inga zoner
 let skordat = []; // arkiverade odlingar - vad har växt var, och hur mycket det gav
+let foton = []; // { id, malTyp: "zon"|"odling", malId, skapad } - filen själv ligger på servern
 let aktivKartaId = null;
 let widgets = [];
 let senasteVader = null;
@@ -1958,6 +2061,15 @@ const SPRAK_TEXT = {
     lagg_till: "Lägg till", spara: "Spara", avmarkera: "Avmarkera", ta_bort: "Ta bort", skorda: "Skörda",
     tidigare_odlat_har: "Tidigare odlat här", skordad_mangd_placeholder: "t.ex. 4 kg",
     sort: "Sort", sort_placeholder: "t.ex. Sungold",
+    foton: "Foton", visa_foto: "Visa foto", lagg_till_foto: "Lägg till foto",
+    guide_steg: "Steg {n} av 3", hoppa_over: "Hoppa över",
+    guide_valkommen: "Välkommen till Growarr", guide_nasta: "Nästa", guide_klar: "Klar",
+    guide_steg1_hjalp: "Låt oss sätta upp er första karta, zon och planta tillsammans - tar under en minut.",
+    guide_karta_namn: "Namn på kartan", guide_karta_forslag: "Min trädgård",
+    guide_steg2_rubrik: "Skapa er första zon", guide_steg2_hjalp: "En zon är en avgränsad yta - ett växthus, en odlingslåda eller en bädd.",
+    guide_steg3_rubrik: "Lägg till er första planta", guide_steg3_hjalp: "Skriv ett namn - känner vi igen det visar vi vattenbehov, sol och säsong direkt.",
+    kom_igang_rubrik: "Kom igång", kom_igang_hjalp: "Guiden som visas första gången du öppnar Growarr - namnger en karta, en zon och en planta åt dig.",
+    visa_guiden_igen: "Visa guiden igen",
     hojd_over_marken: "Höjd över marken (m) – styr hur lång skugga zonen kastar i solkartan",
     jord: "Jord", jord_placeholder_zon: "t.ex. näringsrik potatisjord + kompost",
     jord_placeholder_planta: "t.ex. kruka med kaktusjord",
@@ -2053,6 +2165,15 @@ const SPRAK_TEXT = {
     lagg_till: "Add", spara: "Save", avmarkera: "Deselect", ta_bort: "Delete", skorda: "Harvest",
     tidigare_odlat_har: "Previously grown here", skordad_mangd_placeholder: "e.g. 4 kg",
     sort: "Variety", sort_placeholder: "e.g. Sungold",
+    foton: "Photos", visa_foto: "View photo", lagg_till_foto: "Add photo",
+    guide_steg: "Step {n} of 3", hoppa_over: "Skip",
+    guide_valkommen: "Welcome to Growarr", guide_nasta: "Next", guide_klar: "Done",
+    guide_steg1_hjalp: "Let's set up your first map, zone, and planting together - takes under a minute.",
+    guide_karta_namn: "Map name", guide_karta_forslag: "My garden",
+    guide_steg2_rubrik: "Create your first zone", guide_steg2_hjalp: "A zone is a defined area - a greenhouse, a raised bed, or an outdoor bed.",
+    guide_steg3_rubrik: "Add your first planting", guide_steg3_hjalp: "Type a name - if we recognize it, we'll show water needs, sun, and season right away.",
+    kom_igang_rubrik: "Getting started", kom_igang_hjalp: "The guide shown the first time you open Growarr - names a map, a zone, and a planting for you.",
+    visa_guiden_igen: "Show the guide again",
     hojd_over_marken: "Height above ground (m), sets how long a shadow the zone casts on the sun map",
     jord: "Soil", jord_placeholder_zon: "e.g. rich potting soil + compost",
     jord_placeholder_planta: "e.g. pot with cactus soil",
@@ -2297,10 +2418,11 @@ async function laddaOdlingar() {
     kartor = data.kartor ?? [];
     objekt = data.objekt ?? [];
     skordat = data.skordat ?? [];
+    foton = data.foton ?? [];
     widgets = data.widgets ?? [];
     notiserHanterade = data.notiser ?? [];
     scheman = data.scheman ?? [];
-  } catch { odlingar = []; zoner = []; kartor = []; objekt = []; skordat = []; widgets = []; notiserHanterade = []; scheman = []; }
+  } catch { odlingar = []; zoner = []; kartor = []; objekt = []; skordat = []; foton = []; widgets = []; notiserHanterade = []; scheman = []; }
   // Håll aktiv flik giltig även om kartan tagits bort i en annan flik/enhet.
   if (!kartor.some((k) => k.id === aktivKartaId)) aktivKartaId = kartor[0]?.id ?? null;
   renderaKartaFlikar();
@@ -3486,9 +3608,11 @@ document.addEventListener("input", (e) => {
   if (e.target.id === "zNyPlanta" || e.target.id === "zNyPlantaAntal") uppdateraSnabbknapp();
   if (e.target.id === "zNyPlanta") {
     $("zFamiljVarning").innerHTML = familjVarningHtml(valtMal?.id, e.target.value.trim());
+    $("zVaxtinfo").innerHTML = vaxtinfoHtml(e.target.value.trim());
   }
   if (e.target.id === "oNamn") {
     $("oFamiljVarning").innerHTML = familjVarningHtml($("oZon").value, e.target.value.trim());
+    $("oVaxtinfo").innerHTML = vaxtinfoHtml(e.target.value.trim());
   }
 });
 
@@ -4469,6 +4593,22 @@ function renderaModal() {
       <button class="qr-dolj-vid-utskrift" id="qrSkrivUtBtn" style="margin-top:8px">Skriv ut</button>`;
     return;
   }
+  if (typ === "foto") {
+    const f = foton.find((x) => x.id === id);
+    if (!f) return stangModal();
+    $("modalInnehall").innerHTML = `
+      <button class="ta-bort" id="modalStangBtn" data-i18n-title="stang" style="position:absolute; top:16px; right:16px">×</button>
+      <img src="${BAS}api/photo?id=${encodeURIComponent(f.id)}" alt="" style="width:100%; border-radius:var(--r-sm); display:block">
+      <div class="detalj-knapprad" style="margin-top:14px">
+        <button class="ta-bort-knapp foto-ta-bort" data-id="${esc(f.id)}" style="flex:1">${t("ta_bort")}</button>
+      </div>`;
+    return;
+  }
+}
+function oppnaFotoModal(fotoId) {
+  modalKontext = { typ: "foto", id: fotoId };
+  renderaModal();
+  $("modalBakgrund").style.display = "flex";
 }
 
 // ---- Zondetaljer: ett popup-överlag som dynamiskt visar det du senast
@@ -4583,6 +4723,21 @@ function zonSkordatHtml(z) {
   </div>`;
 }
 
+// Foton kopplade till en zon eller planting - "före/efter", eller bara ett
+// minne av hur det såg ut. Tumnaglar + en "+"-knapp som öppnar filväljaren;
+// klick på en tumnagel öppnar en större lightbox (renderaModal, typ "foto").
+function fotoGalleriHtml(malTyp, malId) {
+  const lista = foton.filter((f) => f.malTyp === malTyp && f.malId === malId);
+  return `<div class="modal-entiteter">
+    <label class="lbl">${t("foton")}</label>
+    <div class="foto-galleri">
+      ${lista.map((f) => `<button class="foto-tumnagel" data-id="${esc(f.id)}" title="${t("visa_foto")}">
+        <img src="${BAS}api/photo?id=${encodeURIComponent(f.id)}" alt="" loading="lazy"></button>`).join("")}
+      <button class="foto-lagg-till" data-mal-typ="${esc(malTyp)}" data-mal-id="${esc(malId)}" title="${t("lagg_till_foto")}">+</button>
+    </div>
+  </div>`;
+}
+
 // Plantor i en zon, direkt i detaljpanelen – lägga till går alltid, men
 // borttagning kräver att Redigera är påslaget så man inte råkar radera.
 // Antalet anges alltid, och "Fyll hela ytan" sprider sorten över lådan i
@@ -4602,6 +4757,7 @@ function zonPlantorHtml(z) {
     <label class="lbl" style="margin-top:18px">${t("lagg_till_planta")}</label>
     <input type="text" id="zNyPlanta" list="sortForslagList" autocomplete="off"
       placeholder="${t("planta_placeholder")}">
+    <div id="zVaxtinfo"></div>
     <div class="familj-varning" id="zFamiljVarning"></div>
     <div class="antal-rad">
       <span class="lbl">${t("antal_st")}</span>
@@ -4916,6 +5072,7 @@ function renderaDetaljPanel() {
       ${zonPlantorHtml(z)}
       ${zonSektionerHtml(z)}
       ${zonSkordatHtml(z)}
+      ${fotoGalleriHtml("zon", z.id)}
       <div class="modal-entiteter">
         <label class="lbl">${t("detaljer")}</label>
         <div class="skapa-rad" style="margin-top:12px">
@@ -4952,6 +5109,8 @@ function renderaDetaljPanel() {
           ? `<button class="tillbaka-zon-btn" id="dTillbakaZonBtn" data-zon-id="${esc(zon.id)}" title="Tillbaka till ${esc(zon.namn)}">${IKON_TILLBAKA}<span>${esc(zon.namn)}</span></button>`
           : `<button class="tillbaka-btn" id="dAvmarkeraBtn">${t("avmarkera")}</button>`}
       </div>
+      ${vaxtinfoHtml(o.namn)}
+      ${fotoGalleriHtml("odling", o.id)}
       ${kopplaEntiteterHtml(o.enhetIds)}
       ${detaljHistorikHtml(o.enhetIds)}
       <div class="modal-entiteter">
@@ -5018,6 +5177,22 @@ document.addEventListener("click", async (e) => {
     await fetch(`${BAS}api/plantings/harvest/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: skordadTaBort.dataset.id }) });
     await laddaOdlingar();
     if (valtMal?.typ === "zon") renderaDetaljPanel();
+    return;
+  }
+  const fotoLaggTill = e.target.closest(".foto-lagg-till");
+  if (fotoLaggTill) {
+    fotoUppladdningsMal = { malTyp: fotoLaggTill.dataset.malTyp, malId: fotoLaggTill.dataset.malId };
+    $("fotoFil").click();
+    return;
+  }
+  const fotoTumnagel = e.target.closest(".foto-tumnagel");
+  if (fotoTumnagel) { oppnaFotoModal(fotoTumnagel.dataset.id); return; }
+  const fotoTaBort = e.target.closest(".foto-ta-bort");
+  if (fotoTaBort) {
+    await fetch(`${BAS}api/photos/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: fotoTaBort.dataset.id }) });
+    stangModal();
+    await laddaOdlingar();
+    renderaDetaljPanel();
     return;
   }
   const enhetTaBort = e.target.closest(".enhet-ta-bort");
@@ -5738,6 +5913,27 @@ $("kartaBildFil").addEventListener("change", async (e) => {
     const st2 = $("bakgrundStatus");
     if (st2) { st2.textContent = t("kunde_inte_spara") + err.message; st2.className = "status err"; }
   }
+});
+
+// Set right before $("fotoFil").click() by the ".foto-lagg-till" handler
+// below - a hidden <input type="file"> has no way to carry its own extra
+// data, so the target it's uploading to is remembered here instead.
+let fotoUppladdningsMal = null;
+$("fotoFil").addEventListener("change", async (e) => {
+  const fil = e.target.files?.[0];
+  e.target.value = "";
+  if (!fil || !fotoUppladdningsMal) return;
+  const { malTyp, malId } = fotoUppladdningsMal;
+  try {
+    const bild = await laddaBild(fil, 1600); // a memory/reference photo, not a print
+    const res = await fetch(`${BAS}api/photos`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ malTyp, malId, data: bild.data }),
+    });
+    if (!res.ok) throw new Error(`${res.status}`);
+    await laddaOdlingar();
+    renderaDetaljPanel();
+  } catch { /* tyst - gallerierna visar bara vad som faktiskt laddades upp */ }
 });
 // Live preview while dragging; only persist when the drag ends, so one slide
 // doesn't fire twenty writes at the server.
@@ -6460,6 +6656,125 @@ async function kontrolleraInloggning() {
     return true; // nätverksstrul - låt den vanliga uppstarten hantera och visa sitt eget fel
   }
 }
+// Kom igång-guide: tre steg i den ordning som redan krävs tekniskt (en
+// zon utan karta blir övergiven, en planta utan zon blir okategoriserad).
+// Postar mot exakt samma endpoints som den vanliga Skapa nytt-dialogen -
+// aldrig en egen genväg som kan divergera från det manuella flödet.
+const GUIDE_AVFARDAD_NYCKEL = "growarr_guide_klar";
+let guideSteg = 1;
+let guideKartaId = null;
+let guideZonId = null;
+function visaGuide() {
+  guideSteg = 1; guideKartaId = null; guideZonId = null;
+  guideRenderaSteg();
+  $("guideBakgrund").style.display = "flex";
+}
+function stangGuide(avfardad) {
+  if (avfardad) localStorage.setItem(GUIDE_AVFARDAD_NYCKEL, "1");
+  $("guideBakgrund").style.display = "none";
+}
+function guideRenderaSteg() {
+  const stegLabel = `<div class="modal-sub">${t("guide_steg").replace("{n}", guideSteg)}</div>`;
+  const hoppaOver = `<button class="ta-bort-knapp" id="guideHoppaBtn" style="flex:0 0 auto">${t("hoppa_over")}</button>`;
+  if (guideSteg === 1) {
+    $("guideInnehall").innerHTML = `
+      <h3>${t("guide_valkommen")}</h3>
+      ${stegLabel}
+      <p class="lbl" style="margin-top:14px">${t("guide_steg1_hjalp")}</p>
+      <label class="lbl" style="margin-top:14px">${t("guide_karta_namn")}</label>
+      <input type="text" id="gKartaNamn" value="${esc(t("guide_karta_forslag"))}" maxlength="60">
+      <div class="detalj-knapprad" style="margin-top:18px">
+        ${hoppaOver}
+        <button id="guideNastaBtn" style="flex:1">${t("guide_nasta")}</button>
+      </div>
+      <div class="status" id="guideStatus"></div>`;
+  } else if (guideSteg === 2) {
+    $("guideInnehall").innerHTML = `
+      <h3>${t("guide_steg2_rubrik")}</h3>
+      ${stegLabel}
+      <p class="lbl" style="margin-top:14px">${t("guide_steg2_hjalp")}</p>
+      <label class="lbl" style="margin-top:14px">${t("namn")}</label>
+      <input type="text" id="gZonNamn" data-i18n-placeholder="zon_namn_placeholder" placeholder="t.ex. Odlingslådan" maxlength="60">
+      <label class="lbl" style="margin-top:12px">${t("typ")}</label>
+      <select id="gZonTyp">
+        <option value="odlingslada" data-i18n="typ_odlingslada">Odlingslåda</option>
+        <option value="vaxthus" data-i18n="typ_vaxthus">Växthus</option>
+        <option value="utomhus" data-i18n="typ_utomhus">Utomhusbädd</option>
+        <option value="inomhus" data-i18n="typ_inomhus">Inomhus / krukor</option>
+        <option value="annat" data-i18n="typ_annat">Annat</option>
+      </select>
+      <div class="detalj-knapprad" style="margin-top:18px">
+        ${hoppaOver}
+        <button id="guideNastaBtn" style="flex:1">${t("guide_nasta")}</button>
+      </div>
+      <div class="status" id="guideStatus"></div>`;
+    oversattStatiskMarkup();
+  } else {
+    $("guideInnehall").innerHTML = `
+      <h3>${t("guide_steg3_rubrik")}</h3>
+      ${stegLabel}
+      <p class="lbl" style="margin-top:14px">${t("guide_steg3_hjalp")}</p>
+      <label class="lbl" style="margin-top:14px">Namn</label>
+      <input type="text" id="gOdlingNamn" list="sortForslagList" autocomplete="off" placeholder="t.ex. Tomater" maxlength="80">
+      <div id="gVaxtinfo"></div>
+      <div class="detalj-knapprad" style="margin-top:18px">
+        ${hoppaOver}
+        <button id="guideNastaBtn" style="flex:1">${t("guide_klar")}</button>
+      </div>
+      <div class="status" id="guideStatus"></div>`;
+  }
+}
+async function guideNasta() {
+  const st = $("guideStatus");
+  $("guideNastaBtn").disabled = true; st.textContent = ""; st.className = "status";
+  try {
+    if (guideSteg === 1) {
+      const namn = $("gKartaNamn").value.trim();
+      if (!namn) { st.textContent = t("namn_kravs"); st.className = "status err"; return; }
+      await fetch(`${BAS}api/maps`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ namn }) });
+      await laddaOdlingar(); // kartor var tom innan guiden startade, så aktivKartaId blir nu den nya kartan
+      guideKartaId = aktivKartaId;
+      guideSteg = 2;
+      guideRenderaSteg();
+    } else if (guideSteg === 2) {
+      const namn = $("gZonNamn").value.trim();
+      if (!namn) { st.textContent = t("namn_kravs"); st.className = "status err"; return; }
+      await fetch(`${BAS}api/zones`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ namn, typ: $("gZonTyp").value, kartaId: guideKartaId, foralderId: "" }),
+      });
+      await laddaOdlingar();
+      guideZonId = zoner.find((z) => z.kartaId === guideKartaId)?.id ?? null;
+      guideSteg = 3;
+      guideRenderaSteg();
+    } else {
+      const namn = $("gOdlingNamn").value.trim();
+      if (!namn) { st.textContent = t("namn_kravs"); st.className = "status err"; return; }
+      await fetch(`${BAS}api/plantings`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ namn, zonId: guideZonId, antal: 1, layout: "klunga" }),
+      });
+      await laddaOdlingar();
+      stangGuide(true);
+      location.hash = "";
+      if (guideZonId) { valtMal = { typ: "zon", id: guideZonId }; visaSheet(true); renderaDetaljPanel(); }
+    }
+  } catch (err) {
+    st.textContent = t("kunde_inte_spara") + err.message; st.className = "status err";
+  } finally {
+    const btn = $("guideNastaBtn");
+    if (btn) btn.disabled = false;
+  }
+}
+document.addEventListener("input", (e) => {
+  if (e.target.id === "gOdlingNamn") $("gVaxtinfo").innerHTML = vaxtinfoHtml(e.target.value.trim());
+});
+document.addEventListener("click", (e) => {
+  if (e.target.closest("#guideNastaBtn")) { guideNasta(); return; }
+  if (e.target.closest("#guideHoppaBtn") || e.target.id === "guideBakgrund") { stangGuide(true); return; }
+  if (e.target.closest("#visaGuideBtn")) { visaGuide(); return; }
+});
+
 function visaInloggning(sessionenSparadesInte) {
   $("appShell").style.display = "none";
   // The chat bubble is a fixed-position sibling of app-shell, not a child
@@ -6520,6 +6835,7 @@ $("logoutBtn").addEventListener("click", loggaUt);
   await laddaInstallningar();
   await laddaHistorikData();
   oppnaFranHash(); // en skannad QR-etikett pekar på en zon
+  if (!kartor.length && !localStorage.getItem(GUIDE_AVFARDAD_NYCKEL)) visaGuide();
 })();
 </script>
 </body>
