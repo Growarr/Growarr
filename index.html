@@ -148,6 +148,14 @@ try {
     background:color-mix(in srgb, var(--accent) 14%, var(--surface2)); border:1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
     color:var(--accent); box-shadow:none; }
   .notis-sa-igen:hover { background:color-mix(in srgb, var(--accent) 24%, var(--surface2)); transform:none; }
+  .hem-tomt { display:flex; flex-direction:column; align-items:center; text-align:center; gap:10px; padding:48px 20px; }
+  .hem-tomt-ikon { font-size:2.4rem; line-height:1; }
+  .hem-tomt p { color:var(--muted); margin:0; }
+  .hem-tomt-knapp { display:inline-block; text-decoration:none; border:0; border-radius:99px; padding:10px 20px;
+    font-size:var(--fs-xs); font-weight:600; background:var(--grad); color:#04140e;
+    box-shadow:0 6px 16px -6px color-mix(in srgb, var(--accent) 60%, transparent);
+    transition:transform .12s ease, box-shadow .12s ease; margin-top:4px; }
+  .hem-tomt-knapp:hover { transform:translateY(-1px); box-shadow:0 10px 20px -6px color-mix(in srgb, var(--accent) 65%, transparent); }
 
   .modal-bred { max-width:620px; }
   .skapa-flikar { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
@@ -1319,13 +1327,14 @@ try {
 <div class="wrap" id="hemVy">
 
   <div class="vy-header">
-    <div>
+    <div style="flex:1">
       <p class="app-brand">Growarr</p>
       <h1 class="vy-titel" data-i18n="hem_rubrik">Vad behöver göras idag</h1>
     </div>
+    <div class="dagens-vader" id="hemVader"></div>
   </div>
 
-  <div class="card" style="margin-top:20px">
+  <div class="card" style="margin-top:20px; max-width:640px">
     <div id="hemInnehall"></div>
   </div>
 
@@ -2117,7 +2126,7 @@ const SPRAK_TEXT = {
     observationer: "Observationer", skadedjur: "Skadedjur", sjukdom: "Sjukdom",
     lagg_till_observation: "Lägg till observation", observation_namn_placeholder: "t.ex. Bladlöss",
     inga_observationer: "Inga observationer ännu.",
-    nav_hem: "Hem", hem_rubrik: "Vad behöver göras idag", hem_tomt: "Allt är under kontroll 🌱",
+    nav_hem: "Hem", hem_rubrik: "Vad behöver göras idag", hem_tomt: "Allt är under kontroll.", hem_till_tradgarden: "Till trädgården",
     guide_steg: "Steg {n} av 3", hoppa_over: "Hoppa över",
     guide_valkommen: "Välkommen till Growarr", guide_nasta: "Nästa", guide_klar: "Klar",
     guide_steg1_hjalp: "Låt oss sätta upp er första karta, zon och planta tillsammans - tar under en minut.",
@@ -2226,7 +2235,7 @@ const SPRAK_TEXT = {
     observationer: "Observations", skadedjur: "Pest", sjukdom: "Disease",
     lagg_till_observation: "Add observation", observation_namn_placeholder: "e.g. Aphids",
     inga_observationer: "No observations yet.",
-    nav_hem: "Home", hem_rubrik: "What needs attention today", hem_tomt: "Everything's under control 🌱",
+    nav_hem: "Home", hem_rubrik: "What needs attention today", hem_tomt: "Everything's under control.", hem_till_tradgarden: "Go to the garden",
     guide_steg: "Step {n} of 3", hoppa_over: "Skip",
     guide_valkommen: "Welcome to Growarr", guide_nasta: "Next", guide_klar: "Done",
     guide_steg1_hjalp: "Let's set up your first map, zone, and planting together - takes under a minute.",
@@ -2389,15 +2398,22 @@ function renderaVader(data) {
 // en gång"-känsla som referensdesignens väder+karta-kort, utan att klämma
 // in vår mycket rikare karta i en fast liten ruta. Den fulla 5-dagars-
 // prognosen bor kvar för sig i sidokolumnen, ihop med Bevattning.
+// Skriver till både kartkortets rubrik och Hem-vyns rubrik (om den finns i
+// DOM just nu) - samma "vädret på en blick" oavsett vilken vy som råkar
+// vara den man landar på, sen Hem blev standardsidan.
 function renderaDagensVader(data) {
-  const el = $("dagensVader");
-  if (!el) return;
-  if (!data || data.fel || !data.dagar?.length) { el.innerHTML = ""; return; }
-  const idag = data.dagar[0];
-  const frost = idag.min <= FROST_TROSKEL;
-  el.innerHTML = `<span class="ikon">${VADER_IKON[idag.symbol] ?? "🌡️"}</span>
-    <span class="temp">${idag.max}°<span class="min">/${idag.min}°</span></span>
-    ${frost ? `<span class="frost-chip">${IKON_FROST}Frost</span>` : ""}`;
+  let html = "";
+  if (data && !data.fel && data.dagar?.length) {
+    const idag = data.dagar[0];
+    const frost = idag.min <= FROST_TROSKEL;
+    html = `<span class="ikon">${VADER_IKON[idag.symbol] ?? "🌡️"}</span>
+      <span class="temp">${idag.max}°<span class="min">/${idag.min}°</span></span>
+      ${frost ? `<span class="frost-chip">${IKON_FROST}Frost</span>` : ""}`;
+  }
+  for (const id of ["dagensVader", "hemVader"]) {
+    const el = $(id);
+    if (el) el.innerHTML = html;
+  }
 }
 
 // ---- Zonvis frostprognos ----
@@ -3969,7 +3985,15 @@ function renderaNotiser() {
 // tillsammans med den här, gör redan det).
 function renderaHem() {
   const { lista } = notisKandidatlista();
-  $("hemInnehall").innerHTML = notisRaderHtml(lista, t("hem_tomt"));
+  // En tom lista är ett bra utfall, inte ett tomt sidfel - egen, rymligare
+  // hälsning i stället för notisRaderHtml:s smala dropdown-anpassade
+  // tomrad, plus en genväg vidare till kartan så sidan alltid leder någonstans.
+  $("hemInnehall").innerHTML = lista.length ? notisRaderHtml(lista, t("hem_tomt")) : `
+    <div class="hem-tomt">
+      <div class="hem-tomt-ikon">🌱</div>
+      <p>${t("hem_tomt")}</p>
+      <a class="hem-tomt-knapp" href="#karta">${t("hem_till_tradgarden")}</a>
+    </div>`;
 }
 async function hanteraNotis(id, atgard) {
   // Mjuk kollaps innan raden faktiskt försvinner ur listan – en tvär
