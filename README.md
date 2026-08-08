@@ -11,11 +11,17 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
 </p>
 
-Most garden trackers are a spreadsheet with extra steps. Growarr is a real,
-drag-and-drop map of your greenhouse, beds and pots that cross-references
-the local forecast, learns your garden's own microclimate, and tells you
-what actually needs attention today. Self-hosted, and built to plug
-straight into a Home Assistant setup you already run.
+Right now you find out about frost, dry soil, or a missed harvest window
+the same way most people do: too late, by looking at the actual plant.
+A spreadsheet won't warn you. A generic gardening app doesn't know your
+sensors, your microclimate, or your Home Assistant setup. Growarr is a
+real, drag-and-drop map of your greenhouse, beds and pots that
+cross-references the local forecast, learns how your garden's own beds
+actually run warmer or colder than the regional number, and puts one
+clear answer on the screen every morning: here's what needs you today.
+Self-hosted, and built to plug straight into a Home Assistant setup you
+already run - not a new account, not another cloud service watching your
+garden.
 
 It's two things in one repo: **the panel** (a single Docker container) and
 a free nightly **frost watch** that runs on GitHub Actions and texts your
@@ -33,18 +39,19 @@ phone before a cold snap hits.
 
 ## Why bother
 
+- **It tells you what matters, once a day.** A notification center
+  surfaces frost risk, dry soil and harvest windows, optionally
+  prioritized and merged by Claude so you get one useful line instead of
+  five - open the app, know exactly what to do, close it.
 - **A map, not a form.** Drag greenhouses, beds and pots into place. Plants
   render as icons you can count, not a row in a table.
 - **It learns your microclimate.** Link a temperature sensor and it figures
   out over time how much colder your north bed actually runs than the
   regional forecast says.
-- **Ask it anything.** Photograph a sick-looking plant and get an answer
-  from Claude that's grounded in your actual sensors, not generic advice.
-- **It tells you what matters.** A notification center surfaces frost risk,
-  dry soil, and harvest windows, optionally prioritized and merged by
-  Claude so you get one useful line instead of five.
 - **Sun and shadow, worked out for real.** See exactly which beds shade
   each other at any hour, computed from your garden's own coordinates.
+- **Ask it anything.** Photograph a sick-looking plant and get an answer
+  from Claude that's grounded in your actual sensors, not generic advice.
 - **Feels native on a phone.** Bottom-sheet panels, a floating glass nav
   bar, dark mode. Not a desktop dashboard squeezed onto a small screen.
 - **Your data, your box.** One container, one data file, your own Home
@@ -54,6 +61,11 @@ phone before a cold snap hits.
   searchable chart across every sensor you've linked, and weekday-based
   watering reminders (a stand-in for real irrigation until there's a valve
   to actually drive).
+
+**Who it's for:** you already run Home Assistant and want your garden to
+show up next to your thermostat and lights, not live in a separate app
+with its own login. If that's not you yet, it still works fine without
+HA - you just lose the sensor history, entity linking, and automations.
 
 ## Getting started
 

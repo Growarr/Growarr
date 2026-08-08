@@ -1990,51 +1990,69 @@ function familjVarningHtml(zonId, namn) {
 // stays self-hosted/offline.
 const VAXT_DATABAS = {
   tomat: { visningsnamn: "Tomat", vatten: "hog", sol: "sol", avstand_cm: 50,
-    sasong: "Så inomhus mars–april, plantera ut efter frostrisk (juni), skörda aug–sep", svarighet: "medel" },
+    sasong: "Så inomhus mars–april, plantera ut efter frostrisk (juni), skörda aug–sep",
+    sasong_en: "Sow indoors March–April, transplant after frost risk (June), harvest Aug–Sep", svarighet: "medel" },
   potatis: { visningsnamn: "Potatis", vatten: "medel", sol: "sol", avstand_cm: 30,
-    sasong: "Sätt april–maj, skörda jul–sep", svarighet: "latt" },
+    sasong: "Sätt april–maj, skörda jul–sep", sasong_en: "Plant April–May, harvest Jul–Sep", svarighet: "latt" },
   paprika: { visningsnamn: "Paprika/chili", vatten: "hog", sol: "sol", avstand_cm: 40,
-    sasong: "Så inomhus feb–mars, plantera ut i juni, skörda aug–okt", svarighet: "svar" },
+    sasong: "Så inomhus feb–mars, plantera ut i juni, skörda aug–okt",
+    sasong_en: "Sow indoors Feb–March, transplant in June, harvest Aug–Oct", svarighet: "svar" },
   aubergine: { visningsnamn: "Aubergine", vatten: "hog", sol: "sol", avstand_cm: 45,
-    sasong: "Så inomhus feb–mars, plantera ut i juni (helst växthus), skörda aug–sep", svarighet: "svar" },
+    sasong: "Så inomhus feb–mars, plantera ut i juni (helst växthus), skörda aug–sep",
+    sasong_en: "Sow indoors Feb–March, transplant in June (greenhouse preferred), harvest Aug–Sep", svarighet: "svar" },
   gurka: { visningsnamn: "Gurka", vatten: "hog", sol: "sol", avstand_cm: 40,
-    sasong: "Så inomhus april, plantera ut eller så direkt i juni, skörda jul–sep", svarighet: "medel" },
+    sasong: "Så inomhus april, plantera ut eller så direkt i juni, skörda jul–sep",
+    sasong_en: "Sow indoors in April, or transplant/direct-sow in June, harvest Jul–Sep", svarighet: "medel" },
   zucchini: { visningsnamn: "Zucchini/squash", vatten: "hog", sol: "sol", avstand_cm: 80,
-    sasong: "Så inomhus april–maj eller direkt i juni, skörda jul–sep", svarighet: "latt" },
+    sasong: "Så inomhus april–maj eller direkt i juni, skörda jul–sep",
+    sasong_en: "Sow indoors April–May or direct-sow in June, harvest Jul–Sep", svarighet: "latt" },
   pumpa: { visningsnamn: "Pumpa", vatten: "hog", sol: "sol", avstand_cm: 100,
-    sasong: "Så inomhus april–maj, plantera ut i juni, skörda sep–okt", svarighet: "medel" },
+    sasong: "Så inomhus april–maj, plantera ut i juni, skörda sep–okt",
+    sasong_en: "Sow indoors April–May, transplant in June, harvest Sep–Oct", svarighet: "medel" },
   art: { visningsnamn: "Ärt", vatten: "medel", sol: "sol", avstand_cm: 10,
-    sasong: "Så direkt april–maj, skörda jun–aug", svarighet: "latt" },
+    sasong: "Så direkt april–maj, skörda jun–aug", sasong_en: "Direct-sow April–May, harvest Jun–Aug", svarighet: "latt" },
   bona: { visningsnamn: "Böna", vatten: "medel", sol: "sol", avstand_cm: 15,
-    sasong: "Så direkt efter frostrisk (juni), skörda jul–sep", svarighet: "latt" },
+    sasong: "Så direkt efter frostrisk (juni), skörda jul–sep",
+    sasong_en: "Direct-sow after frost risk (June), harvest Jul–Sep", svarighet: "latt" },
   morot: { visningsnamn: "Morot", vatten: "medel", sol: "sol", avstand_cm: 5,
-    sasong: "Så direkt april–juni, skörda jul–okt", svarighet: "latt" },
+    sasong: "Så direkt april–juni, skörda jul–okt", sasong_en: "Direct-sow April–June, harvest Jul–Oct", svarighet: "latt" },
   radisa: { visningsnamn: "Rädisa", vatten: "medel", sol: "sol", avstand_cm: 4,
-    sasong: "Så direkt från april, klar på 3–4 veckor - så om flera gånger", svarighet: "latt", saddIntervallDagar: 10 },
+    sasong: "Så direkt från april, klar på 3–4 veckor - så om flera gånger",
+    sasong_en: "Direct-sow from April, ready in 3–4 weeks - sow again several times", svarighet: "latt", saddIntervallDagar: 10 },
   rodbeta: { visningsnamn: "Rödbeta", vatten: "medel", sol: "sol", avstand_cm: 10,
-    sasong: "Så direkt april–juni, skörda jul–okt", svarighet: "latt" },
+    sasong: "Så direkt april–juni, skörda jul–okt", sasong_en: "Direct-sow April–June, harvest Jul–Oct", svarighet: "latt" },
   purjolok: { visningsnamn: "Purjolök", vatten: "medel", sol: "sol", avstand_cm: 15,
-    sasong: "Så inomhus mars, plantera ut i juni, skörda sep–nov", svarighet: "medel" },
+    sasong: "Så inomhus mars, plantera ut i juni, skörda sep–nov",
+    sasong_en: "Sow indoors in March, transplant in June, harvest Sep–Nov", svarighet: "medel" },
   vitlok: { visningsnamn: "Vitlök", vatten: "lag", sol: "sol", avstand_cm: 10,
-    sasong: "Sätt i oktober för övervintring, eller tidigt på våren, skörda jul–aug", svarighet: "latt" },
+    sasong: "Sätt i oktober för övervintring, eller tidigt på våren, skörda jul–aug",
+    sasong_en: "Plant in October to overwinter, or early spring, harvest Jul–Aug", svarighet: "latt" },
   lok: { visningsnamn: "Lök", vatten: "lag", sol: "sol", avstand_cm: 10,
-    sasong: "Sätt sättlök april–maj, skörda aug–sep", svarighet: "latt" },
+    sasong: "Sätt sättlök april–maj, skörda aug–sep", sasong_en: "Plant onion sets April–May, harvest Aug–Sep", svarighet: "latt" },
   kal: { visningsnamn: "Kål", vatten: "hog", sol: "sol", avstand_cm: 50,
-    sasong: "Så inomhus mars–april, plantera ut i maj–juni, skörda aug–okt", svarighet: "medel" },
+    sasong: "Så inomhus mars–april, plantera ut i maj–juni, skörda aug–okt",
+    sasong_en: "Sow indoors March–April, transplant in May–June, harvest Aug–Oct", svarighet: "medel" },
   sallad: { visningsnamn: "Sallad", vatten: "hog", sol: "halvskugga", avstand_cm: 25,
-    sasong: "Så direkt eller inomhus från april, klar 6–8 veckor senare - så om flera gånger", svarighet: "latt", saddIntervallDagar: 14 },
+    sasong: "Så direkt eller inomhus från april, klar 6–8 veckor senare - så om flera gånger",
+    sasong_en: "Direct-sow or start indoors from April, ready 6–8 weeks later - sow again several times", svarighet: "latt", saddIntervallDagar: 14 },
   spenat: { visningsnamn: "Spenat", vatten: "medel", sol: "halvskugga", avstand_cm: 10,
-    sasong: "Så direkt mars–april och igen aug–sep, klar 4–6 veckor senare", svarighet: "latt" },
+    sasong: "Så direkt mars–april och igen aug–sep, klar 4–6 veckor senare",
+    sasong_en: "Direct-sow March–April and again Aug–Sep, ready 4–6 weeks later", svarighet: "latt" },
   dill: { visningsnamn: "Dill", vatten: "medel", sol: "sol", avstand_cm: 15,
-    sasong: "Så direkt från april, så om varannan vecka för jämn skörd", svarighet: "latt", saddIntervallDagar: 14 },
+    sasong: "Så direkt från april, så om varannan vecka för jämn skörd",
+    sasong_en: "Direct-sow from April, sow again every other week for a steady harvest", svarighet: "latt", saddIntervallDagar: 14 },
   basilika: { visningsnamn: "Basilika", vatten: "medel", sol: "sol", avstand_cm: 20,
-    sasong: "Så inomhus april, ställ ut efter frostrisk i juni - känslig för kyla", svarighet: "medel" },
+    sasong: "Så inomhus april, ställ ut efter frostrisk i juni - känslig för kyla",
+    sasong_en: "Sow indoors in April, move outside after frost risk in June - sensitive to cold", svarighet: "medel" },
   jordgubbe: { visningsnamn: "Jordgubbe", vatten: "medel", sol: "sol", avstand_cm: 30,
-    sasong: "Plantera vår eller höst, full skörd andra året, skörda jun–jul", svarighet: "latt" },
+    sasong: "Plantera vår eller höst, full skörd andra året, skörda jun–jul",
+    sasong_en: "Plant spring or autumn, full harvest the second year, harvest Jun–Jul", svarighet: "latt" },
   persilja: { visningsnamn: "Persilja", vatten: "medel", sol: "halvskugga", avstand_cm: 15,
-    sasong: "Så direkt eller inomhus från april - långsam att gro, skörda kontinuerligt jun–okt", svarighet: "latt" },
+    sasong: "Så direkt eller inomhus från april - långsam att gro, skörda kontinuerligt jun–okt",
+    sasong_en: "Direct-sow or start indoors from April - slow to germinate, harvest continuously Jun–Oct", svarighet: "latt" },
   selleri: { visningsnamn: "Selleri", vatten: "hog", sol: "sol", avstand_cm: 25,
-    sasong: "Så inomhus feb–mars, plantera ut i juni, skörda sep–okt", svarighet: "svar" },
+    sasong: "Så inomhus feb–mars, plantera ut i juni, skörda sep–okt",
+    sasong_en: "Sow indoors Feb–March, transplant in June, harvest Sep–Oct", svarighet: "svar" },
 };
 const VAXT_DATABAS_UNDANTAG = [/jordärtskocka|kronärtskocka|potatislök/i];
 const VAXT_DATABAS_MONSTER = [
@@ -2066,10 +2084,10 @@ function saddPeriodAktuell(planterad, intervallDagar, nu = new Date()) {
   return Math.floor(dagarSedan / intervallDagar);
 }
 const VATTEN_ANTAL = { lag: 1, medel: 2, hog: 3 };
-const VATTEN_TEXT = { lag: "Vattenbehov: lågt", medel: "Vattenbehov: medel", hog: "Vattenbehov: högt" };
+const VATTEN_NYCKEL = { lag: "vatten_lagt", medel: "vatten_medel", hog: "vatten_hogt" };
 const SOL_IKON = { sol: IKON_SOL, halvskugga: IKON_HALVSKUGGA, skugga: IKON_SKUGGA };
-const SOL_TEXT = { sol: "Full sol", halvskugga: "Halvskugga", skugga: "Skugga" };
-const SVARIGHET_TEXT = { latt: "Lätt", medel: "Medel", svar: "Kräver erfarenhet" };
+const SOL_NYCKEL = { sol: "full_sol", halvskugga: "halvskugga", skugga: "skugga" };
+const SVARIGHET_NYCKEL = { latt: "svarighet_latt", medel: "svarighet_medel", svar: "svarighet_svar" };
 // Neutral info card, not a warning - reuses the same live-update wiring as
 // familjVarningHtml but with plain text color, no --warn styling. The water
 // indicator is icon-only visually, so it carries an aria-label - the sun
@@ -2077,11 +2095,12 @@ const SVARIGHET_TEXT = { latt: "Lätt", medel: "Medel", svar: "Kräver erfarenhe
 function vaxtinfoHtml(namn) {
   const v = vaxtinfoFor(namn);
   if (!v) return "";
+  const sasong = sprak === "en" ? v.sasong_en : v.sasong;
   return `<div class="vaxtinfo-kort">
-    <div class="vaxtinfo-rad"><span aria-label="${VATTEN_TEXT[v.vatten]}">${IKON_DROPPE.repeat(VATTEN_ANTAL[v.vatten])}</span><span>${SOL_IKON[v.sol]} ${SOL_TEXT[v.sol]}</span><span>↔ ${v.avstand_cm} cm mellan plantor</span></div>
-    <div class="vaxtinfo-rad"><span>${esc(v.sasong)}</span></div>
-    ${v.saddIntervallDagar ? `<div class="vaxtinfo-rad"><span>${IKON_UPPDATERA} Kan sås i omgångar var ${v.saddIntervallDagar}:e dag för jämn skörd</span></div>` : ""}
-    <div class="vaxtinfo-rad"><span class="vaxtinfo-svarighet">${SVARIGHET_TEXT[v.svarighet]}</span></div>
+    <div class="vaxtinfo-rad"><span aria-label="${t(VATTEN_NYCKEL[v.vatten])}">${IKON_DROPPE.repeat(VATTEN_ANTAL[v.vatten])}</span><span>${SOL_IKON[v.sol]} ${t(SOL_NYCKEL[v.sol])}</span><span>↔ ${v.avstand_cm} ${t("cm_mellan_plantor")}</span></div>
+    <div class="vaxtinfo-rad"><span>${esc(sasong)}</span></div>
+    ${v.saddIntervallDagar ? `<div class="vaxtinfo-rad"><span>${IKON_UPPDATERA} ${t("sadd_omgangar").replace("{n}", v.saddIntervallDagar)}</span></div>` : ""}
+    <div class="vaxtinfo-rad"><span class="vaxtinfo-svarighet">${t(SVARIGHET_NYCKEL[v.svarighet])}</span></div>
   </div>`;
 }
 
@@ -2167,6 +2186,25 @@ const SPRAK_TEXT = {
     redigera_for_ta_bort: "Slå på Redigera ovanför kartan för att kunna ta bort plantor.",
     // Weather and watering
     vader_bevattning: "Väder & bevattning", torrt: "torrt",
+    // Plant care card
+    vatten_lagt: "Vattenbehov: lågt", vatten_medel: "Vattenbehov: medel", vatten_hogt: "Vattenbehov: högt",
+    full_sol: "Full sol", halvskugga: "Halvskugga", skugga: "Skugga",
+    svarighet_latt: "Lätt", svarighet_medel: "Medel", svarighet_svar: "Kräver erfarenhet",
+    cm_mellan_plantor: "cm mellan plantor", sadd_omgangar: "Kan sås i omgångar var {n}:e dag för jämn skörd",
+    // Notifications
+    frost_zon_titel: "Frostrisk i {zon}",
+    frost_zon_text: "Ner mot {temp}° i natt, kalibrerat mot era egna mätningar.",
+    frost_allman_titel: "Frostrisk",
+    frost_allman_text: "SMHI väntar {troskel}° eller kallare någon av de kommande dagarna – täck ömtåliga plantor.",
+    dags_skorda_titel: "Dags att skörda {namn}", dags_saso_titel: "Dags att så mer {namn}",
+    for_jamn_skord_liten: "för jämn skörd", for_jamn_skord_stor: "För jämn skörd",
+    enheten_svarar_inte: "enheten svarar inte", dags_vattna_titel: "Dags att vattna {zon}",
+    sensor_torrt: "Torrt – dags att vattna", sensor_fuktigt: "Mycket fuktigt – vänta med vattning",
+    sensor_bra_niva: "Bra nivå", sensor_kallt: "Kallt – frostrisk för känsliga plantor",
+    sensor_varmt: "Varmt – se till att det vädras/vattnas", sensor_behaglig_temp: "Behaglig temperatur",
+    kunde_inte_na_servern: "Kunde inte nå servern:",
+    schema_enligt: "Enligt ditt schema.", schema_enligt_ej_regn: "Enligt ditt schema (ingen betydande nederbörd i prognosen).",
+    nagot_gick_fel: "Något gick fel.",
     // History
     historik: "Historik", per_timme: "Per timme", per_dag: "Per dag",
     historik_tom: "Koppla en HA-entitet till en zon eller odling (klicka på den i Trädgårdskartan) för att se historik här.",
@@ -2277,6 +2315,23 @@ const SPRAK_TEXT = {
     planterad: "Planted", skordemanad: "Harvest month", skordefonster: "Harvest window (free text)",
     redigera_for_ta_bort: "Turn on Edit above the map to remove plants.",
     vader_bevattning: "Weather & watering", torrt: "dry",
+    vatten_lagt: "Water need: low", vatten_medel: "Water need: medium", vatten_hogt: "Water need: high",
+    full_sol: "Full sun", halvskugga: "Partial shade", skugga: "Shade",
+    svarighet_latt: "Easy", svarighet_medel: "Medium", svarighet_svar: "Experienced growers",
+    cm_mellan_plantor: "cm apart", sadd_omgangar: "Can be sown in batches every {n} days for a steady harvest",
+    frost_zon_titel: "Frost risk in {zon}",
+    frost_zon_text: "Down to {temp}° tonight, calibrated against your own readings.",
+    frost_allman_titel: "Frost risk",
+    frost_allman_text: "SMHI expects {troskel}° or colder in the coming days – cover fragile plants.",
+    dags_skorda_titel: "Time to harvest {namn}", dags_saso_titel: "Time to sow more {namn}",
+    for_jamn_skord_liten: "for a steady harvest", for_jamn_skord_stor: "For a steady harvest",
+    enheten_svarar_inte: "the device isn't responding", dags_vattna_titel: "Time to water {zon}",
+    sensor_torrt: "Dry – time to water", sensor_fuktigt: "Very moist – hold off watering",
+    sensor_bra_niva: "Good level", sensor_kallt: "Cold – frost risk for sensitive plants",
+    sensor_varmt: "Warm – make sure it's ventilated/watered", sensor_behaglig_temp: "Comfortable temperature",
+    kunde_inte_na_servern: "Couldn't reach the server:",
+    schema_enligt: "As scheduled.", schema_enligt_ej_regn: "As scheduled (no significant rain in the forecast).",
+    nagot_gick_fel: "Something went wrong.",
     historik: "History", per_timme: "Hourly", per_dag: "Daily",
     historik_tom: "Link a Home Assistant entity to a zone or planting (click it on the garden map) to see history here.",
     samlar_data: "Collecting data … check back in a while.",
@@ -2406,7 +2461,7 @@ function renderaVader(data) {
       <div class="namn">${namn}</div>
       <div class="ikon">${VADER_IKON[d.symbol] ?? "🌡️"}</div>
       <div class="temp">${d.max}° <span class="min">/ ${d.min}°</span></div>
-      <div class="nb">${d.nederbord > 0 ? d.nederbord + " mm" : "torrt"}</div>
+      <div class="nb">${d.nederbord > 0 ? d.nederbord + " mm" : t("torrt")}</div>
     </div>`;
   }).join("");
   const zonRader = nagonFrost ? frostPerZon() : [];
@@ -2591,9 +2646,9 @@ function tillampaKartBakgrund() {
   if (lager.getAttribute("src") !== src) lager.setAttribute("src", src);
 }
 function manadNamn(m) {
-  // "2026-09" -> "september 2026"
+  // "2026-09" -> "september 2026" (sv) or "September 2026" (en)
   const [ar, man] = m.split("-").map(Number);
-  return new Date(Date.UTC(ar, man - 1, 1)).toLocaleDateString("sv-SE", { month: "long", year: "numeric", timeZone: "UTC" });
+  return new Date(Date.UTC(ar, man - 1, 1)).toLocaleDateString(sprak === "en" ? "en-US" : "sv-SE", { month: "long", year: "numeric", timeZone: "UTC" });
 }
 // Bygger en trädordnad lista av zonerna på aktiv karta, så sektioner visas
 // indenterade under sin förälder i rullgardinerna.
@@ -3845,16 +3900,17 @@ function berakningNotiser() {
   const zonFrost = frostPerZon().filter((z) => z.min <= FROST_TROSKEL);
   if (zonFrost.length) {
     for (const z of zonFrost) {
+      const temp = sprak === "en" ? z.min.toFixed(1) : z.min.toFixed(1).replace(".", ",");
       notiser.push({
         id: `frost-zon-${z.namn}-${idag}`, ikon: IKON_FROST, niva: "varning",
-        titel: `Frostrisk i ${z.namn}`,
-        text: `Ner mot ${z.min.toFixed(1).replace(".", ",")}° i natt, kalibrerat mot era egna mätningar.`,
+        titel: t("frost_zon_titel").replace("{zon}", z.namn),
+        text: t("frost_zon_text").replace("{temp}", temp),
       });
     }
   } else if (senasteVader?.dagar?.some((d) => d.min <= FROST_TROSKEL)) {
     notiser.push({
-      id: `frost-allman-${idag}`, ikon: IKON_FROST, niva: "varning", titel: "Frostrisk",
-      text: `SMHI väntar ${FROST_TROSKEL}° eller kallare någon av de kommande dagarna – täck ömtåliga plantor.`,
+      id: `frost-allman-${idag}`, ikon: IKON_FROST, niva: "varning", titel: t("frost_allman_titel"),
+      text: t("frost_allman_text").replace("{troskel}", FROST_TROSKEL),
     });
   }
 
@@ -3865,7 +3921,7 @@ function berakningNotiser() {
     const zon = zoner.find((z) => z.id === o.zonId);
     notiser.push({
       id: `skord-${o.id}-${nuManad}`, ikon: ikonForVaxt(o.namn), niva: "info",
-      titel: `Dags att skörda ${o.namn}`, text: zon ? `${zon.namn} · ${manadNamn(o.skordManad)}` : manadNamn(o.skordManad),
+      titel: t("dags_skorda_titel").replace("{namn}", o.namn), text: zon ? `${zon.namn} · ${manadNamn(o.skordManad)}` : manadNamn(o.skordManad),
     });
   }
 
@@ -3880,7 +3936,7 @@ function berakningNotiser() {
     const zon = zoner.find((z) => z.id === o.zonId);
     notiser.push({
       id: `sadd-${o.id}-p${period}`, ikon: IKON_UPPDATERA, niva: "info",
-      titel: `Dags att så mer ${o.namn}`, text: zon ? `${zon.namn} · för jämn skörd` : "För jämn skörd",
+      titel: t("dags_saso_titel").replace("{namn}", o.namn), text: zon ? `${zon.namn} · ${t("for_jamn_skord_liten")}` : t("for_jamn_skord_stor"),
     });
   }
 
@@ -3890,7 +3946,7 @@ function berakningNotiser() {
     if (m.enhet.fel) {
       notiser.push({
         id: `fel-${m.enhetId}-${idag}`, ikon: IKON_SIGNAL_BORTA, niva: "fel",
-        titel: `${m.label}: enheten svarar inte`, text: `${m.enhet.namn} · ${m.enhet.fel}`,
+        titel: `${m.label}: ${t("enheten_svarar_inte")}`, text: `${m.enhet.namn} · ${m.enhet.fel}`,
       });
       continue;
     }
@@ -3920,8 +3976,8 @@ function berakningNotiser() {
     if (regnarNog && !skyddad) continue;
     notiser.push({
       id: `schema-${s.id}-${idag}`, ikon: "💧", niva: "info",
-      titel: `Dags att vattna ${zon.namn}`,
-      text: skyddad ? "Enligt ditt schema." : "Enligt ditt schema (ingen betydande nederbörd i prognosen).",
+      titel: t("dags_vattna_titel").replace("{zon}", zon.namn),
+      text: skyddad ? t("schema_enligt") : t("schema_enligt_ej_regn"),
     });
   }
   return notiser;
@@ -4560,14 +4616,14 @@ function metrikStatus(enhet, varde) {
   const v = Number(varde);
   if (!Number.isFinite(v)) return { niva: "", text: "" };
   if (e.includes("%") ) {
-    if (v < 20) return { niva: "varning", text: "Torrt – dags att vattna" };
-    if (v > 70) return { niva: "varning", text: "Mycket fuktigt – vänta med vattning" };
-    return { niva: "god", text: "Bra nivå" };
+    if (v < 20) return { niva: "varning", text: t("sensor_torrt") };
+    if (v > 70) return { niva: "varning", text: t("sensor_fuktigt") };
+    return { niva: "god", text: t("sensor_bra_niva") };
   }
   if (e.includes("°")) {
-    if (v < 5) return { niva: "varning", text: "Kallt – frostrisk för känsliga plantor" };
-    if (v > 32) return { niva: "varning", text: "Varmt – se till att det vädras/vattnas" };
-    return { niva: "god", text: "Behaglig temperatur" };
+    if (v < 5) return { niva: "varning", text: t("sensor_kallt") };
+    if (v > 32) return { niva: "varning", text: t("sensor_varmt") };
+    return { niva: "god", text: t("sensor_behaglig_temp") };
   }
   return { niva: "", text: "" };
 }
@@ -6892,9 +6948,9 @@ async function skickaChatt() {
       body: JSON.stringify({ meddelanden: chattHistorik }),
     });
     const data = await res.json();
-    chattHistorik.push(data.text ? { roll: "ai", text: data.text } : { roll: "ai", text: data.fel || "Något gick fel.", fel: true });
+    chattHistorik.push(data.text ? { roll: "ai", text: data.text } : { roll: "ai", text: data.fel || t("nagot_gick_fel"), fel: true });
   } catch (e) {
-    chattHistorik.push({ roll: "ai", text: "Kunde inte nå servern: " + e.message, fel: true });
+    chattHistorik.push({ roll: "ai", text: `${t("kunde_inte_na_servern")} ${e.message}`, fel: true });
   }
   chattVantar = false; renderaChatt();
 }

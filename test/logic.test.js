@@ -262,9 +262,9 @@ describe("vaxtfamiljFor", () => {
 });
 
 describe("vaxtinfoFor", () => {
-  test("every entry in VAXT_DATABAS has all five care-info fields filled in", () => {
+  test("every entry in VAXT_DATABAS has all six care-info fields filled in", () => {
     for (const [nyckel, info] of Object.entries(VAXT_DATABAS)) {
-      for (const falt of ["visningsnamn", "vatten", "sol", "avstand_cm", "sasong", "svarighet"]) {
+      for (const falt of ["visningsnamn", "vatten", "sol", "avstand_cm", "sasong", "sasong_en", "svarighet"]) {
         assert.ok(info[falt] !== undefined && info[falt] !== "", `${nyckel} saknar ${falt}`);
       }
     }
