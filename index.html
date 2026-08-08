@@ -1337,6 +1337,7 @@ try {
   <div class="card" style="margin-top:20px; max-width:640px">
     <div id="hemInnehall"></div>
   </div>
+  <div id="hemSammanfattning"></div>
 
 </div>
 
@@ -2127,6 +2128,8 @@ const SPRAK_TEXT = {
     lagg_till_observation: "Lägg till observation", observation_namn_placeholder: "t.ex. Bladlöss",
     inga_observationer: "Inga observationer ännu.",
     nav_hem: "Hem", hem_rubrik: "Vad behöver göras idag", hem_tomt: "Allt är under kontroll.", hem_till_tradgarden: "Till trädgården",
+    din_tradgard: "Din trädgård", zoner_kort: "zoner", plantor_kort: "plantor",
+    nasta_skord: "Nästa skörd", senast_skordat: "Senast skördat",
     guide_steg: "Steg {n} av 3", hoppa_over: "Hoppa över",
     guide_valkommen: "Välkommen till Growarr", guide_nasta: "Nästa", guide_klar: "Klar",
     guide_steg1_hjalp: "Låt oss sätta upp er första karta, zon och planta tillsammans - tar under en minut.",
@@ -2236,6 +2239,8 @@ const SPRAK_TEXT = {
     lagg_till_observation: "Add observation", observation_namn_placeholder: "e.g. Aphids",
     inga_observationer: "No observations yet.",
     nav_hem: "Home", hem_rubrik: "What needs attention today", hem_tomt: "Everything's under control.", hem_till_tradgarden: "Go to the garden",
+    din_tradgard: "Your garden", zoner_kort: "zones", plantor_kort: "plantings",
+    nasta_skord: "Next harvest", senast_skordat: "Last harvested",
     guide_steg: "Step {n} of 3", hoppa_over: "Skip",
     guide_valkommen: "Welcome to Growarr", guide_nasta: "Next", guide_klar: "Done",
     guide_steg1_hjalp: "Let's set up your first map, zone, and planting together - takes under a minute.",
@@ -3983,6 +3988,23 @@ function renderaNotiser() {
 // Samma lista som klockans dropdown, fast som en hel sida - Hem-vyns enda
 // syfte. Väcker ingen egen AI-förfining (renderaNotiser, som alltid kör
 // tillsammans med den här, gör redan det).
+// En kompakt "läget i trädgården"-rad, orsak: en tom påminnelselista är ett
+// bra utfall men gav sidan inget innehåll alls - det här ger Hem substans
+// oavsett om det finns något akut eller ej, utan att bli ett andra
+// dashboard-kort med grafer och annat som redan finns i Översikt.
+function hemSammanfattningHtml() {
+  const totalt = odlingar.reduce((s, o) => s + antalFor(o), 0);
+  const nuManad = new Date().toISOString().slice(0, 7);
+  const kommande = odlingar.filter((o) => o.skordManad && o.skordManad >= nuManad)
+    .sort((a, b) => a.skordManad.localeCompare(b.skordManad))[0];
+  const senast = [...skordat].sort((a, b) => new Date(b.arkiveradDatum) - new Date(a.arkiveradDatum))[0];
+  return `<div class="card" style="margin-top:16px; max-width:640px">
+    <label class="lbl">${t("din_tradgard")}</label>
+    <p class="sol-timmar">🌍 ${zoner.length} ${t("zoner_kort")} · ${totalt} ${t("plantor_kort")}</p>
+    ${kommande ? `<p class="sol-timmar">🌾 ${t("nasta_skord")}: ${esc(kommande.namn)} (${manadNamn(kommande.skordManad)})</p>` : ""}
+    ${senast ? `<p class="sol-timmar">📦 ${t("senast_skordat")}: ${esc(senast.namn)} (${esc((senast.arkiveradDatum || "").slice(0, 10))})</p>` : ""}
+  </div>`;
+}
 function renderaHem() {
   const { lista } = notisKandidatlista();
   // En tom lista är ett bra utfall, inte ett tomt sidfel - egen, rymligare
@@ -3994,6 +4016,7 @@ function renderaHem() {
       <p>${t("hem_tomt")}</p>
       <a class="hem-tomt-knapp" href="#karta">${t("hem_till_tradgarden")}</a>
     </div>`;
+  $("hemSammanfattning").innerHTML = hemSammanfattningHtml();
 }
 async function hanteraNotis(id, atgard) {
   // Mjuk kollaps innan raden faktiskt försvinner ur listan – en tvär
