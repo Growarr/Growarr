@@ -149,7 +149,8 @@ try {
     color:var(--accent); box-shadow:none; }
   .notis-sa-igen:hover { background:color-mix(in srgb, var(--accent) 24%, var(--surface2)); transform:none; }
   .hem-tomt { display:flex; flex-direction:column; align-items:center; text-align:center; gap:10px; padding:48px 20px; }
-  .hem-tomt-ikon { font-size:2.4rem; line-height:1; }
+  .hem-tomt-ikon { color:var(--accent); }
+  .hem-tomt-ikon svg { width:40px; height:40px; }
   .hem-tomt p { color:var(--muted); margin:0; }
   .hem-tomt-knapp { display:inline-block; text-decoration:none; border:0; border-radius:99px; padding:10px 20px;
     font-size:var(--fs-xs); font-weight:600; background:var(--grad); color:#04140e;
@@ -1335,6 +1336,15 @@ try {
   </div>
 
   <div class="card" style="margin-top:20px; max-width:640px">
+    <h2 style="display:flex; align-items:center; gap:8px; margin-bottom:12px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c4 5 7 9 7 13a7 7 0 0 1-14 0c0-4 3-8 7-13Z"/></svg>
+      <span data-i18n="hem_insikt_rubrik">Bevattningsinsikt</span>
+    </h2>
+    <div class="insikt" id="hemInsikt">
+      <div class="skelett"><div class="skelett-rad" style="width:88%"></div><div class="skelett-rad" style="width:64%"></div></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:20px; max-width:640px">
     <div id="hemInnehall"></div>
   </div>
   <div id="hemSammanfattning"></div>
@@ -1827,6 +1837,14 @@ const IKON_KARTA = IKON_SVG('<path d="M9 3 3 5v16l6-2 6 2 6-2V3l-6 2-6-2z"/><pat
 const IKON_FROST = IKON_SVG('<path d="M12 2v20M4.9 4.9l14.2 14.2M19.1 4.9 4.9 19.1M2 12h20"/>');
 const IKON_TILLBAKA = IKON_SVG('<path d="M15 18l-6-6 6-6"/>', 14);
 const IKON_SIGNAL_BORTA = IKON_SVG('<path d="M5 7a10 10 0 0 1 3-3M19 7a10 10 0 0 0-3-3M8 10.5a5.5 5.5 0 0 1 8 0M12 15v5"/><path d="M3 3l18 18"/>');
+const IKON_DROPPE = IKON_SVG('<path d="M12 2c4 5 7 9 7 13a7 7 0 0 1-14 0c0-4 3-8 7-13Z"/>', 14);
+const IKON_SOL = IKON_SVG('<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/>', 14);
+const IKON_HALVSKUGGA = IKON_SVG('<path d="M17 18a4 4 0 0 0 0-8 5 5 0 0 0-9.6-1.5A4.5 4.5 0 0 0 7 18h10Z"/><path d="M12 3v2M5.5 6l1.4 1.4"/>', 14);
+const IKON_SKUGGA = IKON_SVG('<path d="M17 18a4 4 0 0 0 0-8 5 5 0 0 0-9.6-1.5A4.5 4.5 0 0 0 7 18h10Z"/>', 14);
+const IKON_KALENDER = IKON_SVG('<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>', 15);
+const IKON_ARKIV = IKON_SVG('<path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/>', 15);
+const IKON_SKADEDJUR = IKON_SVG('<ellipse cx="12" cy="14" rx="5" ry="6"/><path d="M12 8V5M9 6 7 4M15 6l2-2M6 12H3M6 16H3M21 12h-3M21 16h-3M8 20l-2 2M16 20l2 2"/>', 15);
+const IKON_SJUKDOM = IKON_SVG('<path d="M12 3c-4 2-7 6-7 10a7 7 0 0 0 14 0c0-4-3-8-7-10Z"/><circle cx="10" cy="14" r="1.2"/><circle cx="14" cy="11" r="0.9"/>', 15);
 
 // <option>-element kan bara visa vanlig text, inte SVG – en liten textikon-
 // karta enbart för rullgardiner, sida vid sida med linjeikonerna i ZON_TYPER.
@@ -2047,21 +2065,22 @@ function saddPeriodAktuell(planterad, intervallDagar, nu = new Date()) {
   if (dagarSedan < intervallDagar) return null;
   return Math.floor(dagarSedan / intervallDagar);
 }
-const VATTEN_IKON = { lag: "💧", medel: "💧💧", hog: "💧💧💧" };
+const VATTEN_ANTAL = { lag: 1, medel: 2, hog: 3 };
 const VATTEN_TEXT = { lag: "Vattenbehov: lågt", medel: "Vattenbehov: medel", hog: "Vattenbehov: högt" };
-const SOL_IKON = { sol: "☀️ Full sol", halvskugga: "⛅ Halvskugga", skugga: "☁️ Skugga" };
+const SOL_IKON = { sol: IKON_SOL, halvskugga: IKON_HALVSKUGGA, skugga: IKON_SKUGGA };
+const SOL_TEXT = { sol: "Full sol", halvskugga: "Halvskugga", skugga: "Skugga" };
 const SVARIGHET_TEXT = { latt: "Lätt", medel: "Medel", svar: "Kräver erfarenhet" };
 // Neutral info card, not a warning - reuses the same live-update wiring as
 // familjVarningHtml but with plain text color, no --warn styling. The water
-// indicator is emoji-only visually, so it carries an aria-label - unlike the
-// sun one, it has no attached text a screen reader could fall back to.
+// indicator is icon-only visually, so it carries an aria-label - the sun
+// one has its own attached text already, so it doesn't need one too.
 function vaxtinfoHtml(namn) {
   const v = vaxtinfoFor(namn);
   if (!v) return "";
   return `<div class="vaxtinfo-kort">
-    <div class="vaxtinfo-rad"><span aria-label="${VATTEN_TEXT[v.vatten]}">${VATTEN_IKON[v.vatten]}</span><span>${SOL_IKON[v.sol]}</span><span>↔ ${v.avstand_cm} cm mellan plantor</span></div>
+    <div class="vaxtinfo-rad"><span aria-label="${VATTEN_TEXT[v.vatten]}">${IKON_DROPPE.repeat(VATTEN_ANTAL[v.vatten])}</span><span>${SOL_IKON[v.sol]} ${SOL_TEXT[v.sol]}</span><span>↔ ${v.avstand_cm} cm mellan plantor</span></div>
     <div class="vaxtinfo-rad"><span>${esc(v.sasong)}</span></div>
-    ${v.saddIntervallDagar ? `<div class="vaxtinfo-rad"><span>🔁 Kan sås i omgångar var ${v.saddIntervallDagar}:e dag för jämn skörd</span></div>` : ""}
+    ${v.saddIntervallDagar ? `<div class="vaxtinfo-rad"><span>${IKON_UPPDATERA} Kan sås i omgångar var ${v.saddIntervallDagar}:e dag för jämn skörd</span></div>` : ""}
     <div class="vaxtinfo-rad"><span class="vaxtinfo-svarighet">${SVARIGHET_TEXT[v.svarighet]}</span></div>
   </div>`;
 }
@@ -2127,7 +2146,7 @@ const SPRAK_TEXT = {
     observationer: "Observationer", skadedjur: "Skadedjur", sjukdom: "Sjukdom",
     lagg_till_observation: "Lägg till observation", observation_namn_placeholder: "t.ex. Bladlöss",
     inga_observationer: "Inga observationer ännu.",
-    nav_hem: "Hem", hem_rubrik: "Vad behöver göras idag", hem_tomt: "Allt är under kontroll.", hem_till_tradgarden: "Till trädgården",
+    nav_hem: "Hem", hem_rubrik: "Vad behöver göras idag", hem_insikt_rubrik: "Bevattningsinsikt", hem_tomt: "Allt är under kontroll.", hem_till_tradgarden: "Till trädgården",
     din_tradgard: "Din trädgård", zoner_kort: "zoner", plantor_kort: "plantor",
     nasta_skord: "Nästa skörd", senast_skordat: "Senast skördat",
     guide_steg: "Steg {n} av 3", hoppa_over: "Hoppa över",
@@ -2238,7 +2257,7 @@ const SPRAK_TEXT = {
     observationer: "Observations", skadedjur: "Pest", sjukdom: "Disease",
     lagg_till_observation: "Add observation", observation_namn_placeholder: "e.g. Aphids",
     inga_observationer: "No observations yet.",
-    nav_hem: "Home", hem_rubrik: "What needs attention today", hem_tomt: "Everything's under control.", hem_till_tradgarden: "Go to the garden",
+    nav_hem: "Home", hem_rubrik: "What needs attention today", hem_insikt_rubrik: "Watering insight", hem_tomt: "Everything's under control.", hem_till_tradgarden: "Go to the garden",
     din_tradgard: "Your garden", zoner_kort: "zones", plantor_kort: "plantings",
     nasta_skord: "Next harvest", senast_skordat: "Last harvested",
     guide_steg: "Step {n} of 3", hoppa_over: "Skip",
@@ -2479,16 +2498,20 @@ function bevattningHeuristik(data) {
 // hamtaSmartBevattning). Faller tillbaka på den enkla regelbaserade insikten
 // ovan om ANTHROPIC_API_KEY inte är satt eller anropet misslyckas.
 async function laddaBevattning() {
+  let html;
   try {
     const res = await fetch(`${BAS}api/watering`, { cache: "no-store" });
     const data = await res.json();
     if (data.text) {
       const kl = new Date(data.tid).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
-      $("bevattningInnehall").innerHTML = `<span>${formatAiText(data.text)}<div class="ai-tid">Uppdaterad ${kl}</div></span>`;
-      return;
+      html = `<span>${formatAiText(data.text)}<div class="ai-tid">Uppdaterad ${kl}</div></span>`;
     }
   } catch { /* faller igenom till heuristiken nedan */ }
-  $("bevattningInnehall").innerHTML = bevattningHeuristik(senasteVader);
+  html ??= bevattningHeuristik(senasteVader);
+  for (const id of ["bevattningInnehall", "hemInsikt"]) {
+    const el = $(id);
+    if (el) el.innerHTML = html;
+  }
 }
 
 async function laddaOdlingar() {
@@ -3856,7 +3879,7 @@ function berakningNotiser() {
     if (period === null) continue;
     const zon = zoner.find((z) => z.id === o.zonId);
     notiser.push({
-      id: `sadd-${o.id}-p${period}`, ikon: "🔁", niva: "info",
+      id: `sadd-${o.id}-p${period}`, ikon: IKON_UPPDATERA, niva: "info",
       titel: `Dags att så mer ${o.namn}`, text: zon ? `${zon.namn} · för jämn skörd` : "För jämn skörd",
     });
   }
@@ -3952,7 +3975,7 @@ function notisRaderHtml(lista, tomText) {
       <div class="info">
         <div class="titel">${esc(n.titel)}</div>
         <div class="text">${formatAiText(n.text)}</div>
-        ${n.id.startsWith("sadd-") ? `<button class="notis-sa-igen" data-id="${esc(n.id)}">🌱 Så igen</button>` : ""}
+        ${n.id.startsWith("sadd-") ? `<button class="notis-sa-igen" data-id="${esc(n.id)}">${IKON_SPRA} Så igen</button>` : ""}
       </div>
       <div class="notis-atgarder">
         <button class="notis-klar" data-id="${esc(n.id)}" title="Markera som klar">✓</button>
@@ -4000,9 +4023,9 @@ function hemSammanfattningHtml() {
   const senast = [...skordat].sort((a, b) => new Date(b.arkiveradDatum) - new Date(a.arkiveradDatum))[0];
   return `<div class="card" style="margin-top:16px; max-width:640px">
     <label class="lbl">${t("din_tradgard")}</label>
-    <p class="sol-timmar">🌍 ${zoner.length} ${t("zoner_kort")} · ${totalt} ${t("plantor_kort")}</p>
-    ${kommande ? `<p class="sol-timmar">🌾 ${t("nasta_skord")}: ${esc(kommande.namn)} (${manadNamn(kommande.skordManad)})</p>` : ""}
-    ${senast ? `<p class="sol-timmar">📦 ${t("senast_skordat")}: ${esc(senast.namn)} (${esc((senast.arkiveradDatum || "").slice(0, 10))})</p>` : ""}
+    <p class="sol-timmar">${IKON_KARTA} ${zoner.length} ${t("zoner_kort")} · ${totalt} ${t("plantor_kort")}</p>
+    ${kommande ? `<p class="sol-timmar">${IKON_KALENDER} ${t("nasta_skord")}: ${esc(kommande.namn)} (${manadNamn(kommande.skordManad)})</p>` : ""}
+    ${senast ? `<p class="sol-timmar">${IKON_ARKIV} ${t("senast_skordat")}: ${esc(senast.namn)} (${esc((senast.arkiveradDatum || "").slice(0, 10))})</p>` : ""}
   </div>`;
 }
 function renderaHem() {
@@ -4012,7 +4035,7 @@ function renderaHem() {
   // tomrad, plus en genväg vidare till kartan så sidan alltid leder någonstans.
   $("hemInnehall").innerHTML = lista.length ? notisRaderHtml(lista, t("hem_tomt")) : `
     <div class="hem-tomt">
-      <div class="hem-tomt-ikon">🌱</div>
+      <div class="hem-tomt-ikon">${IKON_SPRA}</div>
       <p>${t("hem_tomt")}</p>
       <a class="hem-tomt-knapp" href="#karta">${t("hem_till_tradgarden")}</a>
     </div>`;
@@ -4916,7 +4939,7 @@ function fotoGalleriHtml(malTyp, malId) {
   </div>`;
 }
 
-const OBSERVATION_IKON = { skadedjur: "🐛", sjukdom: "🍂" };
+const OBSERVATION_IKON = { skadedjur: IKON_SKADEDJUR, sjukdom: IKON_SJUKDOM };
 // Skadedjurs-/sjukdomsobservationer - fritextnamn (ingen kuraterbar lista,
 // till skillnad från VAXT_DATABAS), nyast först som zonSkordatHtml redan
 // gör. Inte kopplat till växtföljdsvarningen - en egen, djupare funktion.
@@ -4927,7 +4950,7 @@ function observationerHtml(malTyp, malId) {
     <label class="lbl">${t("observationer")}</label>
     ${lista.length ? `<div class="plant-lista">${lista.map((o) => `
       <div class="plant-rad">
-        <span class="plant-ikon">${OBSERVATION_IKON[o.typ] ?? "🔎"}</span>
+        <span class="plant-ikon">${OBSERVATION_IKON[o.typ] ?? IKON_LISTA}</span>
         <span class="namn">${esc(o.namn)}${o.anteckning ? ` · ${esc(o.anteckning)}` : ""}</span>
         <span class="varde">${esc(o.datum)}</span>
         ${redigerarLayout ? `<button class="ta-bort observation-ta-bort" data-id="${esc(o.id)}" title="${t("ta_bort")}" style="position:static">×</button>` : ""}
@@ -4957,7 +4980,7 @@ function zonPlantorHtml(z) {
       <div class="plant-rad plant-rad-klickbar" data-id="${esc(o.id)}">
         <span class="plant-ikon">${ikonForVaxt(o.namn)}</span>
         <span class="namn">${esc(o.namn)}${o.sort ? ` · ${esc(o.sort)}` : ""}</span>
-        <span class="varde">${antalFor(o)} st${layoutFor(o) === "fyll" ? " · fyller ytan" : ""}${o.skordManad ? ` · ${esc(manadNamn(o.skordManad))}` : ""}${!o.planterad && o.saddInomhusDatum ? ` · 🌱 sådd ${esc(o.saddInomhusDatum)}` : ""}</span>
+        <span class="varde">${antalFor(o)} st${layoutFor(o) === "fyll" ? " · fyller ytan" : ""}${o.skordManad ? ` · ${esc(manadNamn(o.skordManad))}` : ""}${!o.planterad && o.saddInomhusDatum ? ` · ${IKON_SPRA} sådd ${esc(o.saddInomhusDatum)}` : ""}</span>
         ${redigerarLayout ? `<button class="ta-bort odling-ta-bort" data-id="${esc(o.id)}" title="Ta bort planta" style="position:static">×</button>` : ""}
       </div>`).join("")}</div>` : `<div class="tom">${t("inga_plantor")}</div>`}
     <label class="lbl" style="margin-top:18px">${t("lagg_till_planta")}</label>
