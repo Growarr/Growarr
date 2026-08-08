@@ -103,10 +103,10 @@ async function lasData() {
       widgets: d.widgets ?? [], installningar: d.installningar ?? {}, historik: d.historik ?? [],
       notiser: d.notiser ?? [], scheman: d.scheman ?? [],
       tradgardsAutomationer: d.tradgardsAutomationer ?? [], objekt: d.objekt ?? [],
-      skordat: d.skordat ?? [], foton: d.foton ?? [],
+      skordat: d.skordat ?? [], foton: d.foton ?? [], observationer: d.observationer ?? [],
     };
   } catch {
-    return { kartor: [], zoner: [], odlingar: [], enheter: [], widgets: [], installningar: {}, historik: [], notiser: [], scheman: [], tradgardsAutomationer: [], objekt: [], skordat: [], foton: [] };
+    return { kartor: [], zoner: [], odlingar: [], enheter: [], widgets: [], installningar: {}, historik: [], notiser: [], scheman: [], tradgardsAutomationer: [], objekt: [], skordat: [], foton: [], observationer: [] };
   }
 }
 async function skrivData(data) {
@@ -1277,26 +1277,26 @@ const server = createServer(async (req, res) => {
       return skickaJson(res, 200, await lasData());
     }
     if (req.method === "POST" && p.endsWith("/api/plantings")) {
-      const { namn, planterad, skordFonster, skordManad, anteckning, zonId, antal, layout, sort } = await lasBody(req);
+      const { namn, planterad, skordFonster, skordManad, anteckning, zonId, antal, layout, sort, saddInomhusDatum } = await lasBody(req);
       if (!namn) return skickaJson(res, 400, { fel: "namn saknas" });
       const data = await muteraData((d) => {
         d.odlingar.push({
           id: randomUUID(), namn, planterad: planterad || "",
           skordFonster: skordFonster || "", skordManad: skordManad || "", anteckning: anteckning || "",
-          zonId: zonId || "", jord: "", sort: sort || "", enhetIds: [],
+          zonId: zonId || "", jord: "", sort: sort || "", saddInomhusDatum: saddInomhusDatum || "", enhetIds: [],
           antal: rensaAntal(antal), layout: rensaLayout(layout),
         });
       });
       return skickaJson(res, 200, data);
     }
     if (req.method === "POST" && p.endsWith("/api/plantings/update")) {
-      const { id, namn, planterad, skordFonster, skordManad, anteckning, jord, sort, enhetIds, zonId, x, y, antal, layout } = await lasBody(req);
+      const { id, namn, planterad, skordFonster, skordManad, anteckning, jord, sort, saddInomhusDatum, enhetIds, zonId, x, y, antal, layout } = await lasBody(req);
       const data = await muteraData((d) => {
         const o = d.odlingar.find((o2) => o2.id === id);
         if (!o) return;
         Object.assign(o, {
           planterad: planterad || "", skordFonster: skordFonster || "", skordManad: skordManad || "",
-          anteckning: anteckning || "", jord: jord || "", sort: sort || "", enhetIds: enhetIds ?? [],
+          anteckning: anteckning || "", jord: jord || "", sort: sort || "", saddInomhusDatum: saddInomhusDatum || "", enhetIds: enhetIds ?? [],
         });
         // Only touched when actually sent, and never blanked: several code
         // paths (dragging on the map, linking an entity) call this without a
@@ -1318,6 +1318,7 @@ const server = createServer(async (req, res) => {
         d.odlingar = d.odlingar.filter((o) => o.id !== id);
         borttagnaFoton = d.foton.filter((f) => f.malTyp === "odling" && f.malId === id);
         d.foton = d.foton.filter((f) => !(f.malTyp === "odling" && f.malId === id));
+        d.observationer = d.observationer.filter((o) => !(o.malTyp === "odling" && o.malId === id));
       });
       await Promise.all(borttagnaFoton.map((f) => unlink(join(PHOTOS_DIR, `${f.id}.jpg`)).catch(() => {})));
       return skickaJson(res, 200, data);
@@ -1594,6 +1595,32 @@ const server = createServer(async (req, res) => {
         return skickaJson(res, 404, { fel: "inget foto med det id:t" });
       }
     }
+    // Skadedjur/sjukdomsobservationer - kopplade till en zon eller planting,
+    // precis som foton (malTyp/malId). Fritextnamn, ingen förvald lista -
+    // till skillnad från VAXT_DATABAS finns ingen säkert kuraterbar lista
+    // över skadedjur/sjukdomar, en ofullständig eller fel lista vore värre
+    // än fritext. Inte kopplat till växtföljdsvarningen i det här steget -
+    // en riktig korrelation är en egen, djupare funktion.
+    if (req.method === "POST" && p.endsWith("/api/observations")) {
+      const { malTyp, malId, typ, namn, datum, anteckning } = await lasBody(req);
+      if ((malTyp !== "zon" && malTyp !== "odling") || !malId || (typ !== "skadedjur" && typ !== "sjukdom") || !namn) {
+        return skickaJson(res, 400, { fel: "malTyp, malId, typ och namn krävs" });
+      }
+      const data = await muteraData((d) => {
+        d.observationer.push({
+          id: randomUUID(), malTyp, malId, typ, namn: String(namn).slice(0, 80),
+          datum: datum || stockholmDatum(), anteckning: (anteckning || "").slice(0, 300),
+        });
+      });
+      return skickaJson(res, 200, data);
+    }
+    if (req.method === "POST" && p.endsWith("/api/observations/delete")) {
+      const { id } = await lasBody(req);
+      const data = await muteraData((d) => {
+        d.observationer = d.observationer.filter((o) => o.id !== id);
+      });
+      return skickaJson(res, 200, data);
+    }
     // Vattningsscheman: bara en lista veckodagar per zon - ingen faktisk
     // ventil/pump finns att styra än (se README:s Roadmap), så ett schema
     // ger en påminnelse i notiscentret på schemalagda dagar i stället för
@@ -1746,6 +1773,7 @@ const server = createServer(async (req, res) => {
         for (const o of d.odlingar) if (o.zonId === id) o.zonId = "";
         borttagnaFoton = d.foton.filter((f) => f.malTyp === "zon" && f.malId === id);
         d.foton = d.foton.filter((f) => !(f.malTyp === "zon" && f.malId === id));
+        d.observationer = d.observationer.filter((o) => !(o.malTyp === "zon" && o.malId === id));
       });
       await Promise.all(borttagnaFoton.map((f) => unlink(join(PHOTOS_DIR, `${f.id}.jpg`)).catch(() => {})));
       return skickaJson(res, 200, data);

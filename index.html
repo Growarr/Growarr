@@ -1275,8 +1275,11 @@ try {
 <div class="app-shell" id="appShell">
 <nav class="sidebar">
   <div class="brand-mark" title="Growarr"><img src="logo.png" alt="Growarr"></div>
-  <button class="side-btn" id="navDashboardBtn" data-i18n-title="nav_oversikt">
+  <button class="side-btn" id="navHemBtn" data-i18n-title="nav_hem">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/></svg>
+  </button>
+  <button class="side-btn" id="navDashboardBtn" data-i18n-title="nav_oversikt">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg>
   </button>
   <button class="side-btn" id="navAnteckningarBtn" data-i18n-title="nav_anteckningar">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/><path d="M9 13h6M9 17h6"/></svg>
@@ -1313,7 +1316,22 @@ try {
   </button>
 </div>
 
-<div class="wrap" id="dashboardVy">
+<div class="wrap" id="hemVy">
+
+  <div class="vy-header">
+    <div>
+      <p class="app-brand">Growarr</p>
+      <h1 class="vy-titel" data-i18n="hem_rubrik">Vad behöver göras idag</h1>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:20px">
+    <div id="hemInnehall"></div>
+  </div>
+
+</div>
+
+<div class="wrap" id="dashboardVy" style="display:none">
 
   <div class="vy-header">
     <div>
@@ -1710,7 +1728,10 @@ try {
         </div>
       </div>
       <div class="skapa-rad" style="margin-top:12px">
+        <div><label class="lbl">${t("sadd_inomhus")}</label><input type="date" id="oSaddInomhusDatum"></div>
         <div><label class="lbl">${t("planterad")}</label><input type="date" id="oPlanterad"></div>
+      </div>
+      <div class="skapa-rad" style="margin-top:12px; grid-template-columns:1fr">
         <div><label class="lbl">${t("skordemanad")}</label><input type="month" id="oSkordManad"></div>
       </div>
       <div class="skapa-rad" style="margin-top:12px">
@@ -2041,6 +2062,7 @@ let kartor = [];
 let objekt = []; // trad/hus/vag/staket/skjul/damm - kartutsmyckning, inga zoner
 let skordat = []; // arkiverade odlingar - vad har växt var, och hur mycket det gav
 let foton = []; // { id, malTyp: "zon"|"odling", malId, skapad } - filen själv ligger på servern
+let observationer = []; // { id, malTyp, malId, typ: "skadedjur"|"sjukdom", namn, datum, anteckning }
 let aktivKartaId = null;
 let widgets = [];
 let senasteVader = null;
@@ -2091,6 +2113,11 @@ const SPRAK_TEXT = {
     tidigare_odlat_har: "Tidigare odlat här", skordad_mangd_placeholder: "t.ex. 4 kg",
     sort: "Sort", sort_placeholder: "t.ex. Sungold",
     foton: "Foton", visa_foto: "Visa foto", lagg_till_foto: "Lägg till foto",
+    sadd_inomhus: "Sådd inomhus",
+    observationer: "Observationer", skadedjur: "Skadedjur", sjukdom: "Sjukdom",
+    lagg_till_observation: "Lägg till observation", observation_namn_placeholder: "t.ex. Bladlöss",
+    inga_observationer: "Inga observationer ännu.",
+    nav_hem: "Hem", hem_rubrik: "Vad behöver göras idag", hem_tomt: "Allt är under kontroll 🌱",
     guide_steg: "Steg {n} av 3", hoppa_over: "Hoppa över",
     guide_valkommen: "Välkommen till Growarr", guide_nasta: "Nästa", guide_klar: "Klar",
     guide_steg1_hjalp: "Låt oss sätta upp er första karta, zon och planta tillsammans - tar under en minut.",
@@ -2195,6 +2222,11 @@ const SPRAK_TEXT = {
     tidigare_odlat_har: "Previously grown here", skordad_mangd_placeholder: "e.g. 4 kg",
     sort: "Variety", sort_placeholder: "e.g. Sungold",
     foton: "Photos", visa_foto: "View photo", lagg_till_foto: "Add photo",
+    sadd_inomhus: "Sown indoors",
+    observationer: "Observations", skadedjur: "Pest", sjukdom: "Disease",
+    lagg_till_observation: "Add observation", observation_namn_placeholder: "e.g. Aphids",
+    inga_observationer: "No observations yet.",
+    nav_hem: "Home", hem_rubrik: "What needs attention today", hem_tomt: "Everything's under control 🌱",
     guide_steg: "Step {n} of 3", hoppa_over: "Skip",
     guide_valkommen: "Welcome to Growarr", guide_nasta: "Next", guide_klar: "Done",
     guide_steg1_hjalp: "Let's set up your first map, zone, and planting together - takes under a minute.",
@@ -2448,10 +2480,11 @@ async function laddaOdlingar() {
     objekt = data.objekt ?? [];
     skordat = data.skordat ?? [];
     foton = data.foton ?? [];
+    observationer = data.observationer ?? [];
     widgets = data.widgets ?? [];
     notiserHanterade = data.notiser ?? [];
     scheman = data.scheman ?? [];
-  } catch { odlingar = []; zoner = []; kartor = []; objekt = []; skordat = []; foton = []; widgets = []; notiserHanterade = []; scheman = []; }
+  } catch { odlingar = []; zoner = []; kartor = []; objekt = []; skordat = []; foton = []; observationer = []; widgets = []; notiserHanterade = []; scheman = []; }
   // Håll aktiv flik giltig även om kartan tagits bort i en annan flik/enhet.
   if (!kartor.some((k) => k.id === aktivKartaId)) aktivKartaId = kartor[0]?.id ?? null;
   renderaKartaFlikar();
@@ -3579,10 +3612,11 @@ $("oLaggTillBtn").addEventListener("click", async () => {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         namn, sort: $("oSort").value.trim(), zonId: $("oZon").value, planterad: $("oPlanterad").value, antal: $("oAntal").value, layout: $("oLayout").value,
+        saddInomhusDatum: $("oSaddInomhusDatum").value,
         skordManad: $("oSkordManad").value, skordFonster: $("oSkord").value.trim(), anteckning: $("oAnteckning").value.trim(),
       }),
     });
-    $("oNamn").value = ""; $("oSort").value = ""; $("oPlanterad").value = ""; $("oSkordManad").value = ""; $("oSkord").value = "";
+    $("oNamn").value = ""; $("oSort").value = ""; $("oSaddInomhusDatum").value = ""; $("oPlanterad").value = ""; $("oSkordManad").value = ""; $("oSkord").value = "";
     $("oAnteckning").value = ""; $("oAntal").value = "1"; $("oLayout").value = "klunga";
     $("oFamiljVarning").innerHTML = "";
     await laddaOdlingar();
@@ -3834,9 +3868,16 @@ function berakningNotiser() {
     if (!s.veckodagar.includes(idagVeckodag)) continue;
     const zon = zoner.find((z) => z.id === s.zonId);
     if (!zon) continue;
+    // Regn ersätter inte bevattning under tak - bara zonens egen typ
+    // kollas (inte en förälderzon), så en låda som råkar vara en sektion
+    // inuti ett växthus skippas ändå av regnkollen i den här passet.
+    const regnarNog = (senasteVader?.dagar?.[0]?.nederbord ?? 0) >= 4;
+    const skyddad = zon.typ === "vaxthus" || zon.typ === "inomhus";
+    if (regnarNog && !skyddad) continue;
     notiser.push({
       id: `schema-${s.id}-${idag}`, ikon: "💧", niva: "info",
-      titel: `Dags att vattna ${zon.namn}`, text: "Enligt ditt schema.",
+      titel: `Dags att vattna ${zon.namn}`,
+      text: skyddad ? "Enligt ditt schema." : "Enligt ditt schema (ingen betydande nederbörd i prognosen).",
     });
   }
   return notiser;
@@ -3870,7 +3911,10 @@ async function hamtaAiForNotiser(nyckel, kandidater) {
   notiserAiState = { nyckel, resultat };
   renderaNotiser();
 }
-function renderaNotiser() {
+// Delad av klockan (renderaNotiser, en kort lista i en dropdown) och
+// Hem-vyn (renderaHem, samma lista som en hel sida) - båda ska visa exakt
+// samma innehåll, bara olika mycket plats.
+function notisKandidatlista() {
   const kandidater = synligaNotiser();
   const nyckel = kandidater.map((k) => k.id).sort().join(",");
   const aiTraff = notiserAiState?.nyckel === nyckel ? notiserAiState.resultat : null;
@@ -3878,13 +3922,10 @@ function renderaNotiser() {
   // filtrera mot de faktiskt synliga kandidaterna så inget klarmarkerat
   // dyker upp igen bara för att det låg kvar i ett cachat AI-svar.
   const lista = aiTraff?.viaAi ? aiTraff.notiser.filter((n) => kandidater.some((k) => k.id === n.id)) : kandidater;
-
-  const badge = $("notisBadge");
-  badge.textContent = String(lista.length);
-  badge.style.display = lista.length ? "" : "none";
-  $("notisBtn").classList.toggle("har-notiser", lista.length > 0);
-  $("notisAiEtikett").style.display = aiTraff?.viaAi ? "" : "none";
-  $("notisLista").innerHTML = lista.length ? lista.map((n) => `
+  return { kandidater, nyckel, aiTraff, lista };
+}
+function notisRaderHtml(lista, tomText) {
+  return lista.length ? lista.map((n) => `
     <div class="notis-rad ${n.niva}" data-id="${esc(n.id)}">
       <span class="ikon">${n.ikon}</span>
       <div class="info">
@@ -3897,7 +3938,17 @@ function renderaNotiser() {
         <button class="notis-avvisa" data-id="${esc(n.id)}" title="Avvisa">×</button>
       </div>
     </div>`).join("")
-    : `<div class="tom" style="padding:20px 4px">${t("inga_notiser")}</div>`;
+    : `<div class="tom" style="padding:20px 4px">${tomText}</div>`;
+}
+function renderaNotiser() {
+  const { kandidater, nyckel, aiTraff, lista } = notisKandidatlista();
+
+  const badge = $("notisBadge");
+  badge.textContent = String(lista.length);
+  badge.style.display = lista.length ? "" : "none";
+  $("notisBtn").classList.toggle("har-notiser", lista.length > 0);
+  $("notisAiEtikett").style.display = aiTraff?.viaAi ? "" : "none";
+  $("notisLista").innerHTML = notisRaderHtml(lista, t("inga_notiser"));
 
   // Skicka kandidaterna till Claude i bakgrunden om listan skiljer sig från
   // det vi redan har (eller väntar på). Panelen visar redan de vanliga,
@@ -3911,6 +3962,14 @@ function renderaNotiser() {
     clearTimeout(notiserAiTimer);
     notiserAiTimer = setTimeout(() => hamtaAiForNotiser(nyckel, kandidater), 500);
   }
+  renderaHem(); // samma lista, oavsett om Hem-vyn råkar vara den synliga just nu - alltid uppdaterad tillsammans med klockan, aldrig ur synk
+}
+// Samma lista som klockans dropdown, fast som en hel sida - Hem-vyns enda
+// syfte. Väcker ingen egen AI-förfining (renderaNotiser, som alltid kör
+// tillsammans med den här, gör redan det).
+function renderaHem() {
+  const { lista } = notisKandidatlista();
+  $("hemInnehall").innerHTML = notisRaderHtml(lista, t("hem_tomt"));
 }
 async function hanteraNotis(id, atgard) {
   // Mjuk kollaps innan raden faktiskt försvinner ur listan – en tvär
@@ -4416,7 +4475,8 @@ async function sparaOdling(id, patch) {
   if (!o) return;
   const body = {
     id, planterad: o.planterad ?? "", skordManad: o.skordManad ?? "", skordFonster: o.skordFonster ?? "",
-    jord: o.jord ?? "", sort: o.sort ?? "", anteckning: o.anteckning ?? "", enhetIds: o.enhetIds ?? [], ...patch,
+    jord: o.jord ?? "", sort: o.sort ?? "", saddInomhusDatum: o.saddInomhusDatum ?? "",
+    anteckning: o.anteckning ?? "", enhetIds: o.enhetIds ?? [], ...patch,
   };
   await fetch(`${BAS}api/plantings/update`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   await laddaOdlingar();
@@ -4809,6 +4869,34 @@ function fotoGalleriHtml(malTyp, malId) {
   </div>`;
 }
 
+const OBSERVATION_IKON = { skadedjur: "🐛", sjukdom: "🍂" };
+// Skadedjurs-/sjukdomsobservationer - fritextnamn (ingen kuraterbar lista,
+// till skillnad från VAXT_DATABAS), nyast först som zonSkordatHtml redan
+// gör. Inte kopplat till växtföljdsvarningen - en egen, djupare funktion.
+function observationerHtml(malTyp, malId) {
+  const lista = observationer.filter((o) => o.malTyp === malTyp && o.malId === malId)
+    .sort((a, b) => new Date(b.datum) - new Date(a.datum));
+  return `<div class="modal-entiteter">
+    <label class="lbl">${t("observationer")}</label>
+    ${lista.length ? `<div class="plant-lista">${lista.map((o) => `
+      <div class="plant-rad">
+        <span class="plant-ikon">${OBSERVATION_IKON[o.typ] ?? "🔎"}</span>
+        <span class="namn">${esc(o.namn)}${o.anteckning ? ` · ${esc(o.anteckning)}` : ""}</span>
+        <span class="varde">${esc(o.datum)}</span>
+        ${redigerarLayout ? `<button class="ta-bort observation-ta-bort" data-id="${esc(o.id)}" title="${t("ta_bort")}" style="position:static">×</button>` : ""}
+      </div>`).join("")}</div>` : `<div class="tom">${t("inga_observationer")}</div>`}
+    <div class="modal-lagg-entitet">
+      <select id="obsTyp-${esc(malTyp)}-${esc(malId)}">
+        <option value="skadedjur">${OBSERVATION_IKON.skadedjur} ${t("skadedjur")}</option>
+        <option value="sjukdom">${OBSERVATION_IKON.sjukdom} ${t("sjukdom")}</option>
+      </select>
+      <input type="text" id="obsNamn-${esc(malTyp)}-${esc(malId)}" maxlength="80" placeholder="${t("observation_namn_placeholder")}">
+      <input type="date" id="obsDatum-${esc(malTyp)}-${esc(malId)}" value="${esc(dagensDatum())}">
+      <button class="observation-lagg-till" data-mal-typ="${esc(malTyp)}" data-mal-id="${esc(malId)}">${t("lagg_till_observation")}</button>
+    </div>
+  </div>`;
+}
+
 // Plantor i en zon, direkt i detaljpanelen – lägga till går alltid, men
 // borttagning kräver att Redigera är påslaget så man inte råkar radera.
 // Antalet anges alltid, och "Fyll hela ytan" sprider sorten över lådan i
@@ -4822,7 +4910,7 @@ function zonPlantorHtml(z) {
       <div class="plant-rad plant-rad-klickbar" data-id="${esc(o.id)}">
         <span class="plant-ikon">${ikonForVaxt(o.namn)}</span>
         <span class="namn">${esc(o.namn)}${o.sort ? ` · ${esc(o.sort)}` : ""}</span>
-        <span class="varde">${antalFor(o)} st${layoutFor(o) === "fyll" ? " · fyller ytan" : ""}${o.skordManad ? ` · ${esc(manadNamn(o.skordManad))}` : ""}</span>
+        <span class="varde">${antalFor(o)} st${layoutFor(o) === "fyll" ? " · fyller ytan" : ""}${o.skordManad ? ` · ${esc(manadNamn(o.skordManad))}` : ""}${!o.planterad && o.saddInomhusDatum ? ` · 🌱 sådd ${esc(o.saddInomhusDatum)}` : ""}</span>
         ${redigerarLayout ? `<button class="ta-bort odling-ta-bort" data-id="${esc(o.id)}" title="Ta bort planta" style="position:static">×</button>` : ""}
       </div>`).join("")}</div>` : `<div class="tom">${t("inga_plantor")}</div>`}
     <label class="lbl" style="margin-top:18px">${t("lagg_till_planta")}</label>
@@ -5144,6 +5232,7 @@ function renderaDetaljPanel() {
       ${zonSektionerHtml(z)}
       ${zonSkordatHtml(z)}
       ${fotoGalleriHtml("zon", z.id)}
+      ${observationerHtml("zon", z.id)}
       <div class="modal-entiteter">
         <label class="lbl">${t("detaljer")}</label>
         <div class="skapa-rad" style="margin-top:12px">
@@ -5182,6 +5271,7 @@ function renderaDetaljPanel() {
       </div>
       ${vaxtinfoHtml(o.namn)}
       ${fotoGalleriHtml("odling", o.id)}
+      ${observationerHtml("odling", o.id)}
       ${kopplaEntiteterHtml(o.enhetIds)}
       ${detaljHistorikHtml(o.enhetIds)}
       <div class="modal-entiteter">
@@ -5203,7 +5293,8 @@ function renderaDetaljPanel() {
             </select>
           </div>
         </div>
-        <div class="falt" style="margin-top:14px"><label class="lbl">${t("planterad")}</label><input type="date" id="mPlanterad" value="${esc(o.planterad ?? "")}"></div>
+        <div class="falt" style="margin-top:14px"><label class="lbl">${t("sadd_inomhus")}</label><input type="date" id="mSaddInomhusDatum" value="${esc(o.saddInomhusDatum ?? "")}"></div>
+        <div class="falt"><label class="lbl">${t("planterad")}</label><input type="date" id="mPlanterad" value="${esc(o.planterad ?? "")}"></div>
         <div class="falt"><label class="lbl">${t("skordemanad")}</label><input type="month" id="mSkordManad" value="${esc(o.skordManad ?? "")}"></div>
         <div class="falt"><label class="lbl">${t("skordefonster")}</label><input type="text" id="mSkordFonster" value="${esc(o.skordFonster ?? "")}"></div>
         <div class="falt"><label class="lbl">${t("jord")}</label><input type="text" id="mJord" placeholder="${t("jord_placeholder_planta")}" value="${esc(o.jord ?? "")}"></div>
@@ -5262,6 +5353,29 @@ document.addEventListener("click", async (e) => {
   if (fotoTaBort) {
     await fetch(`${BAS}api/photos/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: fotoTaBort.dataset.id }) });
     stangModal();
+    await laddaOdlingar();
+    renderaDetaljPanel();
+    return;
+  }
+  const obsLaggTill = e.target.closest(".observation-lagg-till");
+  if (obsLaggTill) {
+    const { malTyp, malId } = obsLaggTill.dataset;
+    const namn = $(`obsNamn-${malTyp}-${malId}`)?.value.trim();
+    if (!namn) return;
+    await fetch(`${BAS}api/observations`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        malTyp, malId, typ: $(`obsTyp-${malTyp}-${malId}`).value,
+        namn, datum: $(`obsDatum-${malTyp}-${malId}`).value,
+      }),
+    });
+    await laddaOdlingar();
+    renderaDetaljPanel();
+    return;
+  }
+  const obsTaBort = e.target.closest(".observation-ta-bort");
+  if (obsTaBort) {
+    await fetch(`${BAS}api/observations/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: obsTaBort.dataset.id }) });
     await laddaOdlingar();
     renderaDetaljPanel();
     return;
@@ -5349,6 +5463,7 @@ document.addEventListener("click", async (e) => {
       } else {
         await sparaOdling(valtMal.id, {
           namn: nyttNamn, sort: $("mSort")?.value.trim() ?? "",
+          saddInomhusDatum: $("mSaddInomhusDatum")?.value ?? "",
           planterad: $("mPlanterad").value, skordManad: $("mSkordManad").value,
           skordFonster: $("mSkordFonster").value.trim(), jord: $("mJord").value.trim(), anteckning: $("mAnteckning").value.trim(),
           antal: $("mAntal").value, layout: $("mLayout").value,
@@ -6088,7 +6203,8 @@ $("solReglage").addEventListener("change", () => {
 // styrt av URL-hash så att bakåtknappen i webbläsaren fungerar och länken
 // går att dela/bokmärka.
 const VYER = {
-  "": { vy: "dashboardVy", nav: "navDashboardBtn" },
+  "": { vy: "hemVy", nav: "navHemBtn" },
+  karta: { vy: "dashboardVy", nav: "navDashboardBtn" },
   anteckningar: { vy: "anteckningarVy", nav: "navAnteckningarBtn" },
   historik: { vy: "historikVy", nav: "navHistorikBtn" },
   schema: { vy: "schemaVy", nav: "navSchemaBtn" },
@@ -6096,7 +6212,10 @@ const VYER = {
 };
 function visaVy() {
   const hash = location.hash.replace(/^#/, "");
-  const aktiv = VYER[hash] ?? VYER[""];
+  // En skannad QR-etikett (#zon=<id>) ska landa på kartan, där zonens
+  // detaljark faktiskt ligger - annars öppnas arket osynligt bakom Hem,
+  // som numera är standardvyn.
+  const aktiv = hash.startsWith("zon=") ? VYER.karta : (VYER[hash] ?? VYER[""]);
   for (const key in VYER) {
     const v = VYER[key];
     $(v.vy).style.display = v === aktiv ? "" : "none";
@@ -6110,6 +6229,7 @@ function visaVy() {
   // Kartan är omätbar medan översikten är dold (0 px), så anpassningen måste
   // göras om när man kommer tillbaka hit.
   if (aktiv.vy === "dashboardVy" && !kartaAnvandarstyrd) passaKarta();
+  if (aktiv.vy === "hemVy") renderaHem();
   if (aktiv.vy === "anteckningarVy") renderaAnteckningar();
   if (aktiv.vy === "historikVy") renderaGlobalHistorik();
   if (aktiv.vy === "schemaVy") { renderaSchema(); laddaSchemaForslag(); laddaAutomationer(); }
@@ -6130,7 +6250,8 @@ function oppnaFranHash() {
   valjMal("zon", id);
 }
 window.addEventListener("hashchange", () => { visaVy(); oppnaFranHash(); });
-$("navDashboardBtn").addEventListener("click", () => { location.hash = ""; });
+$("navHemBtn").addEventListener("click", () => { location.hash = ""; });
+$("navDashboardBtn").addEventListener("click", () => { location.hash = "karta"; });
 $("navAnteckningarBtn").addEventListener("click", () => { location.hash = "anteckningar"; });
 $("navHistorikBtn").addEventListener("click", () => { location.hash = "historik"; });
 $("navSchemaBtn").addEventListener("click", () => { location.hash = "schema"; });
@@ -6252,7 +6373,7 @@ function oppnaOdlingFranAnnanVy(id) {
     kartaAnvandarstyrd = false;
     renderaKartaFlikar();
   }
-  location.hash = "";
+  location.hash = "karta";
   visaVy();
   renderaKarta();
   valjMal("odling", id);
@@ -6838,7 +6959,7 @@ async function guideNasta() {
       });
       await laddaOdlingar();
       stangGuide(true);
-      location.hash = "";
+      location.hash = "karta"; // detaljarket ligger inuti dashboardVy - osynligt om Hem visas istället
       if (guideZonId) { valtMal = { typ: "zon", id: guideZonId }; visaSheet(true); renderaDetaljPanel(); }
     }
   } catch (err) {
