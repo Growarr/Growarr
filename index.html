@@ -218,9 +218,10 @@ try {
   .vaxtinfo-rad { display:flex; gap:14px; flex-wrap:wrap; }
   .vaxtinfo-svarighet { font-weight:600; color:var(--text); }
   .foto-galleri { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
-  .foto-tumnagel { width:64px; height:64px; padding:0; border:1px solid var(--border); border-radius:var(--r-sm);
-    overflow:hidden; background:var(--surface2); cursor:pointer; }
-  .foto-tumnagel img { width:100%; height:100%; object-fit:cover; display:block; }
+  .foto-tumnagel { width:64px; padding:0; border:1px solid var(--border); border-radius:var(--r-sm);
+    overflow:hidden; background:var(--surface2); cursor:pointer; display:flex; flex-direction:column; }
+  .foto-tumnagel img { width:100%; height:64px; object-fit:cover; display:block; }
+  .foto-datum { font-size:var(--fs-2xs); color:var(--muted); padding:2px 0; text-align:center; }
   .foto-lagg-till { width:64px; height:64px; border:1px dashed var(--border); border-radius:var(--r-sm);
     background:transparent; color:var(--muted); font-size:1.4rem; cursor:pointer; }
   .foto-lagg-till:hover { border-color:var(--accent); color:var(--accent); }
@@ -1974,6 +1975,10 @@ const VAXT_DATABAS = {
     sasong: "Så inomhus april, ställ ut efter frostrisk i juni - känslig för kyla", svarighet: "medel" },
   jordgubbe: { visningsnamn: "Jordgubbe", vatten: "medel", sol: "sol", avstand_cm: 30,
     sasong: "Plantera vår eller höst, full skörd andra året, skörda jun–jul", svarighet: "latt" },
+  persilja: { visningsnamn: "Persilja", vatten: "medel", sol: "halvskugga", avstand_cm: 15,
+    sasong: "Så direkt eller inomhus från april - långsam att gro, skörda kontinuerligt jun–okt", svarighet: "latt" },
+  selleri: { visningsnamn: "Selleri", vatten: "hog", sol: "sol", avstand_cm: 25,
+    sasong: "Så inomhus feb–mars, plantera ut i juni, skörda sep–okt", svarighet: "svar" },
 };
 const VAXT_DATABAS_UNDANTAG = [/jordärtskocka|kronärtskocka|potatislök/i];
 const VAXT_DATABAS_MONSTER = [
@@ -1983,7 +1988,7 @@ const VAXT_DATABAS_MONSTER = [
   [/rädisa|rädisor/i, "radisa"], [/rödbeta|rödbetor/i, "rodbeta"], [/purjolök/i, "purjolok"],
   [/vitlök/i, "vitlok"], [/lök/i, "lok"], [/kål/i, "kal"], [/sallad|sallat/i, "sallad"],
   [/spenat/i, "spenat"], [/dill/i, "dill"], [/basilika/i, "basilika"], [/jordgubb/i, "jordgubbe"],
-  [/ärt/i, "art"],
+  [/persilja/i, "persilja"], [/selleri/i, "selleri"], [/ärt/i, "art"],
 ];
 function vaxtinfoFor(namn) {
   if (!namn) return null;
@@ -1992,15 +1997,18 @@ function vaxtinfoFor(namn) {
   return null;
 }
 const VATTEN_IKON = { lag: "💧", medel: "💧💧", hog: "💧💧💧" };
+const VATTEN_TEXT = { lag: "Vattenbehov: lågt", medel: "Vattenbehov: medel", hog: "Vattenbehov: högt" };
 const SOL_IKON = { sol: "☀️ Full sol", halvskugga: "⛅ Halvskugga", skugga: "☁️ Skugga" };
 const SVARIGHET_TEXT = { latt: "Lätt", medel: "Medel", svar: "Kräver erfarenhet" };
 // Neutral info card, not a warning - reuses the same live-update wiring as
-// familjVarningHtml but with plain text color, no --warn styling.
+// familjVarningHtml but with plain text color, no --warn styling. The water
+// indicator is emoji-only visually, so it carries an aria-label - unlike the
+// sun one, it has no attached text a screen reader could fall back to.
 function vaxtinfoHtml(namn) {
   const v = vaxtinfoFor(namn);
   if (!v) return "";
   return `<div class="vaxtinfo-kort">
-    <div class="vaxtinfo-rad"><span>${VATTEN_IKON[v.vatten]}</span><span>${SOL_IKON[v.sol]}</span><span>↔ ${v.avstand_cm} cm mellan plantor</span></div>
+    <div class="vaxtinfo-rad"><span aria-label="${VATTEN_TEXT[v.vatten]}">${VATTEN_IKON[v.vatten]}</span><span>${SOL_IKON[v.sol]}</span><span>↔ ${v.avstand_cm} cm mellan plantor</span></div>
     <div class="vaxtinfo-rad"><span>${esc(v.sasong)}</span></div>
     <div class="vaxtinfo-rad"><span class="vaxtinfo-svarighet">${SVARIGHET_TEXT[v.svarighet]}</span></div>
   </div>`;
@@ -4599,7 +4607,8 @@ function renderaModal() {
     $("modalInnehall").innerHTML = `
       <button class="ta-bort" id="modalStangBtn" data-i18n-title="stang" style="position:absolute; top:16px; right:16px">×</button>
       <img src="${BAS}api/photo?id=${encodeURIComponent(f.id)}" alt="" style="width:100%; border-radius:var(--r-sm); display:block">
-      <div class="detalj-knapprad" style="margin-top:14px">
+      <p class="lbl" style="margin-top:10px">${esc((f.skapad || "").slice(0, 10))}</p>
+      <div class="detalj-knapprad" style="margin-top:4px">
         <button class="ta-bort-knapp foto-ta-bort" data-id="${esc(f.id)}" style="flex:1">${t("ta_bort")}</button>
       </div>`;
     return;
@@ -4724,15 +4733,20 @@ function zonSkordatHtml(z) {
 }
 
 // Foton kopplade till en zon eller planting - "före/efter", eller bara ett
-// minne av hur det såg ut. Tumnaglar + en "+"-knapp som öppnar filväljaren;
-// klick på en tumnagel öppnar en större lightbox (renderaModal, typ "foto").
+// minne av hur det såg ut. Tumnaglar (nyast först, samma sortering som
+// zonSkordatHtml redan använder för arkiveradDatum - annars går det inte
+// att se vilket foto som är äldst i en före/efter-jämförelse) + en
+// "+"-knapp som öppnar filväljaren; klick på en tumnagel öppnar en större
+// lightbox (renderaModal, typ "foto").
 function fotoGalleriHtml(malTyp, malId) {
-  const lista = foton.filter((f) => f.malTyp === malTyp && f.malId === malId);
+  const lista = foton.filter((f) => f.malTyp === malTyp && f.malId === malId)
+    .sort((a, b) => new Date(b.skapad) - new Date(a.skapad));
   return `<div class="modal-entiteter">
     <label class="lbl">${t("foton")}</label>
     <div class="foto-galleri">
       ${lista.map((f) => `<button class="foto-tumnagel" data-id="${esc(f.id)}" title="${t("visa_foto")}">
-        <img src="${BAS}api/photo?id=${encodeURIComponent(f.id)}" alt="" loading="lazy"></button>`).join("")}
+        <img src="${BAS}api/photo?id=${encodeURIComponent(f.id)}" alt="" loading="lazy">
+        <span class="foto-datum">${esc((f.skapad || "").slice(0, 10))}</span></button>`).join("")}
       <button class="foto-lagg-till" data-mal-typ="${esc(malTyp)}" data-mal-id="${esc(malId)}" title="${t("lagg_till_foto")}">+</button>
     </div>
   </div>`;
@@ -6665,6 +6679,13 @@ let guideSteg = 1;
 let guideKartaId = null;
 let guideZonId = null;
 function visaGuide() {
+  // Set the moment the guide is shown, not only on skip/finish - otherwise
+  // someone who reloads mid-guide without finishing it, then later empties
+  // their garden back to zero maps (fresh start, testing, ...), would see
+  // the "welcome, new here?" wizard fire again even though they plainly
+  // aren't new. Always reachable again manually via the Settings link, so
+  // nothing about deliberately reopening it is lost.
+  localStorage.setItem(GUIDE_AVFARDAD_NYCKEL, "1");
   guideSteg = 1; guideKartaId = null; guideZonId = null;
   guideRenderaSteg();
   $("guideBakgrund").style.display = "flex";

@@ -312,6 +312,10 @@ export const VAXT_DATABAS = {
     sasong: "Så inomhus april, ställ ut efter frostrisk i juni - känslig för kyla", svarighet: "medel" },
   jordgubbe: { visningsnamn: "Jordgubbe", vatten: "medel", sol: "sol", avstand_cm: 30,
     sasong: "Plantera vår eller höst, full skörd andra året, skörda jun–jul", svarighet: "latt" },
+  persilja: { visningsnamn: "Persilja", vatten: "medel", sol: "halvskugga", avstand_cm: 15,
+    sasong: "Så direkt eller inomhus från april - långsam att gro, skörda kontinuerligt jun–okt", svarighet: "latt" },
+  selleri: { visningsnamn: "Selleri", vatten: "hog", sol: "sol", avstand_cm: 25,
+    sasong: "Så inomhus feb–mars, plantera ut i juni, skörda sep–okt", svarighet: "svar" },
 };
 
 // A couple of real Swedish crop names are compounds that would otherwise
@@ -344,6 +348,8 @@ const VAXT_DATABAS_MONSTER = [
   [/dill/i, "dill"],
   [/basilika/i, "basilika"],
   [/jordgubb/i, "jordgubbe"],
+  [/persilja/i, "persilja"],
+  [/selleri/i, "selleri"],
   [/ärt/i, "art"],
 ];
 

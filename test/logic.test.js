@@ -295,6 +295,10 @@ describe("vaxtinfoFor", () => {
     assert.equal(vaxtinfoFor("Kronärtskocka"), null);
     assert.equal(vaxtinfoFor("Potatislök"), null);
   });
+  test("persilja and selleri resolve - vaxtfamiljFor already recognized both, the info card shouldn't lag behind it", () => {
+    assert.equal(vaxtinfoFor("Persilja").nyckel, "persilja");
+    assert.equal(vaxtinfoFor("Selleri").nyckel, "selleri");
+  });
 });
 
 describe("skordFamiljVarning", () => {
