@@ -291,7 +291,7 @@ export const VAXT_DATABAS = {
   morot: { visningsnamn: "Morot", vatten: "medel", sol: "sol", avstand_cm: 5,
     sasong: "Så direkt april–juni, skörda jul–okt", svarighet: "latt" },
   radisa: { visningsnamn: "Rädisa", vatten: "medel", sol: "sol", avstand_cm: 4,
-    sasong: "Så direkt från april, klar på 3–4 veckor - så om flera gånger", svarighet: "latt" },
+    sasong: "Så direkt från april, klar på 3–4 veckor - så om flera gånger", svarighet: "latt", saddIntervallDagar: 10 },
   rodbeta: { visningsnamn: "Rödbeta", vatten: "medel", sol: "sol", avstand_cm: 10,
     sasong: "Så direkt april–juni, skörda jul–okt", svarighet: "latt" },
   purjolok: { visningsnamn: "Purjolök", vatten: "medel", sol: "sol", avstand_cm: 15,
@@ -303,11 +303,11 @@ export const VAXT_DATABAS = {
   kal: { visningsnamn: "Kål", vatten: "hog", sol: "sol", avstand_cm: 50,
     sasong: "Så inomhus mars–april, plantera ut i maj–juni, skörda aug–okt", svarighet: "medel" },
   sallad: { visningsnamn: "Sallad", vatten: "hog", sol: "halvskugga", avstand_cm: 25,
-    sasong: "Så direkt eller inomhus från april, klar 6–8 veckor senare - så om flera gånger", svarighet: "latt" },
+    sasong: "Så direkt eller inomhus från april, klar 6–8 veckor senare - så om flera gånger", svarighet: "latt", saddIntervallDagar: 14 },
   spenat: { visningsnamn: "Spenat", vatten: "medel", sol: "halvskugga", avstand_cm: 10,
     sasong: "Så direkt mars–april och igen aug–sep, klar 4–6 veckor senare", svarighet: "latt" },
   dill: { visningsnamn: "Dill", vatten: "medel", sol: "sol", avstand_cm: 15,
-    sasong: "Så direkt från april, så om varannan vecka för jämn skörd", svarighet: "latt" },
+    sasong: "Så direkt från april, så om varannan vecka för jämn skörd", svarighet: "latt", saddIntervallDagar: 14 },
   basilika: { visningsnamn: "Basilika", vatten: "medel", sol: "sol", avstand_cm: 20,
     sasong: "Så inomhus april, ställ ut efter frostrisk i juni - känslig för kyla", svarighet: "medel" },
   jordgubbe: { visningsnamn: "Jordgubbe", vatten: "medel", sol: "sol", avstand_cm: 30,
@@ -358,4 +358,21 @@ export function vaxtinfoFor(namn) {
   if (VAXT_DATABAS_UNDANTAG.some((monster) => monster.test(namn))) return null;
   for (const [monster, nyckel] of VAXT_DATABAS_MONSTER) if (monster.test(namn)) return { nyckel, ...VAXT_DATABAS[nyckel] };
   return null;
+}
+
+export const SADD_SASONG_START_MANAD = 4; // april
+export const SADD_SASONG_SLUT_MANAD = 8;  // augusti - senare sådd hinner inte mogna före hösten
+
+// Which succession-sowing "slot" (0-based count of elapsed intervals) is
+// due right now for a planting, or null if succession sowing doesn't apply
+// at all - no interval for this species, never planted, or outside the
+// growing window (a raw day-count alone would happily suggest sowing more
+// radishes in December).
+export function saddPeriodAktuell(planterad, intervallDagar, nu = new Date()) {
+  if (!planterad || !intervallDagar) return null;
+  const manadNr = Number(stockholmManad(nu).slice(5));
+  if (manadNr < SADD_SASONG_START_MANAD || manadNr > SADD_SASONG_SLUT_MANAD) return null;
+  const dagarSedan = Math.floor((new Date(stockholmDatum(nu)) - new Date(planterad)) / 86400000);
+  if (dagarSedan < intervallDagar) return null;
+  return Math.floor(dagarSedan / intervallDagar);
 }

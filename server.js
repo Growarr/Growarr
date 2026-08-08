@@ -14,6 +14,7 @@ import {
   torkTakt, TORR_GRANS, MIN_LUTNING, veckodagarForIntervall, enhetArFuktsensor,
   normaliseraIp, arBetroddAdress, versionArNyare,
   OBJEKT_TYPER, rensaObjektTyp,
+  vaxtinfoFor, saddPeriodAktuell,
 } from "./src/logic.js";
 
 const PORT = process.env.PORT || 8097;
@@ -1081,8 +1082,31 @@ async function kollaSkordepaminnelser() {
     }
   }
 }
+// Successionssådd: en påminnelse för de arter i VAXT_DATABAS som verkligen
+// odlas i omgångar (sallad, rädisa, dill - inte t.ex. spenat, vars egen
+// säsongstext beskriver två sådder per säsong, inte veckovis succession).
+// saddPeriodAktuell() håller reda på vilken "omgång" som är aktuell och
+// spärrar utanför april-augusti, så en sen sådd inte hinner mogna före
+// hösten - samma dedup-mönster som paminntManader ovan, fast per omgång
+// istället för per kalendermånad.
+async function kollaSaddPaminnelser() {
+  const { odlingar } = await lasData();
+  for (const o of odlingar) {
+    const info = vaxtinfoFor(o.namn);
+    const period = saddPeriodAktuell(o.planterad, info?.saddIntervallDagar);
+    if (period === null) continue;
+    const nyckel = `p${period}`;
+    if ((o.paminntSaddPerioder ?? []).includes(nyckel)) continue;
+    await skickaNotis("🌱 Dags att så igen", `${o.namn} kan sås i en ny omgång nu, för jämn skörd.`);
+    await muteraData((d) => {
+      const post = d.odlingar.find((x) => x.id === o.id);
+      if (post) post.paminntSaddPerioder = [...(post.paminntSaddPerioder ?? []), nyckel];
+    });
+  }
+}
 const EN_DAG_MS = 24 * 3600 * 1000;
 setInterval(() => kollaSkordepaminnelser().catch((err) => console.warn("Skördepåminnelse-koll misslyckades:", err.message)), EN_DAG_MS);
+setInterval(() => kollaSaddPaminnelser().catch((err) => console.warn("Såddpåminnelse-koll misslyckades:", err.message)), EN_DAG_MS);
 setInterval(() => backupData().catch((err) => console.warn("Säkerhetskopiering misslyckades:", err.message)), EN_DAG_MS);
 
 // ---- Historik för entiteter kopplade till zoner/odlingar ----
@@ -1880,5 +1904,6 @@ const server = createServer(async (req, res) => {
 server.listen(PORT, () => console.log(`growarr lyssnar på :${PORT}, data i ${DATA_PATH}`));
 migreraData().catch((err) => console.warn("Migrering misslyckades:", err.message));
 kollaSkordepaminnelser().catch((err) => console.warn("Skördepåminnelse-koll misslyckades:", err.message));
+kollaSaddPaminnelser().catch((err) => console.warn("Såddpåminnelse-koll misslyckades:", err.message));
 loggaHistorik().catch((err) => console.warn("Historik-loggning misslyckades:", err.message));
 backupData().catch((err) => console.warn("Säkerhetskopiering misslyckades:", err.message)); // once at startup, so a mid-day restart doesn't wait a full day

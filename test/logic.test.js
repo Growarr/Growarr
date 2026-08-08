@@ -7,7 +7,7 @@ import {
   normaliseraIp, ipINat, arBetroddAdress, versionArNyare,
   OBJEKT_TYPER, rensaObjektTyp, snappaRotation,
   VAXT_FAMILJER, vaxtfamiljFor, skordFamiljVarning,
-  VAXT_DATABAS, vaxtinfoFor,
+  VAXT_DATABAS, vaxtinfoFor, saddPeriodAktuell,
 } from "../src/logic.js";
 
 describe("rensaAntal", () => {
@@ -298,6 +298,36 @@ describe("vaxtinfoFor", () => {
   test("persilja and selleri resolve - vaxtfamiljFor already recognized both, the info card shouldn't lag behind it", () => {
     assert.equal(vaxtinfoFor("Persilja").nyckel, "persilja");
     assert.equal(vaxtinfoFor("Selleri").nyckel, "selleri");
+  });
+  test("only the crops where succession sowing is real practice carry an interval", () => {
+    assert.equal(vaxtinfoFor("Sallad").saddIntervallDagar, 14);
+    assert.equal(vaxtinfoFor("Rädisa").saddIntervallDagar, 10);
+    assert.equal(vaxtinfoFor("Dill").saddIntervallDagar, 14);
+    // Spenat's own sasong text describes two sowings a season (spring,
+    // then late summer to dodge bolting), not weekly succession - a
+    // reminder here would be actively wrong advice.
+    assert.equal(vaxtinfoFor("Spenat").saddIntervallDagar, undefined);
+  });
+});
+
+describe("saddPeriodAktuell", () => {
+  test("null with no planted date, or no interval (e.g. a non-succession crop)", () => {
+    assert.equal(saddPeriodAktuell(null, 14, new Date(Date.UTC(2026, 5, 1))), null);
+    assert.equal(saddPeriodAktuell("2026-04-01", null, new Date(Date.UTC(2026, 5, 1))), null);
+  });
+  test("null before the first interval has elapsed", () => {
+    assert.equal(saddPeriodAktuell("2026-04-01", 14, new Date(Date.UTC(2026, 3, 10))), null);
+  });
+  test("due exactly at the interval boundary, and the period keeps advancing", () => {
+    assert.equal(saddPeriodAktuell("2026-04-01", 14, new Date(Date.UTC(2026, 3, 15))), 1);
+    assert.equal(saddPeriodAktuell("2026-04-01", 14, new Date(Date.UTC(2026, 3, 29))), 2);
+  });
+  test("a shorter interval (radish) advances faster than a longer one (dill/lettuce)", () => {
+    assert.equal(saddPeriodAktuell("2026-04-01", 10, new Date(Date.UTC(2026, 3, 11))), 1);
+  });
+  test("null outside the April-August growing window, even with the same elapsed days", () => {
+    assert.equal(saddPeriodAktuell("2026-04-01", 14, new Date(Date.UTC(2026, 11, 15))), null);
+    assert.equal(saddPeriodAktuell("2025-08-01", 14, new Date(Date.UTC(2026, 2, 1))), null);
   });
 });
 

@@ -1954,7 +1954,7 @@ const VAXT_DATABAS = {
   morot: { visningsnamn: "Morot", vatten: "medel", sol: "sol", avstand_cm: 5,
     sasong: "Så direkt april–juni, skörda jul–okt", svarighet: "latt" },
   radisa: { visningsnamn: "Rädisa", vatten: "medel", sol: "sol", avstand_cm: 4,
-    sasong: "Så direkt från april, klar på 3–4 veckor - så om flera gånger", svarighet: "latt" },
+    sasong: "Så direkt från april, klar på 3–4 veckor - så om flera gånger", svarighet: "latt", saddIntervallDagar: 10 },
   rodbeta: { visningsnamn: "Rödbeta", vatten: "medel", sol: "sol", avstand_cm: 10,
     sasong: "Så direkt april–juni, skörda jul–okt", svarighet: "latt" },
   purjolok: { visningsnamn: "Purjolök", vatten: "medel", sol: "sol", avstand_cm: 15,
@@ -1966,11 +1966,11 @@ const VAXT_DATABAS = {
   kal: { visningsnamn: "Kål", vatten: "hog", sol: "sol", avstand_cm: 50,
     sasong: "Så inomhus mars–april, plantera ut i maj–juni, skörda aug–okt", svarighet: "medel" },
   sallad: { visningsnamn: "Sallad", vatten: "hog", sol: "halvskugga", avstand_cm: 25,
-    sasong: "Så direkt eller inomhus från april, klar 6–8 veckor senare - så om flera gånger", svarighet: "latt" },
+    sasong: "Så direkt eller inomhus från april, klar 6–8 veckor senare - så om flera gånger", svarighet: "latt", saddIntervallDagar: 14 },
   spenat: { visningsnamn: "Spenat", vatten: "medel", sol: "halvskugga", avstand_cm: 10,
     sasong: "Så direkt mars–april och igen aug–sep, klar 4–6 veckor senare", svarighet: "latt" },
   dill: { visningsnamn: "Dill", vatten: "medel", sol: "sol", avstand_cm: 15,
-    sasong: "Så direkt från april, så om varannan vecka för jämn skörd", svarighet: "latt" },
+    sasong: "Så direkt från april, så om varannan vecka för jämn skörd", svarighet: "latt", saddIntervallDagar: 14 },
   basilika: { visningsnamn: "Basilika", vatten: "medel", sol: "sol", avstand_cm: 20,
     sasong: "Så inomhus april, ställ ut efter frostrisk i juni - känslig för kyla", svarighet: "medel" },
   jordgubbe: { visningsnamn: "Jordgubbe", vatten: "medel", sol: "sol", avstand_cm: 30,
@@ -1996,6 +1996,19 @@ function vaxtinfoFor(namn) {
   for (const [monster, nyckel] of VAXT_DATABAS_MONSTER) if (monster.test(namn)) return { nyckel, ...VAXT_DATABAS[nyckel] };
   return null;
 }
+// Mirrors saddPeriodAktuell in src/logic.js - device-local date, same as
+// berakningNotiser()'s existing skörde-reminder block already uses, not a
+// new Stockholm-timezone dependency the client doesn't otherwise have.
+const SADD_SASONG_START_MANAD = 4, SADD_SASONG_SLUT_MANAD = 8;
+function saddPeriodAktuell(planterad, intervallDagar, nu = new Date()) {
+  if (!planterad || !intervallDagar) return null;
+  const manadNr = nu.getMonth() + 1;
+  if (manadNr < SADD_SASONG_START_MANAD || manadNr > SADD_SASONG_SLUT_MANAD) return null;
+  const idag = nu.toISOString().slice(0, 10);
+  const dagarSedan = Math.floor((new Date(idag) - new Date(planterad)) / 86400000);
+  if (dagarSedan < intervallDagar) return null;
+  return Math.floor(dagarSedan / intervallDagar);
+}
 const VATTEN_IKON = { lag: "💧", medel: "💧💧", hog: "💧💧💧" };
 const VATTEN_TEXT = { lag: "Vattenbehov: lågt", medel: "Vattenbehov: medel", hog: "Vattenbehov: högt" };
 const SOL_IKON = { sol: "☀️ Full sol", halvskugga: "⛅ Halvskugga", skugga: "☁️ Skugga" };
@@ -2010,6 +2023,7 @@ function vaxtinfoHtml(namn) {
   return `<div class="vaxtinfo-kort">
     <div class="vaxtinfo-rad"><span aria-label="${VATTEN_TEXT[v.vatten]}">${VATTEN_IKON[v.vatten]}</span><span>${SOL_IKON[v.sol]}</span><span>↔ ${v.avstand_cm} cm mellan plantor</span></div>
     <div class="vaxtinfo-rad"><span>${esc(v.sasong)}</span></div>
+    ${v.saddIntervallDagar ? `<div class="vaxtinfo-rad"><span>🔁 Kan sås i omgångar var ${v.saddIntervallDagar}:e dag för jämn skörd</span></div>` : ""}
     <div class="vaxtinfo-rad"><span class="vaxtinfo-svarighet">${SVARIGHET_TEXT[v.svarighet]}</span></div>
   </div>`;
 }
@@ -3767,6 +3781,21 @@ function berakningNotiser() {
     notiser.push({
       id: `skord-${o.id}-${nuManad}`, ikon: ikonForVaxt(o.namn), niva: "info",
       titel: `Dags att skörda ${o.namn}`, text: zon ? `${zon.namn} · ${manadNamn(o.skordManad)}` : manadNamn(o.skordManad),
+    });
+  }
+
+  // Successionssådd – odlingar av arter som verkligen sås i omgångar
+  // (sallad, rädisa, dill), där tillräckligt lång tid gått sen förra
+  // sådden. Samma vilka-arter-gäller-det-här-för-logik som servern, se
+  // saddPeriodAktuell.
+  for (const o of odlingar) {
+    const info = vaxtinfoFor(o.namn);
+    const period = saddPeriodAktuell(o.planterad, info?.saddIntervallDagar);
+    if (period === null) continue;
+    const zon = zoner.find((z) => z.id === o.zonId);
+    notiser.push({
+      id: `sadd-${o.id}-p${period}`, ikon: "🔁", niva: "info",
+      titel: `Dags att så mer ${o.namn}`, text: zon ? `${zon.namn} · för jämn skörd` : "För jämn skörd",
     });
   }
 
