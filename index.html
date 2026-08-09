@@ -1313,8 +1313,8 @@ try {
     </button>
     <div class="notis-panel" id="notisPanel">
       <div class="notis-topp">
-        <span class="titel">Notiser</span>
-        <span class="ai-etikett" id="notisAiEtikett" style="display:none">✨ Prioriterat av AI</span>
+        <span class="titel" data-i18n="notiser">Notiser</span>
+        <span class="ai-etikett" id="notisAiEtikett" style="display:none"></span>
       </div>
       <div class="notis-lista" id="notisLista"></div>
     </div>
@@ -1659,8 +1659,8 @@ try {
 
 <div class="chatt-panel" id="chattPanel">
   <div class="chatt-topp">
-    <span style="font-size:1.1rem">🌿</span>
-    <span class="titel">Trädgårdsrådgivaren</span>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-9"/><path d="M12 12c0-3 2.5-5 6-5 0 3.5-2.5 5.5-6 5Z"/><path d="M12 15c0-2.5-2-4-5-4 0 2.8 2 4.5 5 4Z"/></svg>
+    <span class="titel" data-i18n="tradgardsradgivaren">Trädgårdsrådgivaren</span>
     <button class="chatt-ikonknapp" id="chattStangBtn" data-i18n-title="stang" style="width:30px;height:30px">×</button>
   </div>
   <div class="chatt-logg" id="chattLogg">
@@ -1846,6 +1846,14 @@ const IKON_KALENDER = IKON_SVG('<rect x="3" y="4" width="18" height="18" rx="2"/
 const IKON_ARKIV = IKON_SVG('<path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/>', 15);
 const IKON_SKADEDJUR = IKON_SVG('<ellipse cx="12" cy="14" rx="5" ry="6"/><path d="M12 8V5M9 6 7 4M15 6l2-2M6 12H3M6 16H3M21 12h-3M21 16h-3M8 20l-2 2M16 20l2 2"/>', 15);
 const IKON_SJUKDOM = IKON_SVG('<path d="M12 3c-4 2-7 6-7 10a7 7 0 0 0 14 0c0-4-3-8-7-10Z"/><circle cx="10" cy="14" r="1.2"/><circle cx="14" cy="11" r="0.9"/>', 15);
+const IKON_GNISTRA = IKON_SVG('<path d="M12 3l1.5 5.5L19 10l-5.5 1.5L12 17l-1.5-5.5L5 10l5.5-1.5L12 3Z"/>', 14);
+const IKON_TERMOMETER = IKON_SVG('<path d="M10 14V4a2 2 0 1 1 4 0v10a4 4 0 1 1-4 0Z"/>', 14);
+const IKON_DRA = IKON_SVG('<circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/>', 14);
+const IKON_BOCK = IKON_SVG('<path d="M5 13l4 4L19 7"/>', 14);
+const IKON_VARNING = IKON_SVG('<path d="M12 3 2 20h20L12 3Z"/><path d="M12 10v4M12 17h.01"/>', 14);
+const IKON_KAMERA = IKON_SVG('<path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/>', 15);
+const IKON_HINK = IKON_SVG('<path d="M5 8h14l-1.5 11a2 2 0 0 1-2 1.7H8.5a2 2 0 0 1-2-1.7L5 8Z"/><path d="M5 8a7 3 0 0 1 14 0"/>', 14);
+const IKON_REGN = IKON_SVG('<path d="M7 15a4 4 0 0 1 .6-7.9A5.5 5.5 0 0 1 18 9.5 3.5 3.5 0 0 1 17.5 16H7Z"/><path d="M8 19v1M12 19v1M16 19v1"/>', 14);
 
 // <option>-element kan bara visa vanlig text, inte SVG – en liten textikon-
 // karta enbart för rullgardiner, sida vid sida med linjeikonerna i ZON_TYPER.
@@ -2228,13 +2236,13 @@ const SPRAK_TEXT = {
     schema_med_varaktighet: " i {min} minuter", schema_hoppa_fuktig: " Hoppa över om jorden redan är tillräckligt fuktig.",
     schema_fukttrend_titel: "Skapa automation från fukttrenden",
     schema_fukttrend_beskrivning: "Vattna {zon} via den kopplade ventilen när jordens uttorkningstrend visar att den snart blir torr.",
-    kamera_visa_bild: "Visa bild", kamera_dolj_bild: "Dölj bild",
-    forslag_fran_ai: "✨ Förslag från AI", letar_monster: "Letar efter mönster i din trädgård …",
+    kamera_visa_bild: "Visa bild", kamera_dolj_bild: "Dölj bild", tradgardsradgivaren: "Trädgårdsrådgivaren",
+    forslag_fran_ai: "Förslag från AI", letar_monster: "Letar efter mönster i din trädgård …",
     avfarda_forslag: "Avfärda förslaget", lagg_till_schemat: "Lägg till schemat",
     schema_zon_saknas: "Lägg till en zon på Översikt först.",
     // Notification center
     inga_notiser: "Inga uppgifter just nu – bra jobbat.",
-    prioriterat_av_ai: "✨ Prioriterat av AI",
+    prioriterat_av_ai: "Prioriterat av AI",
     markera_klar: "Markera som klar", avvisa: "Avvisa",
     // Settings
     utseende: "Utseende", system: "System", ljust: "Ljust", morkt: "Mörkt",
@@ -2361,12 +2369,12 @@ const SPRAK_TEXT = {
     schema_med_varaktighet: " for {min} minutes", schema_hoppa_fuktig: " Skip if the soil is already moist enough.",
     schema_fukttrend_titel: "Draft an automation from the moisture trend",
     schema_fukttrend_beskrivning: "Water {zon} via the linked valve when the soil's drying trend shows it'll be dry soon.",
-    kamera_visa_bild: "Show image", kamera_dolj_bild: "Hide image",
-    forslag_fran_ai: "✨ Suggested by AI", letar_monster: "Looking for patterns in your garden …",
+    kamera_visa_bild: "Show image", kamera_dolj_bild: "Hide image", tradgardsradgivaren: "Garden Advisor",
+    forslag_fran_ai: "Suggested by AI", letar_monster: "Looking for patterns in your garden …",
     avfarda_forslag: "Dismiss suggestion", lagg_till_schemat: "Add this schedule",
     schema_zon_saknas: "Add a zone on Overview first.",
     inga_notiser: "Nothing needs attention right now. Nice work.",
-    prioriterat_av_ai: "✨ Prioritized by AI",
+    prioriterat_av_ai: "Prioritized by AI",
     markera_klar: "Mark as done", avvisa: "Dismiss",
     utseende: "Appearance", system: "System", ljust: "Light", morkt: "Dark",
     tema_hjalp: "Follows your device's light/dark setting by default, or pick one yourself.",
@@ -2564,8 +2572,8 @@ function bevattningHeuristik(data) {
   const dagarFramat = data.dagar.slice(0, 3);
   const totalNb = dagarFramat.reduce((s, d) => s + d.nederbord, 0);
   return totalNb < 2
-    ? `<span class="ikon">🪣</span><span>Bara ${totalNb.toFixed(1)} mm regn väntas de kommande ${dagarFramat.length} dagarna – dags att vattna själva.</span>`
-    : `<span class="ikon">🌧️</span><span>${totalNb.toFixed(1)} mm regn väntas de kommande ${dagarFramat.length} dagarna – naturen sköter nog bevattningen.</span>`;
+    ? `<span class="ikon">${IKON_HINK}</span><span>Bara ${totalNb.toFixed(1)} mm regn väntas de kommande ${dagarFramat.length} dagarna – dags att vattna själva.</span>`
+    : `<span class="ikon">${IKON_REGN}</span><span>${totalNb.toFixed(1)} mm regn väntas de kommande ${dagarFramat.length} dagarna – naturen sköter nog bevattningen.</span>`;
 }
 // Smart bevattningsinsikt: en Claude-genererad rekommendation som väger in
 // väder, zoner/odlingar och kopplade jordfuktighetssensorer (se server.js:
@@ -2956,7 +2964,7 @@ function renderaKarta() {
       return `<div class="zon-kort zon-kort-canvas${vald ? " vald" : ""}${fokus ? " fokus" : ""}" data-id="${z.id}"
           style="left:${x * 100}%; top:${y * 100}%; width:${b}px">
         <div class="zon-topp">
-          ${redigerarLayout ? `<span class="zon-drag" title="Dra kortet för att flytta">✥</span>` : ""}
+          ${redigerarLayout ? `<span class="zon-drag" title="Dra kortet för att flytta">${IKON_DRA}</span>` : ""}
           <span class="namn">${esc(z.namn)}</span>
           ${enhetBadges}
           ${redigerarLayout ? `<button class="zon-vand vand-btn" data-id="${z.id}" title="Vänd (byt bredd/höjd)">⟳</button>` : ""}
@@ -3845,7 +3853,7 @@ function widgetKortHtml(w, index, antal) {
       const kopplade = entiteterFor(w.enhetIds);
       innehall = kopplade.length
         ? `<div class="metrik-grid">${kopplade.map((e) => {
-            if (e.fel) return `<div class="metrik-tile fel"><div class="topp"><span class="ikon">⚠️</span></div>
+            if (e.fel) return `<div class="metrik-tile fel"><div class="topp"><span class="ikon">${IKON_VARNING}</span></div>
               <div class="varde">${esc(e.fel)}</div><div class="enhet-namn">${esc(e.namn)}</div></div>`;
             const s = metrikStatus(e.enhet, e.state);
             return `<div class="metrik-tile ${s.niva}">
@@ -4005,7 +4013,7 @@ function berakningNotiser() {
     const skyddad = zon.typ === "vaxthus" || zon.typ === "inomhus";
     if (regnarNog && !skyddad) continue;
     notiser.push({
-      id: `schema-${s.id}-${idag}`, ikon: "💧", niva: "info",
+      id: `schema-${s.id}-${idag}`, ikon: IKON_DROPPE, niva: "info",
       titel: t("dags_vattna_titel").replace("{zon}", zon.namn),
       text: skyddad ? t("schema_enligt") : t("schema_enligt_ej_regn"),
     });
@@ -4064,7 +4072,7 @@ function notisRaderHtml(lista, tomText) {
         ${n.id.startsWith("sadd-") ? `<button class="notis-sa-igen" data-id="${esc(n.id)}">${IKON_SPRA} Så igen</button>` : ""}
       </div>
       <div class="notis-atgarder">
-        <button class="notis-klar" data-id="${esc(n.id)}" title="Markera som klar">✓</button>
+        <button class="notis-klar" data-id="${esc(n.id)}" title="Markera som klar">${IKON_BOCK}</button>
         <button class="notis-avvisa" data-id="${esc(n.id)}" title="Avvisa">×</button>
       </div>
     </div>`).join("")
@@ -4077,6 +4085,7 @@ function renderaNotiser() {
   badge.textContent = String(lista.length);
   badge.style.display = lista.length ? "" : "none";
   $("notisBtn").classList.toggle("har-notiser", lista.length > 0);
+  $("notisAiEtikett").innerHTML = `${IKON_GNISTRA} ${t("prioriterat_av_ai")}`;
   $("notisAiEtikett").style.display = aiTraff?.viaAi ? "" : "none";
   $("notisLista").innerHTML = notisRaderHtml(lista, t("inga_notiser"));
 
@@ -4681,7 +4690,7 @@ function kopplaEntiteterHtml(idLista) {
   // kunna koppla bort/till entiteter.
   const tiles = kopplade.map((e) => {
     if (e.fel) return `<div class="entitet-rad-kompakt fel">
-      <span class="ikon">⚠️</span>
+      <span class="ikon">${IKON_VARNING}</span>
       <div class="info"><div class="namn">${esc(e.namn)}</div><div class="statusrad">${esc(e.fel)}</div></div>
       <button class="ta-bort-liten modal-enhet-ta-bort" data-id="${e.id}" title="${t("koppla_bort")}">×</button>
     </div>`;
@@ -4692,7 +4701,7 @@ function kopplaEntiteterHtml(idLista) {
     if ((e.entityId ?? "").startsWith("camera.")) {
       const oppen = oppenKameraTile === e.id;
       return `<div class="entitet-rad-kompakt kamera-tile${oppen ? " oppen" : ""}" data-kamera-tile="${esc(e.id)}">
-        <span class="ikon">📷</span>
+        <span class="ikon">${IKON_KAMERA}</span>
         <div class="info"><div class="namn">${esc(e.namn)}</div><div class="statusrad">${oppen ? t("kamera_dolj_bild") : t("kamera_visa_bild")}</div></div>
         <button class="ta-bort-liten modal-enhet-ta-bort" data-id="${e.id}" title="${t("koppla_bort")}">×</button>
       </div>`;
@@ -5350,7 +5359,7 @@ function solTimmarText(z) {
   const timmar = raknaSoltimmar().get(z.id);
   if (timmar == null) return "";
   const skuggad = zoner.some((a) => a.kartaId === aktivKartaId && !a.foralderId && a.id !== z.id && hojdMFor(a) > 0);
-  return `<p class="sol-timmar">☀️ ≈ ${timmar.toFixed(1).replace(".", ",")} timmar sol idag${
+  return `<p class="sol-timmar">${IKON_SOL} ≈ ${timmar.toFixed(1).replace(".", ",")} timmar sol idag${
     skuggad ? " (skuggning från andra zoner inräknad)" : ""}</p>`;
 }
 // Zonens uppmätta mikroklimat jämfört med SMHI:s prognos för orten.
@@ -5359,12 +5368,12 @@ function mikroklimatText(z) {
   if (!eid) return "";
   const k = temperaturOffset(eid);
   if (!k) {
-    return '<p class="sol-timmar">🌡️ Samlar mätningar för att lära sig zonens mikroklimat – kolla tillbaka om några dygn.</p>';
+    return `<p class="sol-timmar">${IKON_TERMOMETER} Samlar mätningar för att lära sig zonens mikroklimat – kolla tillbaka om några dygn.</p>`;
   }
   const prognosMin = senasteVader?.dagar?.[0]?.min;
   const natt = Number.isFinite(prognosMin)
     ? ` I natt väntas prognosen ${prognosMin}° här bli ungefär <strong>${(prognosMin + k.offset).toFixed(1).replace(".", ",")}°</strong>.` : "";
-  return `<p class="sol-timmar">🌡️ Ligger typiskt ${offsetText(k.offset)} prognosen (${k.matningar} mätningar).${natt}</p>`;
+  return `<p class="sol-timmar">${IKON_TERMOMETER} Ligger typiskt ${offsetText(k.offset)} prognosen (${k.matningar} mätningar).${natt}</p>`;
 }
 function renderaDetaljPanel() {
   uppdateraSortForslagList(); // förslagslistan kan ha ändrats sen sist (ny sort tillagd)
@@ -6633,7 +6642,7 @@ function schemaListaHtml() {
     const idagSchemalagd = s.veckodagar.includes(idagVeckodag);
     const redo = zon && zonHarAktuator(zon);
     return `<div class="schema-rad">
-      <span class="ikon">💧</span>
+      <span class="ikon">${IKON_DROPPE}</span>
       <div class="info">
         <div class="namn">${esc(zon?.namn ?? "Okänd zon")}</div>
         <div class="dagar">${s.veckodagar.map((d) => VECKODAGAR_NAMN[d]).join(", ")}${s.varaktighetMin ? ` · ${s.varaktighetMin} ${t("min_forkortning")}` : ""}</div>
@@ -6691,15 +6700,15 @@ async function laddaSchemaForslag() {
 function schemaForslagHtml() {
   const synliga = schemaForslag.filter((f) => !schemaForslagAvfardade.has(forslagNyckel(f)));
   if (schemaForslagLaddar) {
-    return `<div class="modal-entiteter"><span class="ai-etikett">${t("forslag_fran_ai")}</span>
+    return `<div class="modal-entiteter"><span class="ai-etikett">${IKON_GNISTRA} ${t("forslag_fran_ai")}</span>
       <div class="tom" style="margin-top:10px">${t("letar_monster")}</div></div>`;
   }
   if (!synliga.length) return "";
   return `<div class="modal-entiteter">
-    <span class="ai-etikett">${t("forslag_fran_ai")}</span>
+    <span class="ai-etikett">${IKON_GNISTRA} ${t("forslag_fran_ai")}</span>
     <div class="schema-lista" style="margin-top:12px; margin-bottom:0">
       ${synliga.map((f) => `<div class="schema-rad forslag" data-nyckel="${esc(forslagNyckel(f))}">
-        <span class="ikon">✨</span>
+        <span class="ikon">${IKON_GNISTRA}</span>
         <div class="info">
           <div class="namn">${esc(f.zonNamn)}</div>
           <div class="dagar">${f.veckodagar.map((d) => VECKODAGAR_NAMN[d]).join(", ")}</div>
