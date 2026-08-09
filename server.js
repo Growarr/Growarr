@@ -327,6 +327,33 @@ function tillYaml(varde, indent = 0) {
   return `${pad}${yamlVarde(varde)}`;
 }
 
+// Shared by every Claude call site below (automation draft/revise, the
+// watering insight, notification/schedule suggestions, chat) - the fetch
+// itself, its headers, the res.ok check, and the refusal check were
+// identical six times over, copy-pasted independently each time a new
+// feature needed Claude. What's genuinely call-site-specific (the prompt,
+// max_tokens, an optional system prompt, and whether the response needs
+// JSON-parsing/fence-stripping or is used as raw text) stays at each call
+// site - this only centralizes the part that was pure duplication, so a
+// fix to how refusals or errors are handled only has to happen once.
+async function anropaClaude({ model = ANTHROPIC_MODEL, maxTokens, system, messages }) {
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
+      body: JSON.stringify({ model, max_tokens: maxTokens, ...(system ? { system } : {}), messages }),
+    });
+    if (!res.ok) return { fel: `Claude svarade ${res.status}` };
+    const data = await res.json();
+    if (data.stop_reason === "refusal") return { fel: "Claude avböjde" };
+    const text = data.content?.filter((b) => b.type === "text").map((b) => b.text).join("\n").trim();
+    if (!text) return { fel: "Tomt svar från Claude" };
+    return { text };
+  } catch (err) {
+    return { fel: err.message };
+  }
+}
+
 // ---- Claude drafts a Home Assistant automation from a plain description ----
 // HA's own automation editor (visual and YAML) is already good - Growarr has
 // no business rebuilding it. What Growarr actually knows that HA's editor
@@ -350,15 +377,11 @@ async function utkastAutomation(beskrivning) {
   const entitetText = relevanta.map((e) => `- entity_id: ${e.entityId} | namn: ${e.namn}`).join("\n");
   try {
     const sammanfattning = await byggTradgardsSammanfattning(d, vader);
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
-        max_tokens: 1200,
-        messages: [{
-          role: "user",
-          content: `Du hjälper till att skriva ett utkast till en Home Assistant-automation utifrån en beskrivning på ${sprak}.
+    const svar = await anropaClaude({
+      maxTokens: 1200,
+      messages: [{
+        role: "user",
+        content: `Du hjälper till att skriva ett utkast till en Home Assistant-automation utifrån en beskrivning på ${sprak}.
 
 Beskrivning: "${beskrivning}"
 
@@ -376,14 +399,10 @@ Trädgården:
 ${sammanfattning}
 
 Svara ENDAST med kompakt JSON: {"alias":"...","forklaring":"...","trigger":[...],"condition":[...],"action":[...],"mode":"single"}`,
-        }],
-      }),
+      }],
     });
-    if (!res.ok) return { fel: `Claude svarade ${res.status}` };
-    const data = await res.json();
-    if (data.stop_reason === "refusal") return { fel: "Claude avböjde" };
-    const text = data.content?.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
-    const parsed = JSON.parse((text ?? "").replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, ""));
+    if (svar.fel) return { fel: svar.fel };
+    const parsed = JSON.parse(svar.text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, ""));
     if (parsed.fel) return { fel: String(parsed.fel).slice(0, 300) };
     if (!parsed.alias || !Array.isArray(parsed.trigger) || !Array.isArray(parsed.action)) {
       return { fel: "Claude svarade ofullständigt" };
@@ -448,15 +467,11 @@ async function revideraAutomation(entityId, beskrivning) {
   const entitetText = relevanta.map((e) => `- entity_id: ${e.entityId} | namn: ${e.namn}`).join("\n");
   try {
     const sammanfattning = await byggTradgardsSammanfattning(d, vader);
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
-        max_tokens: 1200,
-        messages: [{
-          role: "user",
-          content: `Du hjälper till att ändra en befintlig Home Assistant-automation utifrån en beskrivning på ${sprak}.
+    const svar = await anropaClaude({
+      maxTokens: 1200,
+      messages: [{
+        role: "user",
+        content: `Du hjälper till att ändra en befintlig Home Assistant-automation utifrån en beskrivning på ${sprak}.
 
 Befintlig automation:
 ${JSON.stringify({ alias: befintlig.alias, trigger: befintlig.trigger, condition: befintlig.condition ?? [], action: befintlig.action, mode: befintlig.mode })}
@@ -476,14 +491,10 @@ Trädgården:
 ${sammanfattning}
 
 Svara ENDAST med kompakt JSON: {"alias":"...","forklaring":"...","trigger":[...],"condition":[...],"action":[...],"mode":"single"}`,
-        }],
-      }),
+      }],
     });
-    if (!res.ok) return { fel: `Claude svarade ${res.status}` };
-    const data = await res.json();
-    if (data.stop_reason === "refusal") return { fel: "Claude avböjde" };
-    const text = data.content?.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
-    const parsed = JSON.parse((text ?? "").replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, ""));
+    if (svar.fel) return { fel: svar.fel };
+    const parsed = JSON.parse(svar.text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, ""));
     if (parsed.fel) return { fel: String(parsed.fel).slice(0, 300) };
     if (!parsed.alias || !Array.isArray(parsed.trigger) || !Array.isArray(parsed.action)) {
       return { fel: "Claude svarade ofullständigt" };
@@ -627,27 +638,15 @@ async function hamtaSmartBevattning() {
       return bevattningCache.resultat;
     }
     const sammanfattning = await byggTradgardsSammanfattning(d, vader);
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
-        max_tokens: 300,
-        messages: [{
-          role: "user",
-          content: `Du är en erfaren trädgårdsrådgivare. Ge en kort (max 3 meningar), konkret bevattningsrekommendation på ${sprak} utifrån datan nedan. Nämn specifika zoner eller odlingar vid namn om något sticker ut (torr jord, ingen nederbörd väntad, en sensor som visar lågt värde). Ingen inledande hälsningsfras, gå rakt på sak.\n\n${sammanfattning}`,
-        }],
-      }),
+    const svar = await anropaClaude({
+      maxTokens: 300,
+      messages: [{
+        role: "user",
+        content: `Du är en erfaren trädgårdsrådgivare. Ge en kort (max 3 meningar), konkret bevattningsrekommendation på ${sprak} utifrån datan nedan. Nämn specifika zoner eller odlingar vid namn om något sticker ut (torr jord, ingen nederbörd väntad, en sensor som visar lågt värde). Ingen inledande hälsningsfras, gå rakt på sak.\n\n${sammanfattning}`,
+      }],
     });
-    if (!res.ok) return { text: null, fel: `Claude svarade ${res.status}` };
-    const data = await res.json();
-    const text = data.content?.[0]?.text?.trim();
-    if (!text) return { text: null, fel: "Tomt svar från Claude" };
-    const resultat = { text, tid: new Date().toISOString() };
+    if (svar.fel) return { text: null, fel: svar.fel };
+    const resultat = { text: svar.text, tid: new Date().toISOString() };
     bevattningCache = { tid: Date.now(), sprak, resultat };
     return resultat;
   } catch (err) {
@@ -679,15 +678,11 @@ async function hamtaAiNotiser(kandidater) {
     }
     const sammanfattning = await byggTradgardsSammanfattning(d, vader);
     const kandidatText = kandidater.map((k) => `- id: ${k.id} | titel: ${k.titel} | text: ${k.text} | nivå: ${k.niva}`).join("\n");
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
-        max_tokens: 1200,
-        messages: [{
-          role: "user",
-          content: `Du hjälper till att förbättra notiser i en trädgårdsapp. Nedan är dagens regelbaserade kandidatnotiser och en sammanfattning av trädgården.
+    const svar = await anropaClaude({
+      maxTokens: 1200,
+      messages: [{
+        role: "user",
+        content: `Du hjälper till att förbättra notiser i en trädgårdsapp. Nedan är dagens regelbaserade kandidatnotiser och en sammanfattning av trädgården.
 
 Uppgift:
 1. Sortera dem efter faktisk angelägenhet för DEN HÄR trädgården (t.ex. väger frostrisk för känsliga plantor tyngre än lätt torr jord i en tålig sort).
@@ -703,15 +698,10 @@ ${kandidatText}
 
 Trädgården:
 ${sammanfattning}`,
-        }],
-      }),
+      }],
     });
-    if (!res.ok) return { fel: `Claude svarade ${res.status}`, notiser: kandidater };
-    const data = await res.json();
-    if (data.stop_reason === "refusal") return { fel: "Claude avböjde", notiser: kandidater };
-    const text = data.content?.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
-    const utanKodblock = text?.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-    const parsed = JSON.parse(utanKodblock ?? "");
+    if (svar.fel) return { fel: svar.fel, notiser: kandidater };
+    const parsed = JSON.parse(svar.text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, ""));
     const giltiga = new Map(kandidater.map((k) => [k.id, k]));
     const sedda = new Set();
     const rensat = [];
@@ -884,15 +874,11 @@ async function hamtaAiSchemaforslag() {
     const sammanfattning = await byggTradgardsSammanfattning(d, vader);
     const kandidatText = kandidater.map((k) =>
       `- zonId: ${k.zonId} | zon: ${k.zonNamn} | sensor: ${k.matt.sensor} | nu: ${k.matt.nu} % | torkar: ${k.matt.taktPerDygn} %/dygn | torr om: ${k.matt.dagarTillTorrt} dygn | intervall: var ${k.matt.intervall}:e dygn | veckodagar: [${k.veckodagar.join(",")}]`).join("\n");
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
-        max_tokens: 800,
-        messages: [{
-          role: "user",
-          content: `Du hjälper till att formulera bevattningsförslag i en trädgårdsapp. Uträkningarna är redan gjorda – din uppgift är att skriva om dem till begriplig text, och bara justera intervallet om väder eller växtval tydligt motiverar det.
+    const svar = await anropaClaude({
+      maxTokens: 800,
+      messages: [{
+        role: "user",
+        content: `Du hjälper till att formulera bevattningsförslag i en trädgårdsapp. Uträkningarna är redan gjorda – din uppgift är att skriva om dem till begriplig text, och bara justera intervallet om väder eller växtval tydligt motiverar det.
 
 Uppgift per kandidat:
 1. Skriv en "motivering": EN kort mening på ${sprak} (max ~20 ord) som förklarar varför, byggd på siffrorna nedan. Nämn gärna den faktiska mätningen.
@@ -907,14 +893,10 @@ ${kandidatText}
 
 Trädgården:
 ${sammanfattning}`,
-        }],
-      }),
+      }],
     });
-    if (!res.ok) return utanAi;
-    const data = await res.json();
-    if (data.stop_reason === "refusal") return utanAi;
-    const text = data.content?.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
-    const parsed = JSON.parse((text ?? "").replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, ""));
+    if (svar.fel) return utanAi;
+    const parsed = JSON.parse(svar.text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, ""));
     // Hard validation, same principle as the AI notifications: our computed
     // candidate list is the source of truth. A zone we did not derive cannot
     // appear, and anything Claude omits falls back to our own wording rather
@@ -978,14 +960,10 @@ async function svaraChatt(meddelanden) {
     return { role: m.roll === "ai" ? "assistant" : "user", content: innehall.length ? innehall : [{ type: "text", text: "(tomt)" }] };
   });
   if (!apiMeddelanden.length) return { fel: "inget meddelande" };
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: CHATT_MODELL,
-        max_tokens: 2000,
-        system: `Du är en kunnig och konkret trädgårdsrådgivare som hjälper ett par med sin odling. Svara på ${sprakNamn(d.installningar)}, kort och praktiskt – hellre två träffsäkra stycken än en lång uppsats.
+  const svar = await anropaClaude({
+    model: CHATT_MODELL,
+    maxTokens: 2000,
+    system: `Du är en kunnig och konkret trädgårdsrådgivare som hjälper ett par med sin odling. Svara på ${sprakNamn(d.installningar)}, kort och praktiskt – hellre två träffsäkra stycken än en lång uppsats.
 
 Om användaren bifogar ett foto: beskriv först kort vad du faktiskt ser på plantan (färg, fläckar, form, jord), och koppla sedan ihop det med mätdatan nedan om den är relevant. Var tydlig med vad som är säkert och vad som är en gissning – hitta aldrig på mätvärden som inte står här.
 
@@ -996,17 +974,9 @@ ${sammanfattning}
 
 Sensorhistorik:
 ${historikSammanfattning(d)}`,
-        messages: apiMeddelanden,
-      }),
-    });
-    if (!res.ok) return { fel: `Claude svarade ${res.status}: ${(await res.text()).slice(0, 300)}` };
-    const data = await res.json();
-    if (data.stop_reason === "refusal") return { fel: "Claude avböjde att svara på den frågan." };
-    const text = data.content?.filter((b) => b.type === "text").map((b) => b.text).join("\n").trim();
-    return text ? { text } : { fel: "Tomt svar från Claude" };
-  } catch (err) {
-    return { fel: err.message };
-  }
+    messages: apiMeddelanden,
+  });
+  return svar.fel ? { fel: svar.fel } : { text: svar.text };
 }
 
 // ---- Skördepåminnelser ----
