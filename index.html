@@ -1804,7 +1804,13 @@ try {
   <div class="modal modal-bred" id="guideInnehall"></div>
 </div>
 
-<script>
+<script type="module">
+// The three helpers below live in src/logic.js so server.js and this panel
+// run the exact same code instead of two hand-copies drifting apart. That
+// shared module is the only reason this script is type="module" - see the
+// two window.* assignments next to historikHoverUt for the one place that
+// still needs a name on the global object.
+import { skordFamiljVarning, vaxtinfoFor, arAktuatorEntitet } from "./src/logic.js";
 const $ = (id) => document.getElementById(id);
 const BAS = location.pathname.replace(/index\.html$/, "").replace(/\/?$/, "/");
 const FROST_TROSKEL = 3;
@@ -1919,70 +1925,10 @@ function ikonForVaxt(namn) {
   return IKON_SPRA;
 }
 
-// Mirrors VAXT_FAMILJER/vaxtfamiljFor/skordFamiljVarning in src/logic.js
-// (kept manually in sync, same as ZON_TYPER here vs. ZON_TYPER_NAMN in
-// server.js - this file has no module imports to share it directly). Used
-// for a live crop-rotation heads-up while creating a planting: growing the
-// same family in the same bed too soon lets family-specific pests/disease
-// build up in the soil.
-const VAXT_FAMILJER = {
-  nattskott:  { namn: "Nattskatteväxter", vilaAr: 3 },
-  kal:        { namn: "Kål",              vilaAr: 3 },
-  gurkvaxter: { namn: "Gurkväxter",       vilaAr: 2 },
-  baljvaxter: { namn: "Baljväxter",       vilaAr: 2 },
-  rotfrukter: { namn: "Rotfrukter",       vilaAr: 3 },
-  lokvaxter:  { namn: "Lökväxter",        vilaAr: 2 },
-  amarant:    { namn: "Mangold/rödbeta/spenat", vilaAr: 2 },
-  korgblommiga: { namn: "Sallad m.fl. korgblommiga", vilaAr: 2 },
-  rosvaxter:  { namn: "Jordgubbar",       vilaAr: 2 },
-  kryddvaxter: { namn: "Kryddväxter (mynta-familjen)", vilaAr: 1 },
-};
-// Checked before the generic patterns below - see the matching comment in
-// src/logic.js for why (jordärtskocka/kronärtskocka/potatislök are
-// compounds that contain another family's keyword as a plain substring
-// without actually being that family).
-const VAXT_FAMILJ_UNDANTAG = [
-  [/jordärtskocka|kronärtskocka/i, "korgblommiga"],
-  [/potatislök/i, "lokvaxter"],
-];
-const VAXT_FAMILJ_MONSTER = [
-  [/tomat|potatis|paprika|paprikor|chili|aubergine/i, "nattskott"],
-  [/kål|broccoli|rädisa|rädisor|rova|rovor|rucola|ruccola/i, "kal"],
-  [/gurk|pumpa|pumpor|squash|zucchini|melon/i, "gurkvaxter"],
-  [/ärt|böna|bönor/i, "baljvaxter"],
-  [/morot|morötter|palsternacka|palsternackor|persilja|dill|selleri/i, "rotfrukter"],
-  [/lök/i, "lokvaxter"],
-  [/rödbeta|rödbetor|mangold|spenat/i, "amarant"],
-  [/sallad|sallat|solros/i, "korgblommiga"],
-  [/jordgubb/i, "rosvaxter"],
-  [/basilika|mynta|timjan|rosmarin/i, "kryddvaxter"],
-];
-function vaxtfamiljFor(namn) {
-  if (!namn) return null;
-  for (const [monster, familj] of VAXT_FAMILJ_UNDANTAG) if (monster.test(namn)) return familj;
-  for (const [monster, familj] of VAXT_FAMILJ_MONSTER) if (monster.test(namn)) return familj;
-  return null;
-}
-function skordFamiljVarning(zonHistorik, namn, nu = new Date()) {
-  const familj = vaxtfamiljFor(namn);
-  if (!familj) return null;
-  const info = VAXT_FAMILJER[familj];
-  let senast = null;
-  for (const post of zonHistorik ?? []) {
-    if (vaxtfamiljFor(post.namn) !== familj) continue;
-    const datum = new Date(post.arkiveradDatum);
-    if (Number.isNaN(datum.getTime())) continue;
-    if (!senast || datum > senast.datum) senast = { datum, namn: post.namn };
-  }
-  if (!senast) return null;
-  const arSedan = (nu - senast.datum) / (365.25 * 24 * 60 * 60 * 1000);
-  if (arSedan >= info.vilaAr) return null;
-  return { familj, familjNamn: info.namn, vilaAr: info.vilaAr, senastNamn: senast.namn, arSedan };
-}
 // Non-blocking heads-up, never a confirmation dialog - the grower might
 // have solarized the soil, be using containers, or simply be planting
 // anyway. Dynamic, data-driven sentence, so it stays Swedish-only like
-// frostVarning's text (index.html ~2117) rather than going through t().
+// frostVarning's text rather than going through t().
 function familjVarningHtml(zonId, namn) {
   if (!zonId || !namn) return "";
   const v = skordFamiljVarning(skordat.filter((a) => a.zonId === zonId), namn);
@@ -1993,95 +1939,10 @@ function familjVarningHtml(zonId, namn) {
   return `⚠️ ${esc(v.familjNamn)} (${esc(v.senastNamn)}) odlades här ${sedan} – rekommenderad vila är ${v.vilaAr} år.`;
 }
 
-// Mirrors VAXT_DATABAS/vaxtinfoFor in src/logic.js (kept manually in sync,
-// same reason as VAXT_FAMILJER above). A small curated care-info lookup,
-// not an external plant database - this app has zero npm dependencies and
-// stays self-hosted/offline.
-const VAXT_DATABAS = {
-  tomat: { visningsnamn: "Tomat", vatten: "hog", sol: "sol", avstand_cm: 50,
-    sasong: "Så inomhus mars–april, plantera ut efter frostrisk (juni), skörda aug–sep",
-    sasong_en: "Sow indoors March–April, transplant after frost risk (June), harvest Aug–Sep", svarighet: "medel" },
-  potatis: { visningsnamn: "Potatis", vatten: "medel", sol: "sol", avstand_cm: 30,
-    sasong: "Sätt april–maj, skörda jul–sep", sasong_en: "Plant April–May, harvest Jul–Sep", svarighet: "latt" },
-  paprika: { visningsnamn: "Paprika/chili", vatten: "hog", sol: "sol", avstand_cm: 40,
-    sasong: "Så inomhus feb–mars, plantera ut i juni, skörda aug–okt",
-    sasong_en: "Sow indoors Feb–March, transplant in June, harvest Aug–Oct", svarighet: "svar" },
-  aubergine: { visningsnamn: "Aubergine", vatten: "hog", sol: "sol", avstand_cm: 45,
-    sasong: "Så inomhus feb–mars, plantera ut i juni (helst växthus), skörda aug–sep",
-    sasong_en: "Sow indoors Feb–March, transplant in June (greenhouse preferred), harvest Aug–Sep", svarighet: "svar" },
-  gurka: { visningsnamn: "Gurka", vatten: "hog", sol: "sol", avstand_cm: 40,
-    sasong: "Så inomhus april, plantera ut eller så direkt i juni, skörda jul–sep",
-    sasong_en: "Sow indoors in April, or transplant/direct-sow in June, harvest Jul–Sep", svarighet: "medel" },
-  zucchini: { visningsnamn: "Zucchini/squash", vatten: "hog", sol: "sol", avstand_cm: 80,
-    sasong: "Så inomhus april–maj eller direkt i juni, skörda jul–sep",
-    sasong_en: "Sow indoors April–May or direct-sow in June, harvest Jul–Sep", svarighet: "latt" },
-  pumpa: { visningsnamn: "Pumpa", vatten: "hog", sol: "sol", avstand_cm: 100,
-    sasong: "Så inomhus april–maj, plantera ut i juni, skörda sep–okt",
-    sasong_en: "Sow indoors April–May, transplant in June, harvest Sep–Oct", svarighet: "medel" },
-  art: { visningsnamn: "Ärt", vatten: "medel", sol: "sol", avstand_cm: 10,
-    sasong: "Så direkt april–maj, skörda jun–aug", sasong_en: "Direct-sow April–May, harvest Jun–Aug", svarighet: "latt" },
-  bona: { visningsnamn: "Böna", vatten: "medel", sol: "sol", avstand_cm: 15,
-    sasong: "Så direkt efter frostrisk (juni), skörda jul–sep",
-    sasong_en: "Direct-sow after frost risk (June), harvest Jul–Sep", svarighet: "latt" },
-  morot: { visningsnamn: "Morot", vatten: "medel", sol: "sol", avstand_cm: 5,
-    sasong: "Så direkt april–juni, skörda jul–okt", sasong_en: "Direct-sow April–June, harvest Jul–Oct", svarighet: "latt" },
-  radisa: { visningsnamn: "Rädisa", vatten: "medel", sol: "sol", avstand_cm: 4,
-    sasong: "Så direkt från april, klar på 3–4 veckor - så om flera gånger",
-    sasong_en: "Direct-sow from April, ready in 3–4 weeks - sow again several times", svarighet: "latt", saddIntervallDagar: 10 },
-  rodbeta: { visningsnamn: "Rödbeta", vatten: "medel", sol: "sol", avstand_cm: 10,
-    sasong: "Så direkt april–juni, skörda jul–okt", sasong_en: "Direct-sow April–June, harvest Jul–Oct", svarighet: "latt" },
-  purjolok: { visningsnamn: "Purjolök", vatten: "medel", sol: "sol", avstand_cm: 15,
-    sasong: "Så inomhus mars, plantera ut i juni, skörda sep–nov",
-    sasong_en: "Sow indoors in March, transplant in June, harvest Sep–Nov", svarighet: "medel" },
-  vitlok: { visningsnamn: "Vitlök", vatten: "lag", sol: "sol", avstand_cm: 10,
-    sasong: "Sätt i oktober för övervintring, eller tidigt på våren, skörda jul–aug",
-    sasong_en: "Plant in October to overwinter, or early spring, harvest Jul–Aug", svarighet: "latt" },
-  lok: { visningsnamn: "Lök", vatten: "lag", sol: "sol", avstand_cm: 10,
-    sasong: "Sätt sättlök april–maj, skörda aug–sep", sasong_en: "Plant onion sets April–May, harvest Aug–Sep", svarighet: "latt" },
-  kal: { visningsnamn: "Kål", vatten: "hog", sol: "sol", avstand_cm: 50,
-    sasong: "Så inomhus mars–april, plantera ut i maj–juni, skörda aug–okt",
-    sasong_en: "Sow indoors March–April, transplant in May–June, harvest Aug–Oct", svarighet: "medel" },
-  sallad: { visningsnamn: "Sallad", vatten: "hog", sol: "halvskugga", avstand_cm: 25,
-    sasong: "Så direkt eller inomhus från april, klar 6–8 veckor senare - så om flera gånger",
-    sasong_en: "Direct-sow or start indoors from April, ready 6–8 weeks later - sow again several times", svarighet: "latt", saddIntervallDagar: 14 },
-  spenat: { visningsnamn: "Spenat", vatten: "medel", sol: "halvskugga", avstand_cm: 10,
-    sasong: "Så direkt mars–april och igen aug–sep, klar 4–6 veckor senare",
-    sasong_en: "Direct-sow March–April and again Aug–Sep, ready 4–6 weeks later", svarighet: "latt" },
-  dill: { visningsnamn: "Dill", vatten: "medel", sol: "sol", avstand_cm: 15,
-    sasong: "Så direkt från april, så om varannan vecka för jämn skörd",
-    sasong_en: "Direct-sow from April, sow again every other week for a steady harvest", svarighet: "latt", saddIntervallDagar: 14 },
-  basilika: { visningsnamn: "Basilika", vatten: "medel", sol: "sol", avstand_cm: 20,
-    sasong: "Så inomhus april, ställ ut efter frostrisk i juni - känslig för kyla",
-    sasong_en: "Sow indoors in April, move outside after frost risk in June - sensitive to cold", svarighet: "medel" },
-  jordgubbe: { visningsnamn: "Jordgubbe", vatten: "medel", sol: "sol", avstand_cm: 30,
-    sasong: "Plantera vår eller höst, full skörd andra året, skörda jun–jul",
-    sasong_en: "Plant spring or autumn, full harvest the second year, harvest Jun–Jul", svarighet: "latt" },
-  persilja: { visningsnamn: "Persilja", vatten: "medel", sol: "halvskugga", avstand_cm: 15,
-    sasong: "Så direkt eller inomhus från april - långsam att gro, skörda kontinuerligt jun–okt",
-    sasong_en: "Direct-sow or start indoors from April - slow to germinate, harvest continuously Jun–Oct", svarighet: "latt" },
-  selleri: { visningsnamn: "Selleri", vatten: "hog", sol: "sol", avstand_cm: 25,
-    sasong: "Så inomhus feb–mars, plantera ut i juni, skörda sep–okt",
-    sasong_en: "Sow indoors Feb–March, transplant in June, harvest Sep–Oct", svarighet: "svar" },
-};
-const VAXT_DATABAS_UNDANTAG = [/jordärtskocka|kronärtskocka|potatislök/i];
-const VAXT_DATABAS_MONSTER = [
-  [/tomat/i, "tomat"], [/potatis/i, "potatis"], [/paprika|paprikor|chili/i, "paprika"],
-  [/aubergine/i, "aubergine"], [/gurk/i, "gurka"], [/zucchini|squash/i, "zucchini"],
-  [/pumpa|pumpor/i, "pumpa"], [/böna|bönor/i, "bona"], [/morot|morötter/i, "morot"],
-  [/rädisa|rädisor/i, "radisa"], [/rödbeta|rödbetor/i, "rodbeta"], [/purjolök/i, "purjolok"],
-  [/vitlök/i, "vitlok"], [/lök/i, "lok"], [/kål/i, "kal"], [/sallad|sallat/i, "sallad"],
-  [/spenat/i, "spenat"], [/dill/i, "dill"], [/basilika/i, "basilika"], [/jordgubb/i, "jordgubbe"],
-  [/persilja/i, "persilja"], [/selleri/i, "selleri"], [/ärt/i, "art"],
-];
-function vaxtinfoFor(namn) {
-  if (!namn) return null;
-  if (VAXT_DATABAS_UNDANTAG.some((monster) => monster.test(namn))) return null;
-  for (const [monster, nyckel] of VAXT_DATABAS_MONSTER) if (monster.test(namn)) return { nyckel, ...VAXT_DATABAS[nyckel] };
-  return null;
-}
-// Mirrors saddPeriodAktuell in src/logic.js - device-local date, same as
-// berakningNotiser()'s existing skörde-reminder block already uses, not a
-// new Stockholm-timezone dependency the client doesn't otherwise have.
+// Deliberately NOT imported from src/logic.js like the helpers above:
+// this copy uses device-local date, same as berakningNotiser()'s existing
+// skörde-reminder block already does, not the Stockholm-timezone version
+// server.js needs. Divergent on purpose - do not "fix" it into an import.
 const SADD_SASONG_START_MANAD = 4, SADD_SASONG_SLUT_MANAD = 8;
 function saddPeriodAktuell(planterad, intervallDagar, nu = new Date()) {
   if (!planterad || !intervallDagar) return null;
@@ -2770,14 +2631,10 @@ function uppdateraZonVal() {
 function entiteterFor(idLista) {
   return (idLista ?? []).map((id) => enheterStatus.find((e) => e.id === id)).filter(Boolean);
 }
-// Mirrors arAktuatorEntitet in src/logic.js (kept manually in sync, same
-// reason as vaxtinfoFor above) - true once a zone has a switch./valve.
-// domain entity linked, the signal that a watering schedule for it could
-// actually drive something rather than just remind about it.
-function arAktuatorEntitet(entityId) {
-  const domän = String(entityId ?? "").split(".")[0];
-  return domän === "switch" || domän === "valve";
-}
+// True once a zone has a switch./valve.-domain entity linked - the signal
+// that a watering schedule for it could actually drive something rather
+// than just remind about it. arAktuatorEntitet itself now comes straight
+// from src/logic.js (see the import at the top of this script).
 function zonHarAktuator(z) {
   return entiteterFor(z.enhetIds).some((e) => arAktuatorEntitet(e.entityId));
 }
@@ -5415,6 +5272,14 @@ function historikHoverUt() {
   document.querySelectorAll(".historik-punkt").forEach((c) => { c.style.display = "none"; });
   $("historikTooltip").style.display = "none";
 }
+// Reachable from the global object on purpose: the history graph's SVG is
+// built as a template string with onmousemove=/onmouseleave= attributes
+// (see historikGraf), and an inline HTML handler resolves its names
+// against global scope when it fires - which a module's top-level
+// declarations never reach. These two lines are the whole cost of this
+// file being type="module"; drop them and the graph tooltip goes dead.
+window.historikHover = historikHover;
+window.historikHoverUt = historikHoverUt;
 // "≈ 6,5 timmar sol idag" – räknat på var solen står och vad som skuggar.
 function solTimmarText(z) {
   if (geoLat == null || geoLon == null) {

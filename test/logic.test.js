@@ -453,87 +453,48 @@ describe("skordFamiljVarning", () => {
   });
 });
 
-// index.html has no module imports (it's a single browser-loaded file with
-// no build step, see src/logic.js's own header comment on why), so a
-// handful of pure helpers are hand-copied there instead, each flagged
-// "kept manually in sync" at its own site. That comment is a promise with
-// nothing enforcing it - this reads both files' actual source and asserts
-// the copies are still identical (modulo comments/whitespace/the `export`
-// keyword), so a future edit to one side without the other fails CI
-// immediately instead of silently drifting. saddPeriodAktuell is
-// deliberately NOT covered here even though it's also "mirrored" - its
-// index.html copy intentionally uses device-local time instead of
-// stockholmManad(), a real difference, not drift (see the comment at its
+// index.html's script is now type="module" and imports skordFamiljVarning/
+// vaxtinfoFor/arAktuatorEntitet straight from src/logic.js - one copy, not
+// two watched by a drift test. Node can't execute index.html, so what's
+// left to test here isn't behaviour, it's wiring: that the import is still
+// there, that nobody's pasted a hand-copy back in (the exact regression
+// this file's history exists to prevent), and that server.js still serves
+// the module above its own HTML catch-all. saddPeriodAktuell is
+// deliberately excluded - its index.html copy intentionally uses
+// device-local time instead of stockholmManad(), a real difference, not
+// something that should ever become an import (see the comment at its
 // definition in index.html).
 const PROJEKTROT = dirname(dirname(fileURLToPath(import.meta.url)));
 const indexHtmlKalla = readFileSync(join(PROJEKTROT, "index.html"), "utf8");
-const logicJsKalla = readFileSync(join(PROJEKTROT, "src/logic.js"), "utf8");
+const serverJsKalla = readFileSync(join(PROJEKTROT, "server.js"), "utf8");
 
-function hittaIndex(kalla, monster, beskrivning) {
-  const m = kalla.match(monster);
-  if (!m) throw new Error(`hittade inte ${beskrivning}`);
-  return m.index;
-}
-// Returns the index just past the closing brace of the first function
-// found matching funktionsMonster, at or after fromIndex - brace-counted
-// so it doesn't get fooled by nested objects/blocks inside the function.
-function hittaFunktionsSlut(kalla, funktionsMonster, beskrivning, fromIndex = 0) {
-  const rest = kalla.slice(fromIndex);
-  const start = hittaIndex(rest, funktionsMonster, beskrivning);
-  const oppen = rest.indexOf("{", start);
-  let djup = 0;
-  for (let i = oppen; i < rest.length; i++) {
-    if (rest[i] === "{") djup++;
-    else if (rest[i] === "}") { djup--; if (djup === 0) return fromIndex + i + 1; }
-  }
-  throw new Error(`obalanserade klamrar i ${beskrivning}`);
-}
-// Comments and whitespace are expected to differ (index.html's copies
-// have their own shorter "Mirrors X" comments) - only the actual code
-// matters for drift. None of the four compared blocks contain a literal
-// "//" inside a string or regex, so naive line-comment stripping is safe
-// here (verified by reading each block, not assumed).
-function normaliseraKod(kod) {
-  return kod
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/\/\/[^\n]*/g, "")
-    .replace(/\bexport\s+/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
+describe("index.html imports the shared helpers instead of copying them", () => {
+  test("the panel script is a module importing src/logic.js", () => {
+    assert.match(indexHtmlKalla, /<script type="module">/);
+    const m = indexHtmlKalla.match(/import\s*\{([^}]*)\}\s*from\s*"\.\/src\/logic\.js";/);
+    assert.ok(m, 'index.html has no import from "./src/logic.js"');
+    const namn = m[1].split(",").map((s) => s.trim()).filter(Boolean);
+    for (const n of ["skordFamiljVarning", "vaxtinfoFor", "arAktuatorEntitet"]) {
+      assert.ok(namn.includes(n), `${n} is no longer imported into index.html`);
+    }
+  });
 
-describe("index.html's hand-copied helpers match src/logic.js (drift check)", () => {
-  test("VAXT_FAMILJER + vaxtfamiljFor + skordFamiljVarning", () => {
-    const start1 = hittaIndex(logicJsKalla, /export const VAXT_FAMILJER = \{/, "VAXT_FAMILJER in src/logic.js");
-    const slut1 = hittaFunktionsSlut(logicJsKalla, /export function skordFamiljVarning\(/, "skordFamiljVarning in src/logic.js", start1);
-    const start2 = hittaIndex(indexHtmlKalla, /const VAXT_FAMILJER = \{/, "VAXT_FAMILJER in index.html");
-    const slut2 = hittaFunktionsSlut(indexHtmlKalla, /function skordFamiljVarning\(/, "skordFamiljVarning in index.html", start2);
-    assert.equal(
-      normaliseraKod(indexHtmlKalla.slice(start2, slut2)),
-      normaliseraKod(logicJsKalla.slice(start1, slut1)),
-      "index.html's VAXT_FAMILJER/vaxtfamiljFor/skordFamiljVarning has drifted from src/logic.js - update both or neither",
-    );
+  test("no hand-copied duplicate has crept back in", () => {
+    for (const n of ["skordFamiljVarning", "vaxtfamiljFor", "vaxtinfoFor", "arAktuatorEntitet"]) {
+      assert.doesNotMatch(indexHtmlKalla, new RegExp(`\\bfunction ${n}\\s*\\(`),
+        `index.html redeclares ${n} - import it from src/logic.js instead`);
+    }
+    for (const n of ["VAXT_FAMILJER", "VAXT_DATABAS"]) {
+      assert.doesNotMatch(indexHtmlKalla, new RegExp(`\\bconst ${n}\\s*=`),
+        `index.html redeclares ${n} - import it from src/logic.js instead`);
+    }
   });
-  test("VAXT_DATABAS + vaxtinfoFor", () => {
-    const start1 = hittaIndex(logicJsKalla, /export const VAXT_DATABAS = \{/, "VAXT_DATABAS in src/logic.js");
-    const slut1 = hittaFunktionsSlut(logicJsKalla, /export function vaxtinfoFor\(/, "vaxtinfoFor in src/logic.js", start1);
-    const start2 = hittaIndex(indexHtmlKalla, /const VAXT_DATABAS = \{/, "VAXT_DATABAS in index.html");
-    const slut2 = hittaFunktionsSlut(indexHtmlKalla, /function vaxtinfoFor\(/, "vaxtinfoFor in index.html", start2);
-    assert.equal(
-      normaliseraKod(indexHtmlKalla.slice(start2, slut2)),
-      normaliseraKod(logicJsKalla.slice(start1, slut1)),
-      "index.html's VAXT_DATABAS/vaxtinfoFor has drifted from src/logic.js - update both or neither",
-    );
-  });
-  test("arAktuatorEntitet", () => {
-    const start1 = hittaIndex(logicJsKalla, /export function arAktuatorEntitet\(/, "arAktuatorEntitet in src/logic.js");
-    const slut1 = hittaFunktionsSlut(logicJsKalla, /export function arAktuatorEntitet\(/, "arAktuatorEntitet in src/logic.js", start1);
-    const start2 = hittaIndex(indexHtmlKalla, /function arAktuatorEntitet\(/, "arAktuatorEntitet in index.html");
-    const slut2 = hittaFunktionsSlut(indexHtmlKalla, /function arAktuatorEntitet\(/, "arAktuatorEntitet in index.html", start2);
-    assert.equal(
-      normaliseraKod(indexHtmlKalla.slice(start2, slut2)),
-      normaliseraKod(logicJsKalla.slice(start1, slut1)),
-      "index.html's arAktuatorEntitet has drifted from src/logic.js - update both or neither",
-    );
+
+  test("server.js serves /src/logic.js above the catch-all HTML route", () => {
+    const logicRutt = serverJsKalla.indexOf('p.endsWith("/src/logic.js")');
+    const fangaAllt = serverJsKalla.indexOf('!p.includes("/api/")');
+    assert.notEqual(logicRutt, -1, "no /src/logic.js route - index.html's module import would 404");
+    assert.ok(logicRutt !== -1 && logicRutt < fangaAllt,
+      "the /src/logic.js route sits below the catch-all, so the module would be served as HTML");
   });
 });

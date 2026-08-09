@@ -51,6 +51,11 @@ const KARTBILD_DIR = join(dirname(DATA_PATH), "maps");
 const PHOTOS_DIR = join(dirname(DATA_PATH), "photos");
 const PANEL_HTML = join(dirname(fileURLToPath(import.meta.url)), "index.html");
 const LOGO_PNG = join(dirname(fileURLToPath(import.meta.url)), "logo.png");
+// index.html's script is a module and imports the shared pure helpers from
+// here directly rather than hand-copying them, so this file has to be
+// reachable over HTTP too - and with a JavaScript Content-Type, or the
+// browser refuses to execute the module and the whole panel stays blank.
+const LOGIC_JS = join(dirname(fileURLToPath(import.meta.url)), "src", "logic.js");
 // Read once at startup rather than per-request - the version only changes
 // when the container image itself is rebuilt.
 const APP_VERSION = JSON.parse(
@@ -1920,6 +1925,16 @@ const server = createServer(async (req, res) => {
       const png = await readFile(LOGO_PNG);
       res.writeHead(200, { "Content-Type": "image/png", "Cache-Control": "public, max-age=86400" });
       return res.end(png);
+    }
+    // Must sit above the catch-all below, which would otherwise answer this
+    // with index.html's HTML - and a module served as text/html is refused
+    // outright by every browser. no-store, not a long cache: unlike
+    // logo.png, this file has to stay in lockstep with index.html, which
+    // is itself already served no-store.
+    if (req.method === "GET" && p.endsWith("/src/logic.js")) {
+      const js = await readFile(LOGIC_JS, "utf8");
+      res.writeHead(200, { "Content-Type": "text/javascript; charset=utf-8", ...INGEN_CACHE });
+      return res.end(js);
     }
     if (req.method === "GET" && !p.includes("/api/")) {
       const html = await readFile(PANEL_HTML, "utf8");
