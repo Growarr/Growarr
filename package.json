@@ -1,6 +1,6 @@
 {
   "name": "growarr",
-  "version": "0.1.31",
+  "version": "0.1.32",
   "description": "A self-hosted garden map with a frost watch (SMHI + ntfy) and a Home Assistant-connected planting journal.",
   "type": "module",
   "scripts": {
