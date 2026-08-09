@@ -2067,7 +2067,7 @@ const VAXT_DATABAS_MONSTER = [
 ];
 function vaxtinfoFor(namn) {
   if (!namn) return null;
-  if (VAXT_DATABAS_UNDANTAG.some((m) => m.test(namn))) return null;
+  if (VAXT_DATABAS_UNDANTAG.some((monster) => monster.test(namn))) return null;
   for (const [monster, nyckel] of VAXT_DATABAS_MONSTER) if (monster.test(namn)) return { nyckel, ...VAXT_DATABAS[nyckel] };
   return null;
 }
@@ -2703,7 +2703,7 @@ function entiteterFor(idLista) {
 // domain entity linked, the signal that a watering schedule for it could
 // actually drive something rather than just remind about it.
 function arAktuatorEntitet(entityId) {
-  const domän = (entityId ?? "").split(".")[0];
+  const domän = String(entityId ?? "").split(".")[0];
   return domän === "switch" || domän === "valve";
 }
 function zonHarAktuator(z) {

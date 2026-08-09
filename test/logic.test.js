@@ -1,5 +1,8 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import {
   rensaAntal, rensaLayout, rensaHojdM, STANDARD_HOJD_M,
   torkTakt, veckodagarForIntervall, enhetArFuktsensor,
@@ -447,5 +450,90 @@ describe("skordFamiljVarning", () => {
     for (const info of Object.values(VAXT_FAMILJER)) {
       assert.ok(Number.isInteger(info.vilaAr) && info.vilaAr > 0, `bad vilaAr for ${info.namn}`);
     }
+  });
+});
+
+// index.html has no module imports (it's a single browser-loaded file with
+// no build step, see src/logic.js's own header comment on why), so a
+// handful of pure helpers are hand-copied there instead, each flagged
+// "kept manually in sync" at its own site. That comment is a promise with
+// nothing enforcing it - this reads both files' actual source and asserts
+// the copies are still identical (modulo comments/whitespace/the `export`
+// keyword), so a future edit to one side without the other fails CI
+// immediately instead of silently drifting. saddPeriodAktuell is
+// deliberately NOT covered here even though it's also "mirrored" - its
+// index.html copy intentionally uses device-local time instead of
+// stockholmManad(), a real difference, not drift (see the comment at its
+// definition in index.html).
+const PROJEKTROT = dirname(dirname(fileURLToPath(import.meta.url)));
+const indexHtmlKalla = readFileSync(join(PROJEKTROT, "index.html"), "utf8");
+const logicJsKalla = readFileSync(join(PROJEKTROT, "src/logic.js"), "utf8");
+
+function hittaIndex(kalla, monster, beskrivning) {
+  const m = kalla.match(monster);
+  if (!m) throw new Error(`hittade inte ${beskrivning}`);
+  return m.index;
+}
+// Returns the index just past the closing brace of the first function
+// found matching funktionsMonster, at or after fromIndex - brace-counted
+// so it doesn't get fooled by nested objects/blocks inside the function.
+function hittaFunktionsSlut(kalla, funktionsMonster, beskrivning, fromIndex = 0) {
+  const rest = kalla.slice(fromIndex);
+  const start = hittaIndex(rest, funktionsMonster, beskrivning);
+  const oppen = rest.indexOf("{", start);
+  let djup = 0;
+  for (let i = oppen; i < rest.length; i++) {
+    if (rest[i] === "{") djup++;
+    else if (rest[i] === "}") { djup--; if (djup === 0) return fromIndex + i + 1; }
+  }
+  throw new Error(`obalanserade klamrar i ${beskrivning}`);
+}
+// Comments and whitespace are expected to differ (index.html's copies
+// have their own shorter "Mirrors X" comments) - only the actual code
+// matters for drift. None of the four compared blocks contain a literal
+// "//" inside a string or regex, so naive line-comment stripping is safe
+// here (verified by reading each block, not assumed).
+function normaliseraKod(kod) {
+  return kod
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\/\/[^\n]*/g, "")
+    .replace(/\bexport\s+/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+describe("index.html's hand-copied helpers match src/logic.js (drift check)", () => {
+  test("VAXT_FAMILJER + vaxtfamiljFor + skordFamiljVarning", () => {
+    const start1 = hittaIndex(logicJsKalla, /export const VAXT_FAMILJER = \{/, "VAXT_FAMILJER in src/logic.js");
+    const slut1 = hittaFunktionsSlut(logicJsKalla, /export function skordFamiljVarning\(/, "skordFamiljVarning in src/logic.js", start1);
+    const start2 = hittaIndex(indexHtmlKalla, /const VAXT_FAMILJER = \{/, "VAXT_FAMILJER in index.html");
+    const slut2 = hittaFunktionsSlut(indexHtmlKalla, /function skordFamiljVarning\(/, "skordFamiljVarning in index.html", start2);
+    assert.equal(
+      normaliseraKod(indexHtmlKalla.slice(start2, slut2)),
+      normaliseraKod(logicJsKalla.slice(start1, slut1)),
+      "index.html's VAXT_FAMILJER/vaxtfamiljFor/skordFamiljVarning has drifted from src/logic.js - update both or neither",
+    );
+  });
+  test("VAXT_DATABAS + vaxtinfoFor", () => {
+    const start1 = hittaIndex(logicJsKalla, /export const VAXT_DATABAS = \{/, "VAXT_DATABAS in src/logic.js");
+    const slut1 = hittaFunktionsSlut(logicJsKalla, /export function vaxtinfoFor\(/, "vaxtinfoFor in src/logic.js", start1);
+    const start2 = hittaIndex(indexHtmlKalla, /const VAXT_DATABAS = \{/, "VAXT_DATABAS in index.html");
+    const slut2 = hittaFunktionsSlut(indexHtmlKalla, /function vaxtinfoFor\(/, "vaxtinfoFor in index.html", start2);
+    assert.equal(
+      normaliseraKod(indexHtmlKalla.slice(start2, slut2)),
+      normaliseraKod(logicJsKalla.slice(start1, slut1)),
+      "index.html's VAXT_DATABAS/vaxtinfoFor has drifted from src/logic.js - update both or neither",
+    );
+  });
+  test("arAktuatorEntitet", () => {
+    const start1 = hittaIndex(logicJsKalla, /export function arAktuatorEntitet\(/, "arAktuatorEntitet in src/logic.js");
+    const slut1 = hittaFunktionsSlut(logicJsKalla, /export function arAktuatorEntitet\(/, "arAktuatorEntitet in src/logic.js", start1);
+    const start2 = hittaIndex(indexHtmlKalla, /function arAktuatorEntitet\(/, "arAktuatorEntitet in index.html");
+    const slut2 = hittaFunktionsSlut(indexHtmlKalla, /function arAktuatorEntitet\(/, "arAktuatorEntitet in index.html", start2);
+    assert.equal(
+      normaliseraKod(indexHtmlKalla.slice(start2, slut2)),
+      normaliseraKod(logicJsKalla.slice(start1, slut1)),
+      "index.html's arAktuatorEntitet has drifted from src/logic.js - update both or neither",
+    );
   });
 });
