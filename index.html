@@ -2237,6 +2237,17 @@ const SPRAK_TEXT = {
     schema_fukttrend_titel: "Skapa automation från fukttrenden",
     schema_fukttrend_beskrivning: "Vattna {zon} via den kopplade ventilen när jordens uttorkningstrend visar att den snart blir torr.",
     kamera_visa_bild: "Visa bild", kamera_dolj_bild: "Dölj bild", tradgardsradgivaren: "Trädgårdsrådgivaren",
+    sondag_kort: "Sön", mandag_kort: "Mån", tisdag_kort: "Tis", onsdag_kort: "Ons", torsdag_kort: "Tor", fredag_kort: "Fre", lordag_kort: "Lör",
+    koordinater_saknas: "Koordinater saknas (GEO_LAT/GEO_LON)",
+    ingen_entitetslista: "Ingen entitetslista tillgänglig (kontrollera HA_TOKEN) – ni kan fortfarande skriva ett entity_id manuellt.",
+    entity_id_kravs: "Entity ID krävs.", karta_tillagd: "Karta tillagd.", rubrik_kravs: "Rubrik krävs.",
+    ange_kameraentitet: "Ange en kameraentitet.", valj_minst_entitet: "Välj minst en entitet.",
+    block_tillagt: "Block tillagt – syns på översikten.",
+    vand_byt: "Vänd (byt bredd/höjd)", ta_bort_sektion: "Ta bort sektion", dra_andra_storlek: "Dra för att ändra storlek",
+    dra_rotera: "Dra för att rotera", ta_bort_zon_titel: "Ta bort zon", tillbaka_till_oversikten: "Tillbaka till översikten",
+    flytta_upp: "Flytta upp", flytta_ner: "Flytta ner", flytta_annan_kolumn: "Flytta till andra kolumnen",
+    ta_bort_block: "Ta bort block", farre: "Färre", fler: "Fler", ta_bort_planta_titel: "Ta bort planta",
+    ej_nabar: "Ej nåbar", ansluten: "Ansluten",
     forslag_fran_ai: "Förslag från AI", letar_monster: "Letar efter mönster i din trädgård …",
     avfarda_forslag: "Avfärda förslaget", lagg_till_schemat: "Lägg till schemat",
     schema_zon_saknas: "Lägg till en zon på Översikt först.",
@@ -2370,6 +2381,17 @@ const SPRAK_TEXT = {
     schema_fukttrend_titel: "Draft an automation from the moisture trend",
     schema_fukttrend_beskrivning: "Water {zon} via the linked valve when the soil's drying trend shows it'll be dry soon.",
     kamera_visa_bild: "Show image", kamera_dolj_bild: "Hide image", tradgardsradgivaren: "Garden Advisor",
+    sondag_kort: "Sun", mandag_kort: "Mon", tisdag_kort: "Tue", onsdag_kort: "Wed", torsdag_kort: "Thu", fredag_kort: "Fri", lordag_kort: "Sat",
+    koordinater_saknas: "Coordinates missing (GEO_LAT/GEO_LON)",
+    ingen_entitetslista: "No entity list available (check HA_TOKEN) - you can still type an entity_id manually.",
+    entity_id_kravs: "Entity ID required.", karta_tillagd: "Map added.", rubrik_kravs: "Title required.",
+    ange_kameraentitet: "Enter a camera entity.", valj_minst_entitet: "Select at least one entity.",
+    block_tillagt: "Block added - shown on Overview.",
+    vand_byt: "Flip (swap width/height)", ta_bort_sektion: "Delete section", dra_andra_storlek: "Drag to resize",
+    dra_rotera: "Drag to rotate", ta_bort_zon_titel: "Delete zone", tillbaka_till_oversikten: "Back to overview",
+    flytta_upp: "Move up", flytta_ner: "Move down", flytta_annan_kolumn: "Move to the other column",
+    ta_bort_block: "Delete block", farre: "Fewer", fler: "More", ta_bort_planta_titel: "Delete plant",
+    ej_nabar: "Unreachable", ansluten: "Connected",
     forslag_fran_ai: "Suggested by AI", letar_monster: "Looking for patterns in your garden …",
     avfarda_forslag: "Dismiss suggestion", lagg_till_schemat: "Add this schedule",
     schema_zon_saknas: "Add a zone on Overview first.",
@@ -2870,15 +2892,15 @@ function sektionHtml(sektion, grupper, i) {
       style="left:${x * 100}%; top:${y * 100}%; width:${b}px; height:${h}px">
       <div class="sektion-topp">
         <span class="namn">${esc(sektion.namn)}</span>
-        ${redigerarLayout ? `<button class="sektion-vand vand-btn" data-id="${esc(sektion.id)}" title="Vänd (byt bredd/höjd)">⟳</button>` : ""}
-        ${redigerarLayout ? `<button class="sektion-ta-bort" data-id="${esc(sektion.id)}" title="Ta bort sektion">×</button>` : ""}
+        ${redigerarLayout ? `<button class="sektion-vand vand-btn" data-id="${esc(sektion.id)}" title="${t("vand_byt")}">⟳</button>` : ""}
+        ${redigerarLayout ? `<button class="sektion-ta-bort" data-id="${esc(sektion.id)}" title="${t("ta_bort_sektion")}">×</button>` : ""}
       </div>
       <div class="sektion-yta">
         <div class="zon-plantor">${lista.length
           ? plantorHtml(lista, true, { bredd: b - 10, hojd: h - 27 }) // minus padding och titelrad
           : '<span class="sektion-tom">Tom</span>'}</div>
       </div>
-      ${redigerarLayout ? `<div class="storlek-handtag" data-id="${esc(sektion.id)}" title="Dra för att ändra storlek"></div>` : ""}
+      ${redigerarLayout ? `<div class="storlek-handtag" data-id="${esc(sektion.id)}" title="${t("dra_andra_storlek")}"></div>` : ""}
     </div>`;
 }
 // Kartobjekt (träd, hus, väg, staket, skjul, damm) - inte zoner, ingen
@@ -2888,8 +2910,8 @@ function sektionHtml(sektion, grupper, i) {
 function objektHtml(o) {
   return `<div class="objekt objekt-${esc(o.typ)}" data-id="${esc(o.id)}"
       style="left:${o.x * 100}%; top:${o.y * 100}%; width:${o.bredd}px; height:${o.hojd}px; transform:translate(-50%,-50%) rotate(${o.rotation ?? 0}deg)">
-    ${redigerarLayout ? `<div class="objekt-rotera-handtag" data-id="${esc(o.id)}" title="Dra för att rotera"></div>
-      <div class="storlek-handtag" data-id="${esc(o.id)}" title="Dra för att ändra storlek"></div>
+    ${redigerarLayout ? `<div class="objekt-rotera-handtag" data-id="${esc(o.id)}" title="${t("dra_rotera")}"></div>
+      <div class="storlek-handtag" data-id="${esc(o.id)}" title="${t("dra_andra_storlek")}"></div>
       <button class="objekt-ta-bort" data-id="${esc(o.id)}" title="${t("ta_bort")}">×</button>` : ""}
   </div>`;
 }
@@ -2967,14 +2989,14 @@ function renderaKarta() {
           ${redigerarLayout ? `<span class="zon-drag" title="Dra kortet för att flytta">${IKON_DRA}</span>` : ""}
           <span class="namn">${esc(z.namn)}</span>
           ${enhetBadges}
-          ${redigerarLayout ? `<button class="zon-vand vand-btn" data-id="${z.id}" title="Vänd (byt bredd/höjd)">⟳</button>` : ""}
-          ${redigerarLayout ? `<button class="zon-ta-bort" data-id="${z.id}" title="Ta bort zon">×</button>` : ""}
+          ${redigerarLayout ? `<button class="zon-vand vand-btn" data-id="${z.id}" title="${t("vand_byt")}">⟳</button>` : ""}
+          ${redigerarLayout ? `<button class="zon-ta-bort" data-id="${z.id}" title="${t("ta_bort_zon_titel")}">×</button>` : ""}
         </div>
         <div class="zon-yta yta ${esc(z.typ || "annat")}" style="height:${h}px">
           ${sektioner.map((s, si) => sektionHtml(s, grupper, si)).join("")}
           <div class="zon-plantor">${lista.length ? plantorHtml(lista, false, { bredd: b - 20, hojd: h }) : tomText}</div>
         </div>
-        ${redigerarLayout ? `<div class="storlek-handtag" data-id="${z.id}" title="Dra för att ändra storlek"></div>` : ""}
+        ${redigerarLayout ? `<div class="storlek-handtag" data-id="${z.id}" title="${t("dra_andra_storlek")}"></div>` : ""}
       </div>`;
     }).join("");
   }
@@ -3171,7 +3193,7 @@ function renderaSol() {
   const tid = new Date(idag.getFullYear(), idag.getMonth(), idag.getDate(), 0, solMinut);
   $("solTid").textContent = `${String(Math.floor(solMinut / 60)).padStart(2, "0")}:${String(solMinut % 60).padStart(2, "0")}`;
   if (geoLat == null || geoLon == null) {
-    $("solInfo").textContent = "Koordinater saknas (GEO_LAT/GEO_LON)";
+    $("solInfo").textContent = t("koordinater_saknas");
     $("kartaScen").querySelector(".sol-lager")?.remove();
     return;
   }
@@ -3338,7 +3360,7 @@ function renderaBreadcrumb() {
   if (!fokusZonId) { el.style.display = "none"; el.innerHTML = ""; return; }
   const z = zoner.find((x) => x.id === fokusZonId);
   el.style.display = "flex";
-  el.innerHTML = `<button id="breadcrumbBackBtn" title="Tillbaka till översikten">${IKON_TILLBAKA}</button><span>${esc(z?.namn ?? "")}</span>`;
+  el.innerHTML = `<button id="breadcrumbBackBtn" title="${t("tillbaka_till_oversikten")}">${IKON_TILLBAKA}</button><span>${esc(z?.namn ?? "")}</span>`;
 }
 
 // ---- Dra zoner fritt på kartan (pointer events, ingen extern lib) ----
@@ -3784,7 +3806,7 @@ async function laddaEnheter() {
 function renderaEnheter(lista) {
   $("enheterLista").innerHTML = lista.length ? lista.map((e) => `
     <div class="enhet-rad" data-id="${e.id}">
-      <span class="status-prick ${e.fel ? "fel" : "ok"}" title="${e.fel ? "Ej nåbar" : "Ansluten"}"></span>
+      <span class="status-prick ${e.fel ? "fel" : "ok"}" title="${e.fel ? t("ej_nabar") : t("ansluten")}"></span>
       <div class="namn">${esc(e.namn)}<span class="entity-id">${esc(e.entityId)}</span></div>
       ${e.fel ? `<span class="varde fel">${esc(e.fel)}</span>` : `<span class="varde">${esc(e.state)} ${esc(e.enhet)}</span>`}
       <button class="ta-bort enhet-ta-bort" data-id="${e.id}" title="${t("ta_bort")}" style="position:static">×</button>
@@ -3801,7 +3823,7 @@ async function laddaHaEntiteter() {
     haEntiteter = await res.json();
   } catch { haEntiteter = []; }
   $("haEntiteterList").innerHTML = haEntiteter.map((e) => `<option value="${esc(e.entityId)}">${esc(e.namn)}</option>`).join("");
-  $("eHint").textContent = haEntiteter.length ? "" : "Ingen entitetslista tillgänglig (kontrollera HA_TOKEN) – ni kan fortfarande skriva ett entity_id manuellt.";
+  $("eHint").textContent = haEntiteter.length ? "" : t("ingen_entitetslista");
 }
 // Panelen ritas om, så fälten nås via delegering i stället för direkt bindning
 document.addEventListener("input", (e) => {
@@ -3869,10 +3891,10 @@ function widgetKortHtml(w, index, antal) {
       <div class="widget-head">
         <h2>${esc(w.titel)}</h2>
         <div class="widget-verktyg">
-          <button class="widget-upp" data-id="${esc(w.id)}" title="Flytta upp" ${index === 0 ? "disabled" : ""}>↑</button>
-          <button class="widget-ner" data-id="${esc(w.id)}" title="Flytta ner" ${index === antal - 1 ? "disabled" : ""}>↓</button>
-          <button class="widget-byt-kolumn" data-id="${esc(w.id)}" title="Flytta till andra kolumnen">⇄</button>
-          <button class="widget-ta-bort" data-id="${esc(w.id)}" title="Ta bort block">×</button>
+          <button class="widget-upp" data-id="${esc(w.id)}" title="${t("flytta_upp")}" ${index === 0 ? "disabled" : ""}>↑</button>
+          <button class="widget-ner" data-id="${esc(w.id)}" title="${t("flytta_ner")}" ${index === antal - 1 ? "disabled" : ""}>↓</button>
+          <button class="widget-byt-kolumn" data-id="${esc(w.id)}" title="${t("flytta_annan_kolumn")}">⇄</button>
+          <button class="widget-ta-bort" data-id="${esc(w.id)}" title="${t("ta_bort_block")}">×</button>
         </div>
       </div>
       ${innehall}
@@ -4989,7 +5011,7 @@ function zonSektionerHtml(z) {
         <span class="plant-ikon">${(ZON_TYPER[s.typ] ?? ZON_TYPER.annat).ikon}</span>
         <span class="namn">${esc(s.namn)}</span>
         <span class="varde">${esc((ZON_TYPER[s.typ] ?? ZON_TYPER.annat).namn)}</span>
-        ${redigerarLayout ? `<button class="ta-bort sektion-ta-bort" data-id="${esc(s.id)}" title="Ta bort sektion" style="position:static">×</button>` : ""}
+        ${redigerarLayout ? `<button class="ta-bort sektion-ta-bort" data-id="${esc(s.id)}" title="${t("ta_bort_sektion")}" style="position:static">×</button>` : ""}
       </div>`).join("")}</div>` : `<div class="tom">${t("inga_sektioner")}</div>`}
     <div class="modal-lagg-entitet">
       <input type="text" id="zNySektion" placeholder="${t("ny_sektion_placeholder")}">
@@ -5089,7 +5111,7 @@ function zonPlantorHtml(z) {
         <span class="plant-ikon">${ikonForVaxt(o.namn)}</span>
         <span class="namn">${esc(o.namn)}${o.sort ? ` · ${esc(o.sort)}` : ""}</span>
         <span class="varde">${antalFor(o)} st${layoutFor(o) === "fyll" ? " · fyller ytan" : ""}${o.skordManad ? ` · ${esc(manadNamn(o.skordManad))}` : ""}${!o.planterad && o.saddInomhusDatum ? ` · ${IKON_SPRA} sådd ${esc(o.saddInomhusDatum)}` : ""}</span>
-        ${redigerarLayout ? `<button class="ta-bort odling-ta-bort" data-id="${esc(o.id)}" title="Ta bort planta" style="position:static">×</button>` : ""}
+        ${redigerarLayout ? `<button class="ta-bort odling-ta-bort" data-id="${esc(o.id)}" title="${t("ta_bort_planta_titel")}" style="position:static">×</button>` : ""}
       </div>`).join("")}</div>` : `<div class="tom">${t("inga_plantor")}</div>`}
     <label class="lbl" style="margin-top:18px">${t("lagg_till_planta")}</label>
     <input type="text" id="zNyPlanta" list="sortForslagList" autocomplete="off"
@@ -5098,9 +5120,9 @@ function zonPlantorHtml(z) {
     <div class="familj-varning" id="zFamiljVarning"></div>
     <div class="antal-rad">
       <span class="lbl">${t("antal_st")}</span>
-      <button class="antal-btn" id="antalNer" title="Färre">−</button>
+      <button class="antal-btn" id="antalNer" title="${t("farre")}">−</button>
       <input type="number" id="zNyPlantaAntal" min="1" max="200" value="1" title="${t("antal_st")}">
-      <button class="antal-btn" id="antalUpp" title="Fler">+</button>
+      <button class="antal-btn" id="antalUpp" title="${t("fler")}">+</button>
     </div>
     <label class="kryss-rad">
       <input type="checkbox" id="zNyPlantaFyll">
@@ -5494,7 +5516,7 @@ function renderaDetaljPanel() {
 $("eLaggTillBtn").addEventListener("click", async () => {
   const st = $("eStatus");
   const entityId = $("eEntityId").value.trim();
-  if (!entityId) { st.textContent = "Entity ID krävs."; st.className = "status err"; return; }
+  if (!entityId) { st.textContent = t("entity_id_kravs"); st.className = "status err"; return; }
   $("eLaggTillBtn").disabled = true; st.textContent = ""; st.className = "status";
   try {
     await fetch(`${BAS}api/devices`, {
@@ -5896,7 +5918,7 @@ document.addEventListener("click", async (e) => {
     const s = scheman.find((x) => x.id === schemaAutomation.dataset.id);
     const zon = s && zoner.find((z) => z.id === s.zonId);
     if (!s || !zon) return;
-    const dagar = s.veckodagar.map((d) => VECKODAGAR_NAMN[d]).join(", ");
+    const dagar = s.veckodagar.map((d) => veckodagKort(d)).join(", ");
     const harFuktsensor = entiteterFor(zon.enhetIds).some((en) => !arAktuatorEntitet(en.entityId) && (en.enhet ?? "").includes("%"));
     avslutaAutomationRedigering(); // ensure "new draft" mode, not mid-edit of another automation
     $("automationBeskrivning").value = t("schema_automation_beskrivning")
@@ -6085,7 +6107,7 @@ $("kLaggTillBtn").addEventListener("click", async () => {
     await fetch(`${BAS}api/maps`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ namn }) });
     $("kNamn").value = "";
     await laddaOdlingar();
-    st.textContent = "Karta tillagd."; st.className = "status ok";
+    st.textContent = t("karta_tillagd"); st.className = "status ok";
   } catch (e) { st.textContent = t("kunde_inte_spara") + e.message; st.className = "status err"; }
   finally { $("kLaggTillBtn").disabled = false; }
 });
@@ -6102,11 +6124,11 @@ $("wLaggTillBtn").addEventListener("click", async () => {
   const st = $("wStatus");
   const titel = $("wTitel").value.trim();
   const typ = $("wTyp").value;
-  if (!titel) { st.textContent = "Rubrik krävs."; st.className = "status err"; return; }
+  if (!titel) { st.textContent = t("rubrik_kravs"); st.className = "status err"; return; }
   const enhetIds = [...$("wEnheter").selectedOptions].map((o) => o.value);
   const entityId = $("wKamera").value.trim();
-  if (typ === "kamera" && !entityId) { st.textContent = "Ange en kameraentitet."; st.className = "status err"; return; }
-  if (typ === "entiteter" && !enhetIds.length) { st.textContent = "Välj minst en entitet."; st.className = "status err"; return; }
+  if (typ === "kamera" && !entityId) { st.textContent = t("ange_kameraentitet"); st.className = "status err"; return; }
+  if (typ === "entiteter" && !enhetIds.length) { st.textContent = t("valj_minst_entitet"); st.className = "status err"; return; }
   $("wLaggTillBtn").disabled = true; st.textContent = ""; st.className = "status";
   try {
     await fetch(`${BAS}api/widgets`, {
@@ -6115,7 +6137,7 @@ $("wLaggTillBtn").addEventListener("click", async () => {
     });
     $("wTitel").value = ""; $("wKamera").value = "";
     await laddaOdlingar();
-    st.textContent = "Block tillagt – syns på översikten."; st.className = "status ok";
+    st.textContent = t("block_tillagt"); st.className = "status ok";
   } catch (e) { st.textContent = t("kunde_inte_spara") + e.message; st.className = "status err"; }
   finally { $("wLaggTillBtn").disabled = false; }
 });
@@ -6556,7 +6578,7 @@ function anteckningarKalenderHtml() {
       <span class="kalender-manad">${manadText.charAt(0).toUpperCase() + manadText.slice(1)}</span>
       <button class="kalender-nav" id="kalenderNastaBtn" title="${t("nasta_manad")}">›</button>
     </div>
-    <div class="kalender-veckodagar">${["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"].map((d) => `<span>${d}</span>`).join("")}</div>
+    <div class="kalender-veckodagar">${[1, 2, 3, 4, 5, 6, 0].map((d) => `<span>${veckodagKort(d)}</span>`).join("")}</div>
     <div class="kalender-grid">${celler}</div>
     ${skordDennaManad.length ? `<div class="kalender-skord">
       <div class="lbl">${t("skord_denna_manad")}</div>
@@ -6633,7 +6655,12 @@ function renderaGlobalHistorik() {
 // notiscentret på schemalagda dagar, byggt på samma id+datum-mönster som
 // skördepåminnelserna. Den dagen en riktig bevattningsventil finns kan
 // samma scheman driva den utan att UI:t behöver ändras.
-const VECKODAGAR_NAMN = ["Sön", "Mån", "Tis", "Ons", "Tor", "Fre", "Lör"]; // matchar Date.getDay()
+// Indexed like Date.getDay() (0 = Sunday). A function, not a plain array,
+// so it re-reads t() live and follows the language toggle - a const array
+// built once at load would freeze at whichever language was active then.
+function veckodagKort(d) {
+  return [t("sondag_kort"), t("mandag_kort"), t("tisdag_kort"), t("onsdag_kort"), t("torsdag_kort"), t("fredag_kort"), t("lordag_kort")][d];
+}
 function schemaListaHtml() {
   if (!scheman.length) return `<div class="tom">${t("inga_scheman")}</div>`;
   const idagVeckodag = new Date().getDay();
@@ -6645,7 +6672,7 @@ function schemaListaHtml() {
       <span class="ikon">${IKON_DROPPE}</span>
       <div class="info">
         <div class="namn">${esc(zon?.namn ?? "Okänd zon")}</div>
-        <div class="dagar">${s.veckodagar.map((d) => VECKODAGAR_NAMN[d]).join(", ")}${s.varaktighetMin ? ` · ${s.varaktighetMin} ${t("min_forkortning")}` : ""}</div>
+        <div class="dagar">${s.veckodagar.map((d) => veckodagKort(d)).join(", ")}${s.varaktighetMin ? ` · ${s.varaktighetMin} ${t("min_forkortning")}` : ""}</div>
       </div>
       ${idagSchemalagd ? `<span class="schema-idag">${t("idag")}</span>` : ""}
       <button class="ta-bort-liten schema-automation-btn" data-id="${esc(s.id)}" ${redo ? "" : "disabled"} title="${redo ? t("schema_till_automation") : t("schema_automation_ej_redo")}">${IKON_VENTIL}</button>
@@ -6665,7 +6692,7 @@ function schemaFormularHtml() {
     <div class="falt">
       <label class="lbl">${t("veckodagar")}</label>
       <div class="schema-dagval">
-        ${[1, 2, 3, 4, 5, 6, 0].map((d) => `<button type="button" class="schema-dag-btn" data-dag="${d}">${VECKODAGAR_NAMN[d]}</button>`).join("")}
+        ${[1, 2, 3, 4, 5, 6, 0].map((d) => `<button type="button" class="schema-dag-btn" data-dag="${d}">${veckodagKort(d)}</button>`).join("")}
       </div>
     </div>
     ${zoner.some((z) => zonHarAktuator(z)) ? `<div class="falt">
@@ -6711,7 +6738,7 @@ function schemaForslagHtml() {
         <span class="ikon">${IKON_GNISTRA}</span>
         <div class="info">
           <div class="namn">${esc(f.zonNamn)}</div>
-          <div class="dagar">${f.veckodagar.map((d) => VECKODAGAR_NAMN[d]).join(", ")}</div>
+          <div class="dagar">${f.veckodagar.map((d) => veckodagKort(d)).join(", ")}</div>
           ${f.motivering ? `<div class="motivering">${formatAiText(f.motivering)}</div>` : ""}
         </div>
         <button class="forslag-lagg-till" data-nyckel="${esc(forslagNyckel(f))}" title="${t("lagg_till_schemat")}">${t("lagg_till")}</button>
