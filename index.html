@@ -1731,7 +1731,7 @@ try {
     <div class="skapa-panel" id="skapaOdling" style="display:none">
       <div class="skapa-rad">
         <div><label class="lbl">Namn</label><input type="text" id="oNamn" list="sortForslagList" autocomplete="off" data-i18n-placeholder="planta_namn_placeholder" placeholder="t.ex. Tomater"></div>
-        <div><label class="lbl">${t("zon")}</label><select id="oZon"><option value="" data-i18n="ingen_zon">Ingen zon</option></select></div>
+        <div><label class="lbl" data-i18n="zon">Zon</label><select id="oZon"><option value="" data-i18n="ingen_zon">Ingen zon</option></select></div>
       </div>
       <div class="skapa-rad" style="margin-top:12px; grid-template-columns:1fr">
         <div><label class="lbl" data-i18n="sort">Sort</label><input type="text" id="oSort" maxlength="60" data-i18n-placeholder="sort_placeholder" placeholder="t.ex. Sungold"></div>
@@ -1739,26 +1739,26 @@ try {
       <div id="oVaxtinfo"></div>
       <div class="familj-varning" id="oFamiljVarning"></div>
       <div class="skapa-rad" style="margin-top:12px">
-        <div><label class="lbl">${t("antal_st")}</label><input type="number" id="oAntal" min="1" max="200" value="1"></div>
-        <div><label class="lbl">${t("pa_kartan")}</label>
+        <div><label class="lbl" data-i18n="antal_st">Antal (st)</label><input type="number" id="oAntal" min="1" max="200" value="1"></div>
+        <div><label class="lbl" data-i18n="pa_kartan">På kartan</label>
           <select id="oLayout">
-            <option value="klunga">${t("samlade")}</option>
-            <option value="fyll">${t("fyller_ytan")}</option>
+            <option value="klunga" data-i18n="samlade">Samlade på en plats</option>
+            <option value="fyll" data-i18n="fyller_ytan">Fyll hela ytan</option>
           </select>
         </div>
       </div>
       <div class="skapa-rad" style="margin-top:12px">
-        <div><label class="lbl">${t("sadd_inomhus")}</label><input type="date" id="oSaddInomhusDatum"></div>
-        <div><label class="lbl">${t("planterad")}</label><input type="date" id="oPlanterad"></div>
+        <div><label class="lbl" data-i18n="sadd_inomhus">Sådd inomhus</label><input type="date" id="oSaddInomhusDatum"></div>
+        <div><label class="lbl" data-i18n="planterad">Planterad</label><input type="date" id="oPlanterad"></div>
       </div>
       <div class="skapa-rad" style="margin-top:12px; grid-template-columns:1fr">
-        <div><label class="lbl">${t("skordemanad")}</label><input type="month" id="oSkordManad"></div>
+        <div><label class="lbl" data-i18n="skordemanad">Skördemånad</label><input type="month" id="oSkordManad"></div>
       </div>
       <div class="skapa-rad" style="margin-top:12px">
-        <div><label class="lbl">${t("skordefonster")}</label><input type="text" id="oSkord" placeholder="t.ex. aug–sep"></div>
-        <div><label class="lbl">${t("anteckning")}</label><input type="text" id="oAnteckning" placeholder="valfritt"></div>
+        <div><label class="lbl" data-i18n="skordefonster">Skördefönster (fritext)</label><input type="text" id="oSkord" placeholder="t.ex. aug–sep"></div>
+        <div><label class="lbl" data-i18n="anteckning">Anteckning</label><input type="text" id="oAnteckning" placeholder="valfritt"></div>
       </div>
-      <button id="oLaggTillBtn" style="margin-top:14px"data-i18n="lagg_till_planta">Lägg till planta</button>
+      <button id="oLaggTillBtn" style="margin-top:14px" data-i18n="lagg_till_planta">Lägg till planta</button>
       <div class="status" id="oStatus"></div>
     </div>
 
@@ -2228,6 +2228,7 @@ const SPRAK_TEXT = {
     schema_med_varaktighet: " i {min} minuter", schema_hoppa_fuktig: " Hoppa över om jorden redan är tillräckligt fuktig.",
     schema_fukttrend_titel: "Skapa automation från fukttrenden",
     schema_fukttrend_beskrivning: "Vattna {zon} via den kopplade ventilen när jordens uttorkningstrend visar att den snart blir torr.",
+    kamera_visa_bild: "Visa bild", kamera_dolj_bild: "Dölj bild",
     forslag_fran_ai: "✨ Förslag från AI", letar_monster: "Letar efter mönster i din trädgård …",
     avfarda_forslag: "Avfärda förslaget", lagg_till_schemat: "Lägg till schemat",
     schema_zon_saknas: "Lägg till en zon på Översikt först.",
@@ -2360,6 +2361,7 @@ const SPRAK_TEXT = {
     schema_med_varaktighet: " for {min} minutes", schema_hoppa_fuktig: " Skip if the soil is already moist enough.",
     schema_fukttrend_titel: "Draft an automation from the moisture trend",
     schema_fukttrend_beskrivning: "Water {zon} via the linked valve when the soil's drying trend shows it'll be dry soon.",
+    kamera_visa_bild: "Show image", kamera_dolj_bild: "Hide image",
     forslag_fran_ai: "✨ Suggested by AI", letar_monster: "Looking for patterns in your garden …",
     avfarda_forslag: "Dismiss suggestion", lagg_till_schemat: "Add this schedule",
     schema_zon_saknas: "Add a zone on Overview first.",
@@ -2880,7 +2882,7 @@ function objektHtml(o) {
       style="left:${o.x * 100}%; top:${o.y * 100}%; width:${o.bredd}px; height:${o.hojd}px; transform:translate(-50%,-50%) rotate(${o.rotation ?? 0}deg)">
     ${redigerarLayout ? `<div class="objekt-rotera-handtag" data-id="${esc(o.id)}" title="Dra för att rotera"></div>
       <div class="storlek-handtag" data-id="${esc(o.id)}" title="Dra för att ändra storlek"></div>
-      <button class="objekt-ta-bort" data-id="${esc(o.id)}" title="Ta bort">×</button>` : ""}
+      <button class="objekt-ta-bort" data-id="${esc(o.id)}" title="${t("ta_bort")}">×</button>` : ""}
   </div>`;
 }
 function renderaKarta() {
@@ -3716,7 +3718,7 @@ window.addEventListener("resize", () => {
 $("zLaggTillBtn").addEventListener("click", async () => {
   const st = $("zStatus");
   const namn = $("zNamn").value.trim();
-  if (!namn) { st.textContent = "Namn krävs."; st.className = "status err"; return; }
+  if (!namn) { st.textContent = t("namn_kravs"); st.className = "status err"; return; }
   $("zLaggTillBtn").disabled = true; st.textContent = ""; st.className = "status";
   try {
     await fetch(`${BAS}api/zones`, {
@@ -3725,14 +3727,14 @@ $("zLaggTillBtn").addEventListener("click", async () => {
     });
     $("zNamn").value = "";
     await laddaOdlingar();
-  } catch (e) { st.textContent = "Kunde inte spara: " + e.message; st.className = "status err"; }
+  } catch (e) { st.textContent = t("kunde_inte_spara") + e.message; st.className = "status err"; }
   finally { $("zLaggTillBtn").disabled = false; }
 });
 
 $("oLaggTillBtn").addEventListener("click", async () => {
   const st = $("oStatus");
   const namn = $("oNamn").value.trim();
-  if (!namn) { st.textContent = "Namn krävs."; st.className = "status err"; return; }
+  if (!namn) { st.textContent = t("namn_kravs"); st.className = "status err"; return; }
   $("oLaggTillBtn").disabled = true; st.textContent = ""; st.className = "status";
   try {
     await fetch(`${BAS}api/plantings`, {
@@ -3747,7 +3749,7 @@ $("oLaggTillBtn").addEventListener("click", async () => {
     $("oAnteckning").value = ""; $("oAntal").value = "1"; $("oLayout").value = "klunga";
     $("oFamiljVarning").innerHTML = "";
     await laddaOdlingar();
-  } catch (e) { st.textContent = "Kunde inte spara: " + e.message; st.className = "status err"; }
+  } catch (e) { st.textContent = t("kunde_inte_spara") + e.message; st.className = "status err"; }
   finally { $("oLaggTillBtn").disabled = false; }
 });
 
@@ -3777,7 +3779,7 @@ function renderaEnheter(lista) {
       <span class="status-prick ${e.fel ? "fel" : "ok"}" title="${e.fel ? "Ej nåbar" : "Ansluten"}"></span>
       <div class="namn">${esc(e.namn)}<span class="entity-id">${esc(e.entityId)}</span></div>
       ${e.fel ? `<span class="varde fel">${esc(e.fel)}</span>` : `<span class="varde">${esc(e.state)} ${esc(e.enhet)}</span>`}
-      <button class="ta-bort enhet-ta-bort" data-id="${e.id}" title="Ta bort" style="position:static">×</button>
+      <button class="ta-bort enhet-ta-bort" data-id="${e.id}" title="${t("ta_bort")}" style="position:static">×</button>
     </div>`).join("")
     : '<div class="tom">Inga enheter tillagda ännu – lägg till HA-entiteter nedan (t.ex. jordfuktighetssensorer) när ni har dem.</div>';
 }
@@ -4691,7 +4693,7 @@ function kopplaEntiteterHtml(idLista) {
       const oppen = oppenKameraTile === e.id;
       return `<div class="entitet-rad-kompakt kamera-tile${oppen ? " oppen" : ""}" data-kamera-tile="${esc(e.id)}">
         <span class="ikon">📷</span>
-        <div class="info"><div class="namn">${esc(e.namn)}</div><div class="statusrad">${oppen ? "Dölj bild" : "Visa bild"}</div></div>
+        <div class="info"><div class="namn">${esc(e.namn)}</div><div class="statusrad">${oppen ? t("kamera_dolj_bild") : t("kamera_visa_bild")}</div></div>
         <button class="ta-bort-liten modal-enhet-ta-bort" data-id="${e.id}" title="${t("koppla_bort")}">×</button>
       </div>`;
     }
@@ -5492,7 +5494,7 @@ $("eLaggTillBtn").addEventListener("click", async () => {
     });
     $("eEntityId").value = ""; $("eNamn").value = "";
     await laddaEnheter();
-  } catch (e) { st.textContent = "Kunde inte spara: " + e.message; st.className = "status err"; }
+  } catch (e) { st.textContent = t("kunde_inte_spara") + e.message; st.className = "status err"; }
   finally { $("eLaggTillBtn").disabled = false; }
 });
 
@@ -5934,15 +5936,15 @@ document.addEventListener("click", async (e) => {
     const zonId = $("schemaZonVal")?.value;
     const dagar = [...document.querySelectorAll(".schema-dag-btn.aktiv")].map((b) => Number(b.dataset.dag));
     const st = $("schemaStatus");
-    if (!zonId) { st.textContent = "Välj en zon."; st.className = "status err"; return; }
-    if (!dagar.length) { st.textContent = "Välj minst en veckodag."; st.className = "status err"; return; }
+    if (!zonId) { st.textContent = t("valj_zon"); st.className = "status err"; return; }
+    if (!dagar.length) { st.textContent = t("valj_veckodag"); st.className = "status err"; return; }
     st.textContent = ""; st.className = "status";
     const varaktighetMin = $("schemaVaraktighetMin")?.value || undefined;
     try {
       await fetch(`${BAS}api/schedules`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ zonId, veckodagar: dagar, varaktighetMin }) });
       await laddaOdlingar();
       renderaSchema();
-    } catch (err) { st.textContent = "Kunde inte spara: " + err.message; st.className = "status err"; }
+    } catch (err) { st.textContent = t("kunde_inte_spara") + err.message; st.className = "status err"; }
     return;
   }
   // Klicka på en planta i listan (inte × i redigeringsläge) för att se dess
@@ -6068,14 +6070,14 @@ document.addEventListener("click", async (e) => {
 $("kLaggTillBtn").addEventListener("click", async () => {
   const st = $("kStatus");
   const namn = $("kNamn").value.trim();
-  if (!namn) { st.textContent = "Namn krävs."; st.className = "status err"; return; }
+  if (!namn) { st.textContent = t("namn_kravs"); st.className = "status err"; return; }
   $("kLaggTillBtn").disabled = true; st.textContent = ""; st.className = "status";
   try {
     await fetch(`${BAS}api/maps`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ namn }) });
     $("kNamn").value = "";
     await laddaOdlingar();
     st.textContent = "Karta tillagd."; st.className = "status ok";
-  } catch (e) { st.textContent = "Kunde inte spara: " + e.message; st.className = "status err"; }
+  } catch (e) { st.textContent = t("kunde_inte_spara") + e.message; st.className = "status err"; }
   finally { $("kLaggTillBtn").disabled = false; }
 });
 
@@ -6105,7 +6107,7 @@ $("wLaggTillBtn").addEventListener("click", async () => {
     $("wTitel").value = ""; $("wKamera").value = "";
     await laddaOdlingar();
     st.textContent = "Block tillagt – syns på översikten."; st.className = "status ok";
-  } catch (e) { st.textContent = "Kunde inte spara: " + e.message; st.className = "status err"; }
+  } catch (e) { st.textContent = t("kunde_inte_spara") + e.message; st.className = "status err"; }
   finally { $("wLaggTillBtn").disabled = false; }
 });
 
@@ -6273,8 +6275,8 @@ $("sSparaBtn").addEventListener("click", async () => {
     solTimmarCache = null;
     renderaSol();
     await laddaVader(); // platsen kan ha ändrats - visa den nya prognosen direkt, inte efter en omladdning
-    st.textContent = "Sparat."; st.className = "status ok";
-  } catch (e) { st.textContent = "Kunde inte spara: " + e.message; st.className = "status err"; }
+    st.textContent = t("sparat"); st.className = "status ok";
+  } catch (e) { st.textContent = t("kunde_inte_spara") + e.message; st.className = "status err"; }
   finally { $("sSparaBtn").disabled = false; }
 });
 
@@ -6933,8 +6935,8 @@ $("nSparaBtn").addEventListener("click", async () => {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ntfyTopic: $("nNtfy").value.trim(), webhookUrl: $("nWebhook").value.trim() }),
     });
-    st.textContent = "Sparat."; st.className = "status ok";
-  } catch (e) { st.textContent = "Kunde inte spara: " + e.message; st.className = "status err"; }
+    st.textContent = t("sparat"); st.className = "status ok";
+  } catch (e) { st.textContent = t("kunde_inte_spara") + e.message; st.className = "status err"; }
   finally { $("nSparaBtn").disabled = false; }
 });
 
@@ -7227,7 +7229,7 @@ async function loggaIn() {
     sessionStorage.setItem(INLOGGNING_FORSOKT_NYCKEL, "1");
     location.reload();
   } catch (e) {
-    st.textContent = "Kunde inte nå servern: " + e.message;
+    st.textContent = t("kunde_inte_na_servern") + " " + e.message;
     st.style.display = "block";
   } finally {
     $("loginBtn").disabled = false;
