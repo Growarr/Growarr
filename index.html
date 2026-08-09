@@ -5561,40 +5561,61 @@ $("eLaggTillBtn").addEventListener("click", async () => {
 
 document.addEventListener("click", async (e) => {
   if (nyligenDragen) return; // undvik att en avslutad dragning även tolkas som ett klick som markerar zonen
+  // Delegated to one named function per feature area (see below) instead of
+  // one long inline body - same single listener, same execution order, just
+  // findable by name. Each handler returns true if it matched and handled
+  // the click, false to let the next one look.
+  if (await handleDeleteAndPhotoObservationClicks(e)) return;
+  if (await handleMapEditClicks(e)) return;
+  if (await handleDetailPanelActionClicks(e)) return;
+  if (await handleModalGenericClicks(e)) return;
+  if (await handleDetailPanelNavClicks(e)) return;
+  if (await handleNotesCalendarClicks(e)) return;
+  if (await handleScheduleAutomationClicks(e)) return;
+  if (await handleMapBackgroundClicks(e)) return;
+  if (await handleScheduleFormAndNotesSaveClicks(e)) return;
+  if (await handlePlantRowClicks(e)) return;
+  if (await handleCreatePopupClicks(e)) return;
+  if (await handleMapTabClicks(e)) return;
+  if (await handleWidgetCameraClicks(e)) return;
+  if (await handleMapSelectionClicks(e)) return;
+});
+
+async function handleDeleteAndPhotoObservationClicks(e) {
   const odlingTaBort = e.target.closest(".odling-ta-bort");
   if (odlingTaBort) {
     await fetch(`${BAS}api/plantings/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: odlingTaBort.dataset.id }) });
     await laddaOdlingar();
-    return;
+    return true;
   }
   const skordadTaBort = e.target.closest(".skordad-ta-bort");
   if (skordadTaBort) {
     await fetch(`${BAS}api/plantings/harvest/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: skordadTaBort.dataset.id }) });
     await laddaOdlingar();
     if (valtMal?.typ === "zon") renderaDetaljPanel();
-    return;
+    return true;
   }
   const fotoLaggTill = e.target.closest(".foto-lagg-till");
   if (fotoLaggTill) {
     fotoUppladdningsMal = { malTyp: fotoLaggTill.dataset.malTyp, malId: fotoLaggTill.dataset.malId };
     $("fotoFil").click();
-    return;
+    return true;
   }
   const fotoTumnagel = e.target.closest(".foto-tumnagel");
-  if (fotoTumnagel) { oppnaFotoModal(fotoTumnagel.dataset.id); return; }
+  if (fotoTumnagel) { oppnaFotoModal(fotoTumnagel.dataset.id); return true; }
   const fotoTaBort = e.target.closest(".foto-ta-bort");
   if (fotoTaBort) {
     await fetch(`${BAS}api/photos/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: fotoTaBort.dataset.id }) });
     stangModal();
     await laddaOdlingar();
     renderaDetaljPanel();
-    return;
+    return true;
   }
   const obsLaggTill = e.target.closest(".observation-lagg-till");
   if (obsLaggTill) {
     const { malTyp, malId } = obsLaggTill.dataset;
     const namn = $(`obsNamn-${malTyp}-${malId}`)?.value.trim();
-    if (!namn) return;
+    if (!namn) return true;
     await fetch(`${BAS}api/observations`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -5604,21 +5625,25 @@ document.addEventListener("click", async (e) => {
     });
     await laddaOdlingar();
     renderaDetaljPanel();
-    return;
+    return true;
   }
   const obsTaBort = e.target.closest(".observation-ta-bort");
   if (obsTaBort) {
     await fetch(`${BAS}api/observations/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: obsTaBort.dataset.id }) });
     await laddaOdlingar();
     renderaDetaljPanel();
-    return;
+    return true;
   }
   const enhetTaBort = e.target.closest(".enhet-ta-bort");
   if (enhetTaBort) {
     await fetch(`${BAS}api/devices/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: enhetTaBort.dataset.id }) });
     await laddaEnheter();
-    return;
+    return true;
   }
+  return false;
+}
+
+async function handleMapEditClicks(e) {
   // Vänd en zon eller sektion – byter bredd och höjd, dvs orienteringen
   const vand = e.target.closest(".vand-btn");
   if (vand) {
@@ -5628,22 +5653,25 @@ document.addEventListener("click", async (e) => {
       const { bredd, hojd } = zonMatt(z, harSektioner);
       await sparaZon(z.id, { bredd: hojd, hojd: bredd });
     }
-    return;
+    return true;
   }
   const zonTaBort = e.target.closest(".zon-ta-bort, .sektion-ta-bort");
   if (zonTaBort) {
-    if (!await bekraftaModal(t("bekrafta_ta_bort_zon"))) return;
+    if (!await bekraftaModal(t("bekrafta_ta_bort_zon"))) return true;
     await fetch(`${BAS}api/zones/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: zonTaBort.dataset.id }) });
     await laddaOdlingar();
-    return;
+    return true;
   }
   const objektTaBort = e.target.closest(".objekt-ta-bort");
   if (objektTaBort) {
     await fetch(`${BAS}api/objects/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: objektTaBort.dataset.id }) });
     await laddaOdlingar();
-    return;
+    return true;
   }
+  return false;
+}
 
+async function handleDetailPanelActionClicks(e) {
   // Skörda: arkiverar odlingen (se /api/plantings/harvest) i stället för
   // att ta bort den. Instant, ingen bekräftelsedialog - någon som står i
   // trädgården med smutsiga händer vill ha ett enda klick, inte ett
@@ -5657,7 +5685,7 @@ document.addEventListener("click", async (e) => {
     });
     avmarkeraMal();
     await laddaOdlingar();
-    return;
+    return true;
   }
 
   // Popup: spara jord/anteckning
@@ -5670,14 +5698,14 @@ document.addEventListener("click", async (e) => {
     const namn = arZon
       ? zoner.find((z) => z.id === mTaBort.dataset.id)?.namn
       : odlingar.find((o) => o.id === mTaBort.dataset.id)?.namn;
-    if (!await bekraftaModal(t(arZon ? "bekrafta_ta_bort_zon" : "bekrafta_ta_bort_planta"), namn ?? "")) return;
+    if (!await bekraftaModal(t(arZon ? "bekrafta_ta_bort_zon" : "bekrafta_ta_bort_planta"), namn ?? "")) return true;
     await fetch(`${BAS}api/${arZon ? "zones" : "plantings"}/delete`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: mTaBort.dataset.id }),
     });
     avmarkeraMal();
     await laddaOdlingar();
-    return;
+    return true;
   }
   const mSpara = e.target.closest("#mSparaBtn");
   if (mSpara && valtMal) {
@@ -5687,7 +5715,7 @@ document.addEventListener("click", async (e) => {
       // An empty name would blank the zone or plant on the map, so reject it
       // here rather than let the server silently ignore it.
       const nyttNamn = $("mNamn")?.value.trim() ?? "";
-      if (!nyttNamn) { st.textContent = t("namn_kravs"); st.className = "status err"; return; }
+      if (!nyttNamn) { st.textContent = t("namn_kravs"); st.className = "status err"; return true; }
       if (valtMal.typ === "zon") {
         const patch = { namn: nyttNamn, typ: $("mTyp").value, jord: $("mJord").value.trim(), anteckning: $("mAnteckning").value.trim() };
         if ($("mHojdM")) patch.hojdM = $("mHojdM").value;
@@ -5704,7 +5732,7 @@ document.addEventListener("click", async (e) => {
       }
       $("mStatus").textContent = t("sparat"); $("mStatus").className = "status ok";
     } catch (err) { $("mStatus").textContent = t("kunde_inte_spara") + err.message; $("mStatus").className = "status err"; }
-    return;
+    return true;
   }
   // Detaljpanel: koppla en entitet
   const mEnhetLaggTill = e.target.closest("#mEnhetLaggTillBtn");
@@ -5719,7 +5747,7 @@ document.addEventListener("click", async (e) => {
         await sparaOdling(valtMal.id, { enhetIds: [...(o.enhetIds ?? []), valtId] });
       }
     }
-    return;
+    return true;
   }
   // Kamera-tile: fäller ut/in en ögonblicksbild. Kollar ta-bort-knappen
   // FÖRST så den inte också råkar öppna/stänga förhandsvisningen.
@@ -5728,7 +5756,7 @@ document.addEventListener("click", async (e) => {
     const id = kameraTile.dataset.kameraTile;
     oppenKameraTile = oppenKameraTile === id ? null : id;
     renderaDetaljPanel();
-    return;
+    return true;
   }
   // Detaljpanel: koppla bort en entitet
   const modalEnhetTaBort = e.target.closest(".modal-enhet-ta-bort");
@@ -5741,47 +5769,53 @@ document.addEventListener("click", async (e) => {
       const o = odlingar.find((x) => x.id === valtMal.id);
       await sparaOdling(valtMal.id, { enhetIds: (o.enhetIds ?? []).filter((eid) => eid !== bortId) });
     }
-    return;
+    return true;
   }
   // QR-etikett för en zon
   const qrBtn = e.target.closest("#mQrBtn");
-  if (qrBtn) { oppnaQrModal(qrBtn.dataset.id); return; }
-  if (e.target.closest("#qrSkrivUtBtn")) { window.print(); return; }
+  if (qrBtn) { oppnaQrModal(qrBtn.dataset.id); return true; }
+  if (e.target.closest("#qrSkrivUtBtn")) { window.print(); return true; }
+  return false;
+}
 
+async function handleModalGenericClicks(e) {
   // Popup (ny zon): stäng
-  if (e.target.closest("#modalStangBtn")) { stangModal(); return; }
-  if (e.target.closest(".bekrafta-ja")) { modalKontext.resolve(true); modalKontext = null; $("modalBakgrund").style.display = "none"; return; }
-  if (e.target.closest(".bekrafta-avbryt")) { stangModal(); return; }
-  if (e.target.id === "modalBakgrund") { stangModal(); return; }
+  if (e.target.closest("#modalStangBtn")) { stangModal(); return true; }
+  if (e.target.closest(".bekrafta-ja")) { modalKontext.resolve(true); modalKontext = null; $("modalBakgrund").style.display = "none"; return true; }
+  if (e.target.closest(".bekrafta-avbryt")) { stangModal(); return true; }
+  if (e.target.id === "modalBakgrund") { stangModal(); return true; }
+  return false;
+}
 
+async function handleDetailPanelNavClicks(e) {
   // Popup: avmarkera i detaljpanelen
-  if (e.target.closest("#dAvmarkeraBtn")) { avmarkeraMal(); return; }
+  if (e.target.closest("#dAvmarkeraBtn")) { avmarkeraMal(); return true; }
   // En plantas detaljpanel har ingen "Avmarkera" - bara en väg tillbaka till
   // zonen den står i, annars fanns inget sätt att komma därifrån till zonens
   // egna uppgifter utan att först stänga hela panelen och leta upp den på kartan.
   const tillbakaZon = e.target.closest("#dTillbakaZonBtn");
-  if (tillbakaZon) { valjMal("zon", tillbakaZon.dataset.zonId); return; }
+  if (tillbakaZon) { valjMal("zon", tillbakaZon.dataset.zonId); return true; }
 
   // Lägg till en sektion (t.ex. odlingslåda) inuti den valda zonen
   if (e.target.closest("#zNySektionBtn") && valtMal?.typ === "zon") {
     const namn = $("zNySektion").value.trim();
-    if (!namn) return;
+    if (!namn) return true;
     await fetch(`${BAS}api/zones`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ namn, typ: $("zNySektionTyp").value, foralderId: valtMal.id }),
     });
     await laddaOdlingar();
     renderaDetaljPanel();
-    return;
+    return true;
   }
 
-  if (e.target.closest("#antalNer")) { stegaAntal(-1); return; }
-  if (e.target.closest("#antalUpp")) { stegaAntal(1); return; }
+  if (e.target.closest("#antalNer")) { stegaAntal(-1); return true; }
+  if (e.target.closest("#antalUpp")) { stegaAntal(1); return true; }
 
   // Lägg till planta direkt i den valda zonen
   if (e.target.closest("#zNyPlantaBtn") && valtMal?.typ === "zon") {
     const namn = $("zNyPlanta").value.trim();
-    if (!namn) return;
+    if (!namn) return true;
     await fetch(`${BAS}api/plantings`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -5791,33 +5825,41 @@ document.addEventListener("click", async (e) => {
     });
     await laddaOdlingar();
     renderaDetaljPanel();
-    return;
+    return true;
   }
+  return false;
+}
+
+async function handleNotesCalendarClicks(e) {
   // Anteckningar-vyn: klick på ett kort eller en planta i kalenderns
   // dagdetalj öppnar samma detaljpanel som på kartan, fast måste först
   // växla tillbaka till Översikt (panelen ligger inuti dashboardVy).
   const anteckningKortEl = e.target.closest(".anteckning-kort");
-  if (anteckningKortEl) { oppnaOdlingFranAnnanVy(anteckningKortEl.dataset.id); return; }
+  if (anteckningKortEl) { oppnaOdlingFranAnnanVy(anteckningKortEl.dataset.id); return true; }
   const kalenderPlantRadEl = e.target.closest(".kalender-dagdetalj .plant-rad-klickbar");
-  if (kalenderPlantRadEl) { oppnaOdlingFranAnnanVy(kalenderPlantRadEl.dataset.id); return; }
+  if (kalenderPlantRadEl) { oppnaOdlingFranAnnanVy(kalenderPlantRadEl.dataset.id); return true; }
   const kalenderForegBtn = e.target.closest("#kalenderForegBtn");
-  if (kalenderForegBtn) { bytAnteckningarManad(-1); return; }
+  if (kalenderForegBtn) { bytAnteckningarManad(-1); return true; }
   const kalenderNastaBtn = e.target.closest("#kalenderNastaBtn");
-  if (kalenderNastaBtn) { bytAnteckningarManad(1); return; }
+  if (kalenderNastaBtn) { bytAnteckningarManad(1); return true; }
   const kalenderDagEl = e.target.closest(".kalender-dag:not(.tom)");
   if (kalenderDagEl) {
     anteckningarValdDag = anteckningarValdDag === kalenderDagEl.dataset.datum ? null : kalenderDagEl.dataset.datum;
     renderaAnteckningar();
-    return;
+    return true;
   }
+  return false;
+}
+
+async function handleScheduleAutomationClicks(e) {
   // Schema-vyn: välj veckodagar (flera i taget), ta bort ett schema, eller
   // spara ett nytt.
   const schemaDagBtn = e.target.closest(".schema-dag-btn");
-  if (schemaDagBtn) { schemaDagBtn.classList.toggle("aktiv"); return; }
+  if (schemaDagBtn) { schemaDagBtn.classList.toggle("aktiv"); return true; }
   // HA automations linked to the garden: open the picker, link one from it,
   // or unlink one from the main list. Toggling on/off is a "change" event
   // on the checkbox itself, handled separately below.
-  if (e.target.closest("#automationKopplaBtn")) { oppnaAutomationValjare(); return; }
+  if (e.target.closest("#automationKopplaBtn")) { oppnaAutomationValjare(); return true; }
   const automationLank = e.target.closest(".automation-lank-btn");
   if (automationLank) {
     await fetch(`${BAS}api/automations/link`, {
@@ -5826,7 +5868,7 @@ document.addEventListener("click", async (e) => {
     });
     await laddaAutomationer();
     renderaModal();
-    return;
+    return true;
   }
   const automationKopplaBort = e.target.closest(".automation-koppla-bort");
   if (automationKopplaBort) {
@@ -5835,15 +5877,15 @@ document.addEventListener("click", async (e) => {
       body: JSON.stringify({ entityId: automationKopplaBort.dataset.entity }),
     });
     await laddaAutomationer();
-    return;
+    return true;
   }
   const automationRedigera = e.target.closest(".automation-redigera");
-  if (automationRedigera) { paborjaAutomationRedigering(automationRedigera.dataset.entity, automationRedigera.dataset.namn); return; }
-  if (e.target.closest("#automationAvslutaRedigeraBtn")) { avslutaAutomationRedigering(); return; }
-  if (e.target.closest("#automationForeslaBtn")) { await foreslaAutomation(); return; }
+  if (automationRedigera) { paborjaAutomationRedigering(automationRedigera.dataset.entity, automationRedigera.dataset.namn); return true; }
+  if (e.target.closest("#automationAvslutaRedigeraBtn")) { avslutaAutomationRedigering(); return true; }
+  if (e.target.closest("#automationForeslaBtn")) { await foreslaAutomation(); return true; }
   // Discards only this one draft - "Avbryt ändringen" above (handled just
   // above) is the one that leaves edit-an-existing-automation mode entirely.
-  if (e.target.closest(".automation-utkast-avbryt")) { automationUtkast = null; renderaAutomationUtkast(); return; }
+  if (e.target.closest(".automation-utkast-avbryt")) { automationUtkast = null; renderaAutomationUtkast(); return true; }
   if (e.target.closest(".automation-utkast-skapa")) {
     const st = $("automationSkapaStatus");
     st.textContent = ""; st.className = "status";
@@ -5853,7 +5895,7 @@ document.addEventListener("click", async (e) => {
       if (!alias || !Array.isArray(trigger) || !Array.isArray(action)) throw new Error(t("ofullstandig_automation"));
     } catch (err) {
       st.textContent = t("ogiltig_yaml") + err.message; st.className = "status err";
-      return;
+      return true;
     }
     try {
       const { entityId } = automationUtkast;
@@ -5886,24 +5928,28 @@ document.addEventListener("click", async (e) => {
     } catch (err) {
       st.textContent = t("kunde_inte_spara") + err.message; st.className = "status err";
     }
-    return;
+    return true;
   }
+  return false;
+}
+
+async function handleMapBackgroundClicks(e) {
   // Map backdrop: grid / plain / photo, plus uploading and dimming the photo
-  if (e.target.closest("#bakgrundBtn")) { oppnaBakgrundModal(); return; }
+  if (e.target.closest("#bakgrundBtn")) { oppnaBakgrundModal(); return true; }
   const bakgrundVal = e.target.closest("#bakgrundSegment .vy-segment-btn");
   if (bakgrundVal && !bakgrundVal.disabled) {
     await sparaKartaBakgrund({ bakgrund: bakgrundVal.dataset.bakgrund });
-    return;
+    return true;
   }
-  if (e.target.closest("#bakgrundValjBildBtn")) { $("kartaBildFil").click(); return; }
+  if (e.target.closest("#bakgrundValjBildBtn")) { $("kartaBildFil").click(); return true; }
   // Close the dialog and switch to the inline row, so the map stays visible
   // while the photo is being lined up.
-  if (e.target.closest("#bakgrundPassaInBtn")) { stangModal(); visaBildRad(true); return; }
-  if (e.target.closest("#bildRadKlarBtn")) { visaBildRad(false); return; }
+  if (e.target.closest("#bakgrundPassaInBtn")) { stangModal(); visaBildRad(true); return true; }
+  if (e.target.closest("#bildRadKlarBtn")) { visaBildRad(false); return true; }
   if (e.target.closest("#bakgrundAterstallBtn")) {
     await sparaKartaBakgrund({ bildRotation: 0, bildSkala: 100, bildX: 0, bildY: 0 });
     fyllBildRad();
-    return;
+    return true;
   }
   if (e.target.closest("#bakgrundTaBortBildBtn")) {
     await fetch(`${BAS}api/maps/image/delete`, {
@@ -5912,8 +5958,12 @@ document.addEventListener("click", async (e) => {
     });
     await laddaOdlingar();
     renderaModal();
-    return;
+    return true;
   }
+  return false;
+}
+
+async function handleScheduleFormAndNotesSaveClicks(e) {
   // AI-förslag: lägg till som riktigt schema, eller avfärda det.
   const forslagLaggTill = e.target.closest(".forslag-lagg-till");
   if (forslagLaggTill) {
@@ -5924,20 +5974,20 @@ document.addEventListener("click", async (e) => {
       await laddaOdlingar();
       renderaSchema();
     }
-    return;
+    return true;
   }
   const forslagAvfarda = e.target.closest(".forslag-avfarda");
   if (forslagAvfarda) {
     schemaForslagAvfardade.add(forslagAvfarda.dataset.nyckel);
     renderaSchema();
-    return;
+    return true;
   }
   const schemaTaBort = e.target.closest(".schema-ta-bort");
   if (schemaTaBort) {
     await fetch(`${BAS}api/schedules/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: schemaTaBort.dataset.id }) });
     await laddaOdlingar();
     renderaSchema();
-    return;
+    return true;
   }
   // Turns an already-actuator-linked schedule into a pre-filled automation
   // draft, reusing foreslaAutomation()/renderaAutomationUtkast() unchanged -
@@ -5947,7 +5997,7 @@ document.addEventListener("click", async (e) => {
   if (schemaAutomation) {
     const s = scheman.find((x) => x.id === schemaAutomation.dataset.id);
     const zon = s && zoner.find((z) => z.id === s.zonId);
-    if (!s || !zon) return;
+    if (!s || !zon) return true;
     const dagar = s.veckodagar.map((d) => veckodagKort(d)).join(", ");
     const harFuktsensor = entiteterFor(zon.enhetIds).some((en) => !arAktuatorEntitet(en.entityId) && (en.enhet ?? "").includes("%"));
     avslutaAutomationRedigering(); // ensure "new draft" mode, not mid-edit of another automation
@@ -5957,7 +6007,7 @@ document.addEventListener("click", async (e) => {
       .replace("{hoppa}", harFuktsensor ? t("schema_hoppa_fuktig") : "");
     $("automationBeskrivning").scrollIntoView({ behavior: "smooth", block: "center" });
     await foreslaAutomation();
-    return;
+    return true;
   }
   // No schedule needed for this one - synkaMetrikerTillHa already exports a
   // per-zone "days until dry" sensor to HA every hour, and utkastAutomation
@@ -5967,18 +6017,18 @@ document.addEventListener("click", async (e) => {
   const zonFuktAutomation = e.target.closest(".zon-automation-fukt-btn");
   if (zonFuktAutomation) {
     const z = zoner.find((x) => x.id === zonFuktAutomation.dataset.id);
-    if (!z) return;
+    if (!z) return true;
     avslutaAutomationRedigering();
     $("automationBeskrivning").value = t("schema_fukttrend_beskrivning").replace("{zon}", z.namn);
     location.hash = "schema";
     $("automationBeskrivning").scrollIntoView({ behavior: "smooth", block: "center" });
     await foreslaAutomation();
-    return;
+    return true;
   }
   const anteckningSpara = e.target.closest("#anteckningSparaBtn");
   if (anteckningSpara) {
     const id = $("anteckningPlantaVal")?.value;
-    if (!id) return;
+    if (!id) return true;
     const text = $("anteckningTextVal").value.trim();
     try {
       await sparaOdling(id, { anteckning: text });
@@ -5990,15 +6040,15 @@ document.addEventListener("click", async (e) => {
       const st = $("anteckningSkrivStatus");
       st.textContent = t("kunde_inte_spara") + err.message; st.className = "status err";
     }
-    return;
+    return true;
   }
   const schemaLaggTill = e.target.closest("#schemaLaggTillBtn");
   if (schemaLaggTill) {
     const zonId = $("schemaZonVal")?.value;
     const dagar = [...document.querySelectorAll(".schema-dag-btn.aktiv")].map((b) => Number(b.dataset.dag));
     const st = $("schemaStatus");
-    if (!zonId) { st.textContent = t("valj_zon"); st.className = "status err"; return; }
-    if (!dagar.length) { st.textContent = t("valj_veckodag"); st.className = "status err"; return; }
+    if (!zonId) { st.textContent = t("valj_zon"); st.className = "status err"; return true; }
+    if (!dagar.length) { st.textContent = t("valj_veckodag"); st.className = "status err"; return true; }
     st.textContent = ""; st.className = "status";
     const varaktighetMin = $("schemaVaraktighetMin")?.value || undefined;
     try {
@@ -6006,34 +6056,44 @@ document.addEventListener("click", async (e) => {
       await laddaOdlingar();
       renderaSchema();
     } catch (err) { st.textContent = t("kunde_inte_spara") + err.message; st.className = "status err"; }
-    return;
+    return true;
   }
+  return false;
+}
+
+async function handlePlantRowClicks(e) {
   // Klicka på en planta i listan (inte × i redigeringsläge) för att se dess
   // egen översikt – samma detaljpanel som klick på kartan.
   const plantRadEl = e.target.closest(".plant-rad-klickbar");
-  if (plantRadEl) { valjMal("odling", plantRadEl.dataset.id); return; }
+  if (plantRadEl) { valjMal("odling", plantRadEl.dataset.id); return true; }
+  return false;
+}
 
+async function handleCreatePopupClicks(e) {
   // Skapa-popupen
-  if (e.target.closest("#skapaBtn")) { $("skapaBakgrund").style.display = "flex"; return; }
+  if (e.target.closest("#skapaBtn")) { $("skapaBakgrund").style.display = "flex"; return true; }
   if (e.target.closest("#skapaStangBtn") || e.target.id === "skapaBakgrund") {
     $("skapaBakgrund").style.display = "none";
-    return;
+    return true;
   }
   const skapaFlik = e.target.closest(".skapa-flik");
   if (skapaFlik) {
     document.querySelectorAll(".skapa-flik").forEach((f) => f.classList.toggle("aktiv", f === skapaFlik));
     document.querySelectorAll(".skapa-panel").forEach((p) => { p.style.display = p.id === skapaFlik.dataset.mal ? "" : "none"; });
-    return;
+    return true;
   }
+  return false;
+}
 
+async function handleMapTabClicks(e) {
   // Kartflikar
   const flikTaBort = e.target.closest(".karta-flik-ta-bort");
   if (flikTaBort) {
     e.stopPropagation();
-    if (!await bekraftaModal(t("bekrafta_ta_bort_karta"))) return;
+    if (!await bekraftaModal(t("bekrafta_ta_bort_karta"))) return true;
     await fetch(`${BAS}api/maps/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: flikTaBort.dataset.id }) });
     await laddaOdlingar();
-    return;
+    return true;
   }
   const flik = e.target.closest(".karta-flik");
   if (flik) {
@@ -6042,14 +6102,18 @@ document.addEventListener("click", async (e) => {
     avmarkeraMal();
     renderaKartaFlikar();
     renderaKarta();
-    return;
+    return true;
   }
+  return false;
+}
+
+async function handleWidgetCameraClicks(e) {
   // Ta bort ett eget block
   const widgetTaBort = e.target.closest(".widget-ta-bort");
   if (widgetTaBort) {
     await fetch(`${BAS}api/widgets/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: widgetTaBort.dataset.id }) });
     await laddaOdlingar();
-    return;
+    return true;
   }
   // Kamerawidgetens kontroller: uppdatera bilden på begäran, eller visa den
   // i fullskärm. Bilden hämtas alltid på nytt (cachebuster i URL:en) – ingen
@@ -6063,24 +6127,24 @@ document.addEventListener("click", async (e) => {
     img.src = `${BAS}api/camera?entityId=${encodeURIComponent(wrap.dataset.entity)}&t=${Date.now()}`;
     img.onload = img.onerror = () => knapp.classList.remove("laddar");
     wrap.querySelector(".kamera-tid").textContent = `${t("uppdaterad_prefix")} ${new Date().toLocaleTimeString(sprak === "en" ? "en-US" : "sv-SE", { hour: "2-digit", minute: "2-digit" })}`;
-    return;
+    return true;
   }
   const kameraFullskarm = e.target.closest(".kamera-fullskarm");
   if (kameraFullskarm) {
     const img = kameraFullskarm.closest(".kamera-wrap").querySelector(".widget-kamera");
     $("kameraLightboxBild").src = img.src;
     $("kameraLightbox").classList.add("oppen");
-    return;
+    return true;
   }
   if (e.target.closest("#kameraLightboxStang") || e.target.id === "kameraLightbox") {
     $("kameraLightbox").classList.remove("oppen");
-    return;
+    return true;
   }
   // Flytta block upp/ner inom sin kolumn
   const widgetUpp = e.target.closest(".widget-upp");
-  if (widgetUpp) { await flyttaWidget(widgetUpp.dataset.id, -1); return; }
+  if (widgetUpp) { await flyttaWidget(widgetUpp.dataset.id, -1); return true; }
   const widgetNer = e.target.closest(".widget-ner");
-  if (widgetNer) { await flyttaWidget(widgetNer.dataset.id, 1); return; }
+  if (widgetNer) { await flyttaWidget(widgetNer.dataset.id, 1); return true; }
   // Flytta block mellan huvud- och sidokolumn
   const widgetByt = e.target.closest(".widget-byt-kolumn");
   if (widgetByt) {
@@ -6092,41 +6156,45 @@ document.addEventListener("click", async (e) => {
       });
       await laddaOdlingar();
     }
-    return;
+    return true;
   }
+  return false;
+}
 
+async function handleMapSelectionClicks(e) {
   // Tillbaka-chippen som dyker upp när kameran zoomat in på en zon
   const breadcrumbBackEl = e.target.closest("#breadcrumbBackBtn");
-  if (breadcrumbBackEl) { stangFokusZon(); return; }
+  if (breadcrumbBackEl) { stangFokusZon(); return true; }
   const granVal = e.target.closest(".historik-granularitet button");
   if (granVal) {
     historikGranularitet = granVal.dataset.gran;
     if (location.hash.replace(/^#/, "") === "historik") renderaGlobalHistorik();
     else renderaDetaljPanel();
-    return;
+    return true;
   }
   const globalHistorikBtn = e.target.closest("#globalHistorikVal .vy-segment-btn");
-  if (globalHistorikBtn) { globalHistorikValdMal = globalHistorikBtn.dataset.mal; renderaGlobalHistorik(); return; }
+  if (globalHistorikBtn) { globalHistorikValdMal = globalHistorikBtn.dataset.mal; renderaGlobalHistorik(); return true; }
   // Välj mål: klick på en planta väger tyngre än klick på hela zon-kortet
   const chipEl = e.target.closest(".vaxt-grupp, .vaxt-fyll");
-  if (chipEl) { valjMal("odling", chipEl.dataset.id); return; }
+  if (chipEl) { valjMal("odling", chipEl.dataset.id); return true; }
   // Sektionen måste testas före zon-kortet – annars fångar föräldern klicket
   const sektionEl = e.target.closest(".zon-sektion");
-  if (sektionEl) { valjMal("zon", sektionEl.dataset.id); return; }
+  if (sektionEl) { valjMal("zon", sektionEl.dataset.id); return true; }
   // Zon-kortet (flatfärgad zon-pin i kompakt läge, eller det rika kortet i
   // den vanliga kartvyn) – klick zoomar in kameran på zonen OCH öppnar
   // detaljpanelen i samma klick, i båda lägena.
   const zonKortEl = e.target.closest(".zon-kort");
-  if (zonKortEl && !zonKortEl.classList.contains("okategoriserat")) { fokuseraZon(zonKortEl.dataset.id); return; }
+  if (zonKortEl && !zonKortEl.classList.contains("okategoriserat")) { fokuseraZon(zonKortEl.dataset.id); return true; }
 
   // Per zon-fliken: klick på ett sammanfattningskort öppnar samma
   // detaljpanel som klick på kartan – samma data, en genväg dit.
   const zonSummaryEl = e.target.closest(".zon-summary-kort");
-  if (zonSummaryEl) { valjMal("zon", zonSummaryEl.dataset.id); return; }
+  if (zonSummaryEl) { valjMal("zon", zonSummaryEl.dataset.id); return true; }
   // Per planta-fliken: klick på en sort expanderar dess detaljer nedanför.
   const sortSummaryEl = e.target.closest(".sort-summary-kort");
-  if (sortSummaryEl) { valdSortNyckel = sortSummaryEl.dataset.namn; renderaPerPlanta(); return; }
-});
+  if (sortSummaryEl) { valdSortNyckel = sortSummaryEl.dataset.namn; renderaPerPlanta(); return true; }
+  return false;
+}
 
 $("kLaggTillBtn").addEventListener("click", async () => {
   const st = $("kStatus");
