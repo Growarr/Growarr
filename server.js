@@ -1095,6 +1095,10 @@ setInterval(() => backupData().catch((err) => console.warn("Säkerhetskopiering 
 // trend. Bara numeriska tillstånd loggas (t.ex. jordfuktighet i %, inte en
 // switch-entitets on/off). 90 dagars historik sparas, äldre städas bort.
 const HISTORIK_DAGAR = 90;
+// Unlike historik/notiser, a harvest log is worth keeping far longer than
+// sensor readings - but shouldn't grow forever either. Cleaned up in the
+// same hourly job as historik since both are simple age-based cutoffs.
+const SKORDAT_DAGAR = 730;
 function kopladeEnhetIder(d) {
   return new Set([...d.zoner.flatMap((z) => z.enhetIds ?? []), ...d.odlingar.flatMap((o) => o.enhetIds ?? [])]);
 }
@@ -1125,8 +1129,10 @@ async function loggaHistorik() {
   if (Number.isFinite(vader?.nu)) punkter.push({ tid: nu, enhetId: UTE_SERIE, varde: vader.nu });
   if (!punkter.length) return;
   const gransTid = Date.now() - HISTORIK_DAGAR * 24 * 3600 * 1000;
+  const skordatGransTid = Date.now() - SKORDAT_DAGAR * 24 * 3600 * 1000;
   await muteraData((data) => {
     data.historik = [...(data.historik ?? []), ...punkter].filter((p) => new Date(p.tid).getTime() >= gransTid);
+    data.skordat = (data.skordat ?? []).filter((a) => new Date(a.arkiveradDatum).getTime() >= skordatGransTid);
   });
 }
 const EN_TIMME_MS = 3600 * 1000;
@@ -1318,10 +1324,10 @@ const server = createServer(async (req, res) => {
     }
     if (req.method === "POST" && p.endsWith("/api/plantings")) {
       const { namn, planterad, skordFonster, skordManad, anteckning, zonId, antal, layout, sort, saddInomhusDatum } = await lasBody(req);
-      if (!namn) return skickaJson(res, 400, { fel: "namn saknas" });
+      if (typeof namn !== "string" || !namn.trim()) return skickaJson(res, 400, { fel: "namn saknas" });
       const data = await muteraData((d) => {
         d.odlingar.push({
-          id: randomUUID(), namn, planterad: planterad || "",
+          id: randomUUID(), namn: namn.trim().slice(0, 80), planterad: planterad || "",
           skordFonster: skordFonster || "", skordManad: skordManad || "", anteckning: anteckning || "",
           zonId: zonId || "", jord: "", sort: sort || "", saddInomhusDatum: saddInomhusDatum || "", enhetIds: [],
           antal: rensaAntal(antal), layout: rensaLayout(layout),
@@ -1331,6 +1337,7 @@ const server = createServer(async (req, res) => {
     }
     if (req.method === "POST" && p.endsWith("/api/plantings/update")) {
       const { id, namn, planterad, skordFonster, skordManad, anteckning, jord, sort, saddInomhusDatum, enhetIds, zonId, x, y, antal, layout } = await lasBody(req);
+      if (!(await lasData()).odlingar.some((o2) => o2.id === id)) return skickaJson(res, 404, { fel: "hittades inte" });
       const data = await muteraData((d) => {
         const o = d.odlingar.find((o2) => o2.id === id);
         if (!o) return;
@@ -1405,6 +1412,7 @@ const server = createServer(async (req, res) => {
     }
     if (req.method === "POST" && p.endsWith("/api/zones/update")) {
       const { id, namn, typ, jord, anteckning, enhetIds, x, y, foralderId, bredd, hojd, hojdM } = await lasBody(req);
+      if (!(await lasData()).zoner.some((z) => z.id === id)) return skickaJson(res, 404, { fel: "hittades inte" });
       const data = await muteraData((d) => {
         const zon = d.zoner.find((z) => z.id === id);
         if (!zon) return;
@@ -1440,7 +1448,7 @@ const server = createServer(async (req, res) => {
     }
     if (req.method === "POST" && p.endsWith("/api/zones")) {
       const { namn, typ, x, y, kartaId, foralderId } = await lasBody(req);
-      if (!namn) return skickaJson(res, 400, { fel: "namn saknas" });
+      if (typeof namn !== "string" || !namn.trim()) return skickaJson(res, 400, { fel: "namn saknas" });
       const data = await muteraData((d) => {
         // En sektion (t.ex. en odlingslåda inne i ett växthus) ärver kartan
         // från sin förälder och behöver ingen egen x/y – den ritas inuti
@@ -1453,7 +1461,7 @@ const server = createServer(async (req, res) => {
         const standardX = 0.2 + (n % 3) * 0.3;
         const standardY = 0.25 + Math.floor(n / 3) * 0.32;
         d.zoner.push({
-          id: randomUUID(), namn, typ: typ || "annat", jord: "", anteckning: "", enhetIds: [],
+          id: randomUUID(), namn: namn.trim().slice(0, 80), typ: typ || "annat", jord: "", anteckning: "", enhetIds: [],
           kartaId: karta, foralderId: foralder ? foralder.id : "",
           // Sektioner placeras i förälderns yta (0–1), toppzoner på kartan.
           x: x ?? (foralder ? 0.5 : standardX), y: y ?? (foralder ? 0.5 : standardY),
@@ -1489,6 +1497,7 @@ const server = createServer(async (req, res) => {
     }
     if (req.method === "POST" && p.endsWith("/api/objects/update")) {
       const { id, x, y, bredd, hojd, rotation } = await lasBody(req);
+      if (!(await lasData()).objekt.some((o) => o.id === id)) return skickaJson(res, 404, { fel: "hittades inte" });
       const data = await muteraData((d) => {
         const obj = d.objekt.find((o) => o.id === id);
         if (!obj) return;
@@ -1513,8 +1522,8 @@ const server = createServer(async (req, res) => {
     }
     if (req.method === "POST" && p.endsWith("/api/maps")) {
       const { namn } = await lasBody(req);
-      if (!namn) return skickaJson(res, 400, { fel: "namn saknas" });
-      const data = await muteraData((d) => { d.kartor.push({ id: randomUUID(), namn }); });
+      if (typeof namn !== "string" || !namn.trim()) return skickaJson(res, 400, { fel: "namn saknas" });
+      const data = await muteraData((d) => { d.kartor.push({ id: randomUUID(), namn: namn.trim().slice(0, 80) }); });
       return skickaJson(res, 200, data);
     }
     if (req.method === "POST" && p.endsWith("/api/maps/delete")) {
@@ -1758,6 +1767,7 @@ const server = createServer(async (req, res) => {
     }
     if (req.method === "POST" && p.endsWith("/api/widgets/update")) {
       const { id, titel, enhetIds, entityId, kolumn } = await lasBody(req);
+      if (!(await lasData()).widgets.some((x) => x.id === id)) return skickaJson(res, 404, { fel: "hittades inte" });
       const data = await muteraData((d) => {
         const w = d.widgets.find((x) => x.id === id);
         if (w) Object.assign(w, {
