@@ -2263,6 +2263,12 @@ const SPRAK_TEXT = {
     kartans_lage_hjalp: "Koordinaterna styr väderprognosen, frostvarningen och solkartan. Utanför Norden används automatiskt en global väderkälla istället för SMHI. Solkartan räknar dessutom ut solens bana från koordinaterna och ritar skuggorna som växthus och lådor kastar - för att de ska peka åt rätt håll och bli rätt långa behöver den även veta hur kartan är vriden och hur stor den är i verkligheten.",
     latitud: "Latitud", longitud: "Longitud", kompassgrader_label: "Vad pekar uppåt på kartan? (kompassgrader)",
     kartans_bredd: "Kartans bredd i meter",
+    kunde_inte_hamta_vader: "Kunde inte hämta väder: ",
+    inga_enheter_tillagda: "Inga enheter tillagda ännu – lägg till HA-entiteter nedan (t.ex. jordfuktighetssensorer) när ni har dem.",
+    okand_zon: "Okänd zon",
+    rad_vantade_nyckel_varde: "rad {n}: väntade \"nyckel: värde\"",
+    rad_ovantad_indentering: "rad {n}: oväntad indentering",
+    tom_ogiltig_automation: "tom eller ogiltig automation",
     forslag_fran_ai: "Förslag från AI", letar_monster: "Letar efter mönster i din trädgård …",
     avfarda_forslag: "Avfärda förslaget", lagg_till_schemat: "Lägg till schemat",
     schema_zon_saknas: "Lägg till en zon på Översikt först.",
@@ -2422,6 +2428,12 @@ const SPRAK_TEXT = {
     kartans_lage_hjalp: "The coordinates drive the weather forecast, frost warning, and sun map. Outside the Nordics a global weather source is used automatically instead of SMHI. The sun map also works out the sun's path from the coordinates and draws the shadows greenhouses and beds cast - to point the right way and be the right length, it also needs to know how the map is rotated and how big it is in reality.",
     latitud: "Latitude", longitud: "Longitude", kompassgrader_label: "What's facing up on the map? (compass degrees)",
     kartans_bredd: "Map width in meters",
+    kunde_inte_hamta_vader: "Couldn't fetch weather: ",
+    inga_enheter_tillagda: "No entities added yet - add HA entities below (e.g. soil moisture sensors) once you have some.",
+    okand_zon: "Unknown zone",
+    rad_vantade_nyckel_varde: "line {n}: expected \"key: value\"",
+    rad_ovantad_indentering: "line {n}: unexpected indentation",
+    tom_ogiltig_automation: "empty or invalid automation",
     forslag_fran_ai: "Suggested by AI", letar_monster: "Looking for patterns in your garden …",
     avfarda_forslag: "Dismiss suggestion", lagg_till_schemat: "Add this schedule",
     schema_zon_saknas: "Add a zone on Overview first.",
@@ -2522,8 +2534,8 @@ async function laddaVader() {
     renderaVader(data);
     renderaNotiser();
   } catch (e) {
-    $("vaderInnehall").innerHTML = `<div class="status err">Kunde inte hämta väder: ${e.message}</div>`;
-    $("bevattningInnehall").innerHTML = `<div class="status err">Kunde inte hämta väder: ${e.message}</div>`;
+    $("vaderInnehall").innerHTML = `<div class="status err">${t("kunde_inte_hamta_vader")}${e.message}</div>`;
+    $("bevattningInnehall").innerHTML = `<div class="status err">${t("kunde_inte_hamta_vader")}${e.message}</div>`;
   }
 }
 function renderaVader(data) {
@@ -3842,7 +3854,7 @@ function renderaEnheter(lista) {
       ${e.fel ? `<span class="varde fel">${esc(e.fel)}</span>` : `<span class="varde">${esc(e.state)} ${esc(e.enhet)}</span>`}
       <button class="ta-bort enhet-ta-bort" data-id="${e.id}" title="${t("ta_bort")}" style="position:static">×</button>
     </div>`).join("")
-    : '<div class="tom">Inga enheter tillagda ännu – lägg till HA-entiteter nedan (t.ex. jordfuktighetssensorer) när ni har dem.</div>';
+    : `<div class="tom">${t("inga_enheter_tillagda")}</div>`;
 }
 
 // Sökbar lista över HA:s alla entiteter (via <datalist>) istället för att
@@ -6769,7 +6781,7 @@ function schemaListaHtml() {
     return `<div class="schema-rad">
       <span class="ikon">${IKON_DROPPE}</span>
       <div class="info">
-        <div class="namn">${esc(zon?.namn ?? "Okänd zon")}</div>
+        <div class="namn">${esc(zon?.namn ?? t("okand_zon"))}</div>
         <div class="dagar">${s.veckodagar.map((d) => veckodagKort(d)).join(", ")}${s.varaktighetMin ? ` · ${s.varaktighetMin} ${t("min_forkortning")}` : ""}</div>
       </div>
       ${idagSchemalagd ? `<span class="schema-idag">${t("idag")}</span>` : ""}
@@ -6953,7 +6965,7 @@ function franYaml(text) {
     while (i < rader.length && indentAv(rader[i]) === bas && !rader[i].trim().startsWith("-")) {
       const rad = rader[i];
       const kolon = rad.indexOf(":");
-      if (kolon === -1) throw new Error(`rad ${i + 1}: väntade "nyckel: värde"`);
+      if (kolon === -1) throw new Error(t("rad_vantade_nyckel_varde").replace("{n}", i + 1));
       const nyckel = rad.slice(indentAv(rad), kolon).trim();
       const vardeText = rad.slice(kolon + 1).trim();
       i++;
@@ -6978,7 +6990,7 @@ function franYaml(text) {
       while (i < rader.length && indentAv(rader[i]) === fortsattIndent) {
         const r2 = rader[i];
         const k2 = r2.indexOf(":");
-        if (k2 === -1) throw new Error(`rad ${i + 1}: väntade "nyckel: värde"`);
+        if (k2 === -1) throw new Error(t("rad_vantade_nyckel_varde").replace("{n}", i + 1));
         const nyckel2 = r2.slice(fortsattIndent, k2).trim();
         const vardeText2 = r2.slice(k2 + 1).trim();
         i++;
@@ -6989,8 +7001,8 @@ function franYaml(text) {
     return ut;
   }
   const resultat = parseBlock(0);
-  if (i < rader.length) throw new Error(`rad ${i + 1}: oväntad indentering`);
-  if (!resultat || typeof resultat !== "object") throw new Error("tom eller ogiltig automation");
+  if (i < rader.length) throw new Error(t("rad_ovantad_indentering").replace("{n}", i + 1));
+  if (!resultat || typeof resultat !== "object") throw new Error(t("tom_ogiltig_automation"));
   return resultat;
 }
 // Editing an existing automation opens a pencil button on its row rather
