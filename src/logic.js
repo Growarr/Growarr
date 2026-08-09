@@ -64,6 +64,18 @@ export function rensaHojdM(v, typ) {
   return Math.min(20, Math.round(n * 100) / 100);
 }
 
+// How many minutes a watering schedule should run an actuator once one is
+// linked - absent/invalid returns null (unset) rather than a guessed
+// default, since unlike height/quantity there's no safe default for "how
+// long the valve stays open" that fits every zone.
+export const MAX_VARAKTIGHET_MIN = 180;
+export function rensaVaraktighetMin(v) {
+  if (v === undefined || v === null || v === "") return null;
+  const n = Math.round(Number(v));
+  if (!Number.isFinite(n) || n < 1) return null;
+  return Math.min(MAX_VARAKTIGHET_MIN, n);
+}
+
 // Map-dressing objects (trees, houses, paths...) placed on the garden map,
 // distinct from zones. This vocabulary starts in English - unlike zones'
 // legacy Swedish typ values (vaxthus, odlingslada, ...), which stay as
@@ -131,6 +143,17 @@ export function veckodagarForIntervall(intervall) {
 export function enhetArFuktsensor(enhet) {
   const namn = (enhet.namn ?? "").toLowerCase();
   return namn.includes("fukt") || namn.includes("moist") || namn.includes("humid");
+}
+
+// A valve/pump is identified by its Home Assistant domain (the segment of
+// entity_id before the first "."), not a name guess like the sensor check
+// above - domain is a hard HA convention. switch. covers a smart plug
+// driving a pump, valve. is HA's own irrigation domain. Takes the raw
+// entity_id string, not an enhet object, since that's the only part that
+// matters here.
+export function arAktuatorEntitet(entityId) {
+  const domän = String(entityId ?? "").split(".")[0];
+  return domän === "switch" || domän === "valve";
 }
 
 // Node reports an IPv4 connection's remote address as an IPv4-mapped IPv6

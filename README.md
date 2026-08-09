@@ -201,7 +201,11 @@ specific addresses.
 
 ## What's next
 
-Automatic watering: give it a valve entity once you have one, and the same
-sensor data this already collects becomes the trigger.
+Automatic watering. The software side is already built and waiting: link a
+`switch.` or `valve.` entity to a zone the same way you'd link a soil
+sensor, and a "Draft an automation" button appears on that zone's watering
+schedule (and on its moisture trend, which is already tracked regardless
+of a schedule) - Claude drafts a real Home Assistant automation from it,
+off by default until you turn it on. What's missing is a valve to link.
 
 Ideas and PRs welcome.

@@ -12,6 +12,7 @@ import {
   stockholmManad, stockholmDatum,
   rensaAntal, rensaLayout, rensaHojdM,
   torkTakt, TORR_GRANS, MIN_LUTNING, veckodagarForIntervall, enhetArFuktsensor,
+  rensaVaraktighetMin, arAktuatorEntitet,
   normaliseraIp, arBetroddAdress, versionArNyare,
   OBJEKT_TYPER, rensaObjektTyp,
   vaxtinfoFor, saddPeriodAktuell,
@@ -598,10 +599,21 @@ async function byggTradgardsSammanfattning(d, vader) {
   }
   const vaderRader = vader.fel ? ["Väderdata ej tillgänglig."] : vader.dagar.map((dag) =>
     `- ${dag.dag}: ${dag.min}–${dag.max}°C, ${dag.nederbord} mm nederbörd`);
+  // Facit för utkastAutomation nedan: en zon med ett schema OCH en kopplad
+  // ventil/pump kan faktiskt drivas, inte bara påminnas om - texten säger
+  // uttryckligen vilket det är, så Claude kan skilja "skriv en påminnelse"
+  // från "skriv en trigger som faktiskt vattnar".
+  const schemaRader = d.scheman.map((s) => {
+    const zon = d.zoner.find((z) => z.id === s.zonId);
+    const dagar = s.veckodagar.map((v) => VECKODAG_NAMN[v]).join(", ");
+    const kopplad = zon ? zonHarAktuator(zon, d) : false;
+    return `- ${zon?.namn ?? "okänd zon"}: ${dagar}${s.varaktighetMin ? `, ${s.varaktighetMin} min` : ""}${kopplad ? " (ventil kopplad, kan drivas på riktigt)" : " (ingen ventil kopplad ännu, bara en påminnelse)"}`;
+  });
   return [
     "Zoner:", zonRader.length ? zonRader.join("\n") : "(inga zoner ännu)",
     "\nOdlingar:", odlingRader.length ? odlingRader.join("\n") : "(inga odlingar ännu)",
     "\nSensorer just nu:", sensorRader.length ? sensorRader.join("\n") : "(inga sensorer kopplade ännu)",
+    "\nBevattningsscheman:", schemaRader.length ? schemaRader.join("\n") : "(inga scheman ännu)",
     "\nVäderprognos:", vaderRader.join("\n"),
   ].join("\n");
 }
@@ -1085,6 +1097,12 @@ setInterval(() => backupData().catch((err) => console.warn("Säkerhetskopiering 
 const HISTORIK_DAGAR = 90;
 function kopladeEnhetIder(d) {
   return new Set([...d.zoner.flatMap((z) => z.enhetIds ?? []), ...d.odlingar.flatMap((o) => o.enhetIds ?? [])]);
+}
+// True once a zone has a switch./valve.-domain entity linked - the signal
+// that a schedule for this zone could actually drive something, not just
+// remind about it. See arAktuatorEntitet in src/logic.js.
+function zonHarAktuator(zon, d) {
+  return (zon.enhetIds ?? []).some((id) => arAktuatorEntitet(d.enheter.find((e) => e.id === id)?.entityId));
 }
 async function loggaHistorik() {
   const d = await lasData();
@@ -1621,17 +1639,21 @@ const server = createServer(async (req, res) => {
       });
       return skickaJson(res, 200, data);
     }
-    // Vattningsscheman: bara en lista veckodagar per zon - ingen faktisk
-    // ventil/pump finns att styra än (se README:s Roadmap), så ett schema
-    // ger en påminnelse i notiscentret på schemalagda dagar i stället för
-    // att låtsas kunna vattna på riktigt.
+    // Vattningsscheman: en lista veckodagar per zon, plus en valfri
+    // varaktighet i minuter. Så länge zonen saknar en kopplad ventil/pump
+    // ger ett schema bara en påminnelse i notiscentret på schemalagda
+    // dagar (se berakningNotiser i index.html) - men datamodellen och
+    // draft-automation-flödet (utkastAutomation nedan) är redan redo att
+    // driva en riktig ventil den dagen en sådan länkas till zonen, utan
+    // att UI:t eller den här endpointen behöver ändras.
     if (req.method === "POST" && p.endsWith("/api/schedules")) {
-      const { zonId, veckodagar } = await lasBody(req);
+      const { zonId, veckodagar, varaktighetMin } = await lasBody(req);
       if (!zonId) return skickaJson(res, 400, { fel: "zonId saknas" });
       const dagar = Array.isArray(veckodagar) ? veckodagar.map(Number).filter((n) => n >= 0 && n <= 6) : [];
       if (!dagar.length) return skickaJson(res, 400, { fel: "minst en veckodag krävs" });
+      const varaktighet = rensaVaraktighetMin(varaktighetMin);
       const data = await muteraData((d) => {
-        d.scheman.push({ id: randomUUID(), zonId, veckodagar: [...new Set(dagar)].sort() });
+        d.scheman.push({ id: randomUUID(), zonId, veckodagar: [...new Set(dagar)].sort(), ...(varaktighet ? { varaktighetMin: varaktighet } : {}) });
       });
       return skickaJson(res, 200, data);
     }

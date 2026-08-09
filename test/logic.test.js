@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   rensaAntal, rensaLayout, rensaHojdM, STANDARD_HOJD_M,
   torkTakt, veckodagarForIntervall, enhetArFuktsensor,
+  rensaVaraktighetMin, MAX_VARAKTIGHET_MIN, arAktuatorEntitet,
   stockholmManad, stockholmDatum, lokalTimme,
   normaliseraIp, ipINat, arBetroddAdress, versionArNyare,
   OBJEKT_TYPER, rensaObjektTyp, snappaRotation,
@@ -110,6 +111,46 @@ describe("enhetArFuktsensor", () => {
     assert.equal(enhetArFuktsensor({ namn: "Temperatur ute" }), false);
     assert.equal(enhetArFuktsensor({ namn: "" }), false);
     assert.equal(enhetArFuktsensor({}), false);
+  });
+});
+
+describe("rensaVaraktighetMin", () => {
+  test("rounds and accepts valid numbers", () => {
+    assert.equal(rensaVaraktighetMin(10), 10);
+    assert.equal(rensaVaraktighetMin("10"), 10);
+    assert.equal(rensaVaraktighetMin(10.4), 10);
+    assert.equal(rensaVaraktighetMin(10.6), 11);
+  });
+  test("returns null (unset) for absent or invalid input, not a guessed default", () => {
+    assert.equal(rensaVaraktighetMin(undefined), null);
+    assert.equal(rensaVaraktighetMin(null), null);
+    assert.equal(rensaVaraktighetMin(""), null);
+    assert.equal(rensaVaraktighetMin(0), null);
+    assert.equal(rensaVaraktighetMin(-5), null);
+    assert.equal(rensaVaraktighetMin(NaN), null);
+    assert.equal(rensaVaraktighetMin("not a number"), null);
+  });
+  test(`caps at ${MAX_VARAKTIGHET_MIN}`, () => {
+    assert.equal(rensaVaraktighetMin(10000), MAX_VARAKTIGHET_MIN);
+    assert.equal(rensaVaraktighetMin(MAX_VARAKTIGHET_MIN), MAX_VARAKTIGHET_MIN);
+    assert.equal(rensaVaraktighetMin(MAX_VARAKTIGHET_MIN + 1), MAX_VARAKTIGHET_MIN);
+  });
+});
+
+describe("arAktuatorEntitet", () => {
+  test("recognizes the switch. and valve. HA domains", () => {
+    assert.equal(arAktuatorEntitet("switch.pump"), true);
+    assert.equal(arAktuatorEntitet("valve.dripline_1"), true);
+  });
+  test("rejects sensors and other domains", () => {
+    assert.equal(arAktuatorEntitet("sensor.jordfuktighet"), false);
+    assert.equal(arAktuatorEntitet("automation.foo"), false);
+    assert.equal(arAktuatorEntitet(""), false);
+    assert.equal(arAktuatorEntitet(undefined), false);
+    assert.equal(arAktuatorEntitet(null), false);
+  });
+  test("matches the domain exactly, not just a prefix", () => {
+    assert.equal(arAktuatorEntitet("switcheroo.x"), false);
   });
 });
 

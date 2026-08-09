@@ -1838,6 +1838,7 @@ const IKON_FROST = IKON_SVG('<path d="M12 2v20M4.9 4.9l14.2 14.2M19.1 4.9 4.9 19
 const IKON_TILLBAKA = IKON_SVG('<path d="M15 18l-6-6 6-6"/>', 14);
 const IKON_SIGNAL_BORTA = IKON_SVG('<path d="M5 7a10 10 0 0 1 3-3M19 7a10 10 0 0 0-3-3M8 10.5a5.5 5.5 0 0 1 8 0M12 15v5"/><path d="M3 3l18 18"/>');
 const IKON_DROPPE = IKON_SVG('<path d="M12 2c4 5 7 9 7 13a7 7 0 0 1-14 0c0-4 3-8 7-13Z"/>', 14);
+const IKON_VENTIL = IKON_SVG('<path d="M2 12h5M17 12h5"/><path d="M7 7l5 5-5 5V7ZM17 7l-5 5 5 5V7Z"/>', 15);
 const IKON_SOL = IKON_SVG('<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/>', 14);
 const IKON_HALVSKUGGA = IKON_SVG('<path d="M17 18a4 4 0 0 0 0-8 5 5 0 0 0-9.6-1.5A4.5 4.5 0 0 0 7 18h10Z"/><path d="M12 3v2M5.5 6l1.4 1.4"/>', 14);
 const IKON_SKUGGA = IKON_SVG('<path d="M17 18a4 4 0 0 0 0-8 5 5 0 0 0-9.6-1.5A4.5 4.5 0 0 0 7 18h10Z"/>', 14);
@@ -2118,7 +2119,7 @@ let enheterStatus = [];
 let historik = [];
 let installningar = {};
 let notiserHanterade = []; // { id, atgard, tid } – hämtade från servern
-let scheman = []; // { id, zonId, veckodagar: [0-6] } – vattningspåminnelser
+let scheman = []; // { id, zonId, veckodagar: [0-6], varaktighetMin? } – vattningspåminnelser
 let automationer = []; // { entityId, namn, pa, lankad } – riktiga HA-automationer
 let automationUtkast = null; // { alias, forklaring, trigger, condition, action, mode, yaml } | { fel } | null
 let automationUtkastLaddar = false;
@@ -2219,6 +2220,14 @@ const SPRAK_TEXT = {
     nytt_schema: "Nytt schema", inga_scheman: "Inga scheman ännu – lägg till ett nedan.",
     zon: "Zon", veckodagar: "Veckodagar", lagg_till_schema: "Lägg till schema",
     idag: "Idag", ta_bort_schema: "Ta bort schema",
+    schema_varaktighet: "Varaktighet (min)", schema_varaktighet_hjalp: "Valfritt – hur länge ventilen ska vara öppen",
+    min_forkortning: "min", aktuator_kopplad: "Ventil kopplad",
+    schema_till_automation: "Skapa automation från schemat",
+    schema_automation_ej_redo: "Koppla en ventil (switch- eller valve-entitet) till zonen för att kunna skapa en automation",
+    schema_automation_beskrivning: "Vattna {zon} på {dagar}{varaktighet} via den kopplade ventilen.{hoppa}",
+    schema_med_varaktighet: " i {min} minuter", schema_hoppa_fuktig: " Hoppa över om jorden redan är tillräckligt fuktig.",
+    schema_fukttrend_titel: "Skapa automation från fukttrenden",
+    schema_fukttrend_beskrivning: "Vattna {zon} via den kopplade ventilen när jordens uttorkningstrend visar att den snart blir torr.",
     forslag_fran_ai: "✨ Förslag från AI", letar_monster: "Letar efter mönster i din trädgård …",
     avfarda_forslag: "Avfärda förslaget", lagg_till_schemat: "Lägg till schemat",
     schema_zon_saknas: "Lägg till en zon på Översikt först.",
@@ -2343,6 +2352,14 @@ const SPRAK_TEXT = {
     nytt_schema: "New schedule", inga_scheman: "No schedules yet. Add one below.",
     zon: "Zone", veckodagar: "Days of the week", lagg_till_schema: "Add schedule",
     idag: "Today", ta_bort_schema: "Delete schedule",
+    schema_varaktighet: "Duration (min)", schema_varaktighet_hjalp: "Optional – how long the valve should stay open",
+    min_forkortning: "min", aktuator_kopplad: "Valve linked",
+    schema_till_automation: "Draft an automation from this schedule",
+    schema_automation_ej_redo: "Link a valve (a switch or valve entity) to the zone to draft an automation",
+    schema_automation_beskrivning: "Water {zon} on {dagar}{varaktighet} via the linked valve.{hoppa}",
+    schema_med_varaktighet: " for {min} minutes", schema_hoppa_fuktig: " Skip if the soil is already moist enough.",
+    schema_fukttrend_titel: "Draft an automation from the moisture trend",
+    schema_fukttrend_beskrivning: "Water {zon} via the linked valve when the soil's drying trend shows it'll be dry soon.",
     forslag_fran_ai: "✨ Suggested by AI", letar_monster: "Looking for patterns in your garden …",
     avfarda_forslag: "Dismiss suggestion", lagg_till_schemat: "Add this schedule",
     schema_zon_saknas: "Add a zone on Overview first.",
@@ -2678,6 +2695,17 @@ function uppdateraZonVal() {
 }
 function entiteterFor(idLista) {
   return (idLista ?? []).map((id) => enheterStatus.find((e) => e.id === id)).filter(Boolean);
+}
+// Mirrors arAktuatorEntitet in src/logic.js (kept manually in sync, same
+// reason as vaxtinfoFor above) - true once a zone has a switch./valve.
+// domain entity linked, the signal that a watering schedule for it could
+// actually drive something rather than just remind about it.
+function arAktuatorEntitet(entityId) {
+  const domän = (entityId ?? "").split(".")[0];
+  return domän === "switch" || domän === "valve";
+}
+function zonHarAktuator(z) {
+  return entiteterFor(z.enhetIds).some((e) => arAktuatorEntitet(e.entityId));
 }
 // ---- Plantor på kartan ----
 // En odling är "en sort på en plats" och bär ett antal. Antalet ritas som
@@ -4667,6 +4695,19 @@ function kopplaEntiteterHtml(idLista) {
         <button class="ta-bort-liten modal-enhet-ta-bort" data-id="${e.id}" title="${t("koppla_bort")}">×</button>
       </div>`;
     }
+    // Ventiler/switchar har inget mätvärde med enhet (%, °) att köra genom
+    // metrikStatus - egen gren med sin egen ikon i stället för att falla
+    // igenom till den generiska sensor-cirkeln.
+    if (arAktuatorEntitet(e.entityId)) {
+      return `<div class="entitet-rad-kompakt">
+        <span class="ikon">${IKON_VENTIL}</span>
+        <div class="info">
+          <div class="namn">${esc(e.namn)}</div>
+          <div class="statusrad">${esc(e.state)} · ${t("aktuator_kopplad")}</div>
+        </div>
+        <button class="ta-bort-liten modal-enhet-ta-bort" data-id="${e.id}" title="${t("koppla_bort")}">×</button>
+      </div>`;
+    }
     const status = metrikStatus(e.enhet, e.state);
     return `<div class="entitet-rad-kompakt ${status.niva}">
       <span class="ikon">${ikonForEnhet(e.enhet)}</span>
@@ -5343,7 +5384,7 @@ function renderaDetaljPanel() {
         <div><h3>${esc(z.namn)}</h3><div class="modal-sub">${esc(info.namn)}${(() => {
           const f = z.foralderId ? zoner.find((x) => x.id === z.foralderId) : null;
           return f ? ` · sektion i ${esc(f.namn)}` : "";
-        })()}${snabblasningHtml(z.enhetIds)}</div></div>
+        })()}${snabblasningHtml(z.enhetIds)}${zonHarAktuator(z) ? `<span class="snabblasning">${IKON_VENTIL}${t("aktuator_kopplad")}</span>` : ""}</div></div>
         <button class="tillbaka-zon-btn" id="mQrBtn" data-id="${esc(z.id)}" title="${t("qr_hjalp")}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
@@ -5352,6 +5393,9 @@ function renderaDetaljPanel() {
         </button>
       </div>
       ${kopplaEntiteterHtml(z.enhetIds)}
+      ${zonHarAktuator(z) ? `<div class="falt" style="margin-top:4px">
+        <button class="zon-automation-fukt-btn" data-id="${esc(z.id)}">${IKON_VENTIL} ${t("schema_fukttrend_titel")}</button>
+      </div>` : ""}
       ${mikroklimatText(z)}
       ${detaljHistorikHtml(z.enhetIds)}
       ${zonPlantorHtml(z)}
@@ -5832,6 +5876,42 @@ document.addEventListener("click", async (e) => {
     renderaSchema();
     return;
   }
+  // Turns an already-actuator-linked schedule into a pre-filled automation
+  // draft, reusing foreslaAutomation()/renderaAutomationUtkast() unchanged -
+  // this only builds the description text and triggers the same flow the
+  // free-text box below already offers.
+  const schemaAutomation = e.target.closest(".schema-automation-btn:not([disabled])");
+  if (schemaAutomation) {
+    const s = scheman.find((x) => x.id === schemaAutomation.dataset.id);
+    const zon = s && zoner.find((z) => z.id === s.zonId);
+    if (!s || !zon) return;
+    const dagar = s.veckodagar.map((d) => VECKODAGAR_NAMN[d]).join(", ");
+    const harFuktsensor = entiteterFor(zon.enhetIds).some((en) => !arAktuatorEntitet(en.entityId) && (en.enhet ?? "").includes("%"));
+    avslutaAutomationRedigering(); // ensure "new draft" mode, not mid-edit of another automation
+    $("automationBeskrivning").value = t("schema_automation_beskrivning")
+      .replace("{zon}", zon.namn).replace("{dagar}", dagar)
+      .replace("{varaktighet}", s.varaktighetMin ? t("schema_med_varaktighet").replace("{min}", s.varaktighetMin) : "")
+      .replace("{hoppa}", harFuktsensor ? t("schema_hoppa_fuktig") : "");
+    $("automationBeskrivning").scrollIntoView({ behavior: "smooth", block: "center" });
+    await foreslaAutomation();
+    return;
+  }
+  // No schedule needed for this one - synkaMetrikerTillHa already exports a
+  // per-zone "days until dry" sensor to HA every hour, and utkastAutomation
+  // already offers it to Claude for every zone, so a moisture-trend-driven
+  // automation is draftable today - this button is just the missing UI
+  // entry point for a capability that already exists.
+  const zonFuktAutomation = e.target.closest(".zon-automation-fukt-btn");
+  if (zonFuktAutomation) {
+    const z = zoner.find((x) => x.id === zonFuktAutomation.dataset.id);
+    if (!z) return;
+    avslutaAutomationRedigering();
+    $("automationBeskrivning").value = t("schema_fukttrend_beskrivning").replace("{zon}", z.namn);
+    location.hash = "schema";
+    $("automationBeskrivning").scrollIntoView({ behavior: "smooth", block: "center" });
+    await foreslaAutomation();
+    return;
+  }
   const anteckningSpara = e.target.closest("#anteckningSparaBtn");
   if (anteckningSpara) {
     const id = $("anteckningPlantaVal")?.value;
@@ -5857,8 +5937,9 @@ document.addEventListener("click", async (e) => {
     if (!zonId) { st.textContent = "Välj en zon."; st.className = "status err"; return; }
     if (!dagar.length) { st.textContent = "Välj minst en veckodag."; st.className = "status err"; return; }
     st.textContent = ""; st.className = "status";
+    const varaktighetMin = $("schemaVaraktighetMin")?.value || undefined;
     try {
-      await fetch(`${BAS}api/schedules`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ zonId, veckodagar: dagar }) });
+      await fetch(`${BAS}api/schedules`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ zonId, veckodagar: dagar, varaktighetMin }) });
       await laddaOdlingar();
       renderaSchema();
     } catch (err) { st.textContent = "Kunde inte spara: " + err.message; st.className = "status err"; }
@@ -6548,13 +6629,15 @@ function schemaListaHtml() {
   return `<div class="schema-lista">${scheman.map((s) => {
     const zon = zoner.find((z) => z.id === s.zonId);
     const idagSchemalagd = s.veckodagar.includes(idagVeckodag);
+    const redo = zon && zonHarAktuator(zon);
     return `<div class="schema-rad">
       <span class="ikon">💧</span>
       <div class="info">
         <div class="namn">${esc(zon?.namn ?? "Okänd zon")}</div>
-        <div class="dagar">${s.veckodagar.map((d) => VECKODAGAR_NAMN[d]).join(", ")}</div>
+        <div class="dagar">${s.veckodagar.map((d) => VECKODAGAR_NAMN[d]).join(", ")}${s.varaktighetMin ? ` · ${s.varaktighetMin} ${t("min_forkortning")}` : ""}</div>
       </div>
       ${idagSchemalagd ? `<span class="schema-idag">${t("idag")}</span>` : ""}
+      <button class="ta-bort-liten schema-automation-btn" data-id="${esc(s.id)}" ${redo ? "" : "disabled"} title="${redo ? t("schema_till_automation") : t("schema_automation_ej_redo")}">${IKON_VENTIL}</button>
       <button class="ta-bort-liten schema-ta-bort" data-id="${esc(s.id)}" title="${t("ta_bort_schema")}">×</button>
     </div>`;
   }).join("")}</div>`;
@@ -6574,6 +6657,10 @@ function schemaFormularHtml() {
         ${[1, 2, 3, 4, 5, 6, 0].map((d) => `<button type="button" class="schema-dag-btn" data-dag="${d}">${VECKODAGAR_NAMN[d]}</button>`).join("")}
       </div>
     </div>
+    ${zoner.some((z) => zonHarAktuator(z)) ? `<div class="falt">
+      <label class="lbl">${t("schema_varaktighet")}</label>
+      <input type="number" id="schemaVaraktighetMin" min="1" max="180" placeholder="${t("schema_varaktighet_hjalp")}">
+    </div>` : ""}
     <button id="schemaLaggTillBtn">${t("lagg_till_schema")}</button>
     <div class="status" id="schemaStatus"></div>
   </div>`;
