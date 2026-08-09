@@ -13,7 +13,7 @@ import {
   rensaAntal, rensaLayout, rensaHojdM,
   torkTakt, TORR_GRANS, MIN_LUTNING, veckodagarForIntervall, enhetArFuktsensor,
   rensaVaraktighetMin, arAktuatorEntitet,
-  normaliseraIp, arBetroddAdress, versionArNyare,
+  normaliseraIp, arBetroddAdress, ursprungGodkant, versionArNyare,
   OBJEKT_TYPER, rensaObjektTyp,
   vaxtinfoFor, saddPeriodAktuell,
 } from "./src/logic.js";
@@ -1255,6 +1255,22 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url, "http://intern");
   const p = url.pathname.replace(/\/+$/, "") || "/";
   try {
+    // Runs before the login/trusted-network gate below, not just for
+    // cookie-authenticated requests - TRUSTED_NETWORKS bypasses that gate
+    // entirely, and a forged cross-site request still arrives from the
+    // victim's own (possibly trusted) IP, so this needs to be independent
+    // of the auth mechanism. Scoped to non-GET so every current (all-POST)
+    // and any future mutating endpoint is covered without a path
+    // allowlist; GET endpoints never mutate data here. Applies even
+    // without APP_PASSWORD set - harmless for legitimate same-origin
+    // fetch() calls, and still closes the gap for a proxied deployment
+    // with no password configured. See ursprungGodkant in src/logic.js
+    // for why this doesn't conflict with the SameSite=None iframe
+    // accommodation below.
+    if (p.includes("/api/") && req.method !== "GET" && !ursprungGodkant(req.headers.origin, req.headers.referer, req.headers.host)) {
+      console.warn(`[csrf] nekad åtkomst till ${p} från ${req.socket.remoteAddress ?? "okänd adress"} (Origin/Referer matchade inte Host) - User-Agent: ${req.headers["user-agent"] ?? "(saknas)"}`);
+      return skickaJson(res, 403, { fel: "ogiltig ursprungsadress" });
+    }
     // The page itself (index.html, logo.png) is always reachable - it's
     // static markup with no secrets in it, and it has to load unauthenticated
     // for the login screen inside it to have something to render into. Only
@@ -1275,7 +1291,13 @@ const server = createServer(async (req, res) => {
       }
     }
     if (req.method === "POST" && p.endsWith("/api/login")) {
-      if (!withinRateLimit("login", 10, EN_TIMME_MS)) return skickaJson(res, 429, { fel: "för många inloggningsförsök, försök igen om en stund" });
+      // Unlike the four AI-cost call sites above (shared, global-bucket by
+      // design - see the comment above requestWindows), this one is keyed
+      // per-source: a global bucket here would let anyone's failed logins
+      // (a bot scanning the port, a forgetful housemate) lock out the
+      // whole household's login - and therefore every AI feature too,
+      // since those sit behind login when APP_PASSWORD is set.
+      if (!withinRateLimit(`login:${normaliseraIp(req.socket.remoteAddress ?? "")}`, 10, EN_TIMME_MS)) return skickaJson(res, 429, { fel: "för många inloggningsförsök, försök igen om en stund" });
       const { losenord } = await lasBody(req);
       if (!losenordStammer(losenord)) return skickaJson(res, 401, { fel: "fel lösenord" });
       res.writeHead(200, {

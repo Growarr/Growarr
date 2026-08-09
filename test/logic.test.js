@@ -5,7 +5,7 @@ import {
   torkTakt, veckodagarForIntervall, enhetArFuktsensor,
   rensaVaraktighetMin, MAX_VARAKTIGHET_MIN, arAktuatorEntitet,
   stockholmManad, stockholmDatum, lokalTimme,
-  normaliseraIp, ipINat, arBetroddAdress, versionArNyare,
+  normaliseraIp, ipINat, arBetroddAdress, ursprungGodkant, versionArNyare,
   OBJEKT_TYPER, rensaObjektTyp, snappaRotation,
   VAXT_FAMILJER, vaxtfamiljFor, skordFamiljVarning,
   VAXT_DATABAS, vaxtinfoFor, saddPeriodAktuell,
@@ -220,6 +220,35 @@ describe("arBetroddAdress", () => {
   test("loopback works too, if explicitly listed", () => {
     assert.equal(arBetroddAdress("127.0.0.1", ["127.0.0.1/32"]), true);
     assert.equal(arBetroddAdress("::ffff:127.0.0.1", ["127.0.0.1/32"]), true);
+  });
+});
+
+describe("ursprungGodkant", () => {
+  test("allows a matching Origin", () => {
+    assert.equal(ursprungGodkant("https://growarr.example:8097", null, "growarr.example:8097"), true);
+  });
+  test("rejects a mismatched Origin (the actual CSRF case)", () => {
+    assert.equal(ursprungGodkant("https://evil.example", null, "growarr.example:8097"), false);
+  });
+  test("falls back to Referer when Origin is absent", () => {
+    assert.equal(ursprungGodkant(null, "https://growarr.example:8097/karta", "growarr.example:8097"), true);
+    assert.equal(ursprungGodkant(null, "https://evil.example/x", "growarr.example:8097"), false);
+  });
+  test("Origin takes precedence over a mismatched Referer", () => {
+    assert.equal(ursprungGodkant("https://growarr.example:8097", "https://evil.example", "growarr.example:8097"), true);
+  });
+  test("allows the request when both headers are absent", () => {
+    assert.equal(ursprungGodkant(null, null, "growarr.example:8097"), true);
+    assert.equal(ursprungGodkant(undefined, undefined, "growarr.example:8097"), true);
+  });
+  test("rejects a malformed Origin instead of throwing", () => {
+    assert.equal(ursprungGodkant("not a url", null, "growarr.example:8097"), false);
+  });
+  test("a port mismatch is a mismatch", () => {
+    assert.equal(ursprungGodkant("https://growarr.example:9999", null, "growarr.example:8097"), false);
+  });
+  test("host comparison is case-insensitive", () => {
+    assert.equal(ursprungGodkant("https://Growarr.Example:8097", null, "growarr.example:8097"), true);
   });
 });
 

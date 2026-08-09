@@ -204,6 +204,26 @@ export function arBetroddAdress(ip, natverksLista) {
   return (natverksLista ?? []).some((cidr) => ipINat(adress, cidr));
 }
 
+// CSRF defense for state-changing requests: the request's own Origin
+// (falling back to Referer when Origin is absent) must match its own
+// Host. This is unaffected by the SameSite=None cookie upgrade used to
+// support embedding the panel in an <iframe> (see sessionCookieAttribut
+// in server.js) - that's about how the browser classifies the top-level
+// page for cookie purposes, not about what Origin header the panel's own
+// fetch() calls carry. Those always carry the panel's own origin
+// regardless of what page it's iframed into, while a forged cross-site
+// POST carries the attacker page's origin instead, which won't match.
+// Neither header is guaranteed on every client, so total absence is let
+// through rather than rejected - a real browser POST essentially always
+// sends one or the other, so this doesn't meaningfully weaken the check.
+export function ursprungGodkant(originHeader, refererHeader, hostHeader) {
+  const varde = originHeader || refererHeader;
+  if (!varde) return true;
+  let host;
+  try { host = new URL(varde).host; } catch { return false; }
+  return host.toLowerCase() === String(hostHeader ?? "").toLowerCase();
+}
+
 // Plant-family lookup for a crop-rotation heads-up: growing the same
 // family in the same bed too soon lets family-specific pests/disease
 // build up in the soil. Regex-matched against the free-text planting name
