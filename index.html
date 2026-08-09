@@ -1587,12 +1587,12 @@ try {
 
   <div class="card">
     <h2 data-i18n="installningar_notiser">Notiser (skördepåminnelser)</h2>
-    <p class="lbl" style="margin-bottom:10px">Skickas när en odling når sin skördemånad. Ntfy-ämnet och webhooken sparas
+    <p class="lbl" style="margin-bottom:10px" data-i18n="notiser_hjalp">Skickas när en odling når sin skördemånad. Ntfy-ämnet och webhooken sparas
       här i panelen – ingen SSH eller docker-compose behövs. (Den separata nattliga frostvarningen på GitHub Actions
       har egna secrets och styrs inte härifrån.)</p>
     <div class="lagg-till-zon">
-      <div><label class="lbl">Ntfy-ämne</label><input type="text" id="nNtfy" placeholder="t.ex. samma som Bostadsvakt"></div>
-      <div><label class="lbl">HA-webhook-URL</label><input type="text" id="nWebhook" placeholder="https://.../api/webhook/..."></div>
+      <div><label class="lbl" data-i18n="ntfy_amne">Ntfy-ämne</label><input type="text" id="nNtfy" placeholder="t.ex. samma som Bostadsvakt"></div>
+      <div><label class="lbl" data-i18n="webhook_url">HA-webhook-URL</label><input type="text" id="nWebhook" placeholder="https://.../api/webhook/..."></div>
       <button id="nSparaBtn" data-i18n="spara">Spara</button>
     </div>
     <div class="status" id="nStatus"></div>
@@ -1600,26 +1600,26 @@ try {
 
   <div class="card">
     <h2 data-i18n="kartans_lage">Kartans läge i verkligheten (för solkartan)</h2>
-    <p class="lbl" style="margin-bottom:12px">Koordinaterna styr väderprognosen, frostvarningen och solkartan.
+    <p class="lbl" style="margin-bottom:12px" data-i18n="kartans_lage_hjalp">Koordinaterna styr väderprognosen, frostvarningen och solkartan.
       Utanför Norden används automatiskt en global väderkälla istället för SMHI. Solkartan räknar dessutom ut
       solens bana från koordinaterna och ritar skuggorna som växthus och lådor kastar - för att de ska peka åt
       rätt håll och bli rätt långa behöver den även veta hur kartan är vriden och hur stor den är i verkligheten.</p>
     <div class="lagg-till-zon">
-      <div><label class="lbl">Latitud</label><input type="number" id="sLat" step="0.0001" min="-90" max="90" placeholder="t.ex. 59.85"></div>
-      <div><label class="lbl">Longitud</label><input type="number" id="sLon" step="0.0001" min="-180" max="180" placeholder="t.ex. 17.63"></div>
-      <div><label class="lbl">Vad pekar uppåt på kartan? (kompassgrader)</label>
+      <div><label class="lbl" data-i18n="latitud">Latitud</label><input type="number" id="sLat" step="0.0001" min="-90" max="90" placeholder="t.ex. 59.85"></div>
+      <div><label class="lbl" data-i18n="longitud">Longitud</label><input type="number" id="sLon" step="0.0001" min="-180" max="180" placeholder="t.ex. 17.63"></div>
+      <div><label class="lbl" data-i18n="kompassgrader_label">Vad pekar uppåt på kartan? (kompassgrader)</label>
         <select id="sNorr">
-          <option value="0">Norr (0°)</option>
-          <option value="45">Nordost (45°)</option>
-          <option value="90">Öster (90°)</option>
-          <option value="135">Sydost (135°)</option>
-          <option value="180">Söder (180°)</option>
-          <option value="225">Sydväst (225°)</option>
-          <option value="270">Väster (270°)</option>
-          <option value="315">Nordväst (315°)</option>
+          <option value="0" data-i18n="kompass_norr">Norr (0°)</option>
+          <option value="45" data-i18n="kompass_nordost">Nordost (45°)</option>
+          <option value="90" data-i18n="kompass_oster">Öster (90°)</option>
+          <option value="135" data-i18n="kompass_sydost">Sydost (135°)</option>
+          <option value="180" data-i18n="kompass_soder">Söder (180°)</option>
+          <option value="225" data-i18n="kompass_sydvast">Sydväst (225°)</option>
+          <option value="270" data-i18n="kompass_vaster">Väster (270°)</option>
+          <option value="315" data-i18n="kompass_nordvast">Nordväst (315°)</option>
         </select>
       </div>
-      <div><label class="lbl">Kartans bredd i meter</label><input type="number" id="sBredd" min="1" max="500" step="1" value="20"></div>
+      <div><label class="lbl" data-i18n="kartans_bredd">Kartans bredd i meter</label><input type="number" id="sBredd" min="1" max="500" step="1" value="20"></div>
       <button id="sSparaBtn" data-i18n="spara">Spara</button>
     </div>
     <div class="status" id="sStatus"></div>
@@ -2248,6 +2248,21 @@ const SPRAK_TEXT = {
     flytta_upp: "Flytta upp", flytta_ner: "Flytta ner", flytta_annan_kolumn: "Flytta till andra kolumnen",
     ta_bort_block: "Ta bort block", farre: "Färre", fler: "Fler", ta_bort_planta_titel: "Ta bort planta",
     ej_nabar: "Ej nåbar", ansluten: "Ansluten",
+    i_niva_med: "i nivå med", temp_over: "över", temp_under: "under",
+    kunde_inte_hamta_bild: "Kunde inte hämta bild – kontrollera entity_id och HA_TOKEN.",
+    uppdaterad_prefix: "Uppdaterad", uppdatera_bild: "Uppdatera bild", visa_fullskarm: "Visa i fullskärm",
+    ingen_kameraentitet_vald: "Ingen kameraentitet vald.", inga_entiteter_valda_block: "Inga entiteter valda för det här blocket.",
+    qr_instruktion: "Skriv ut och sätt på lådan. Riktar ni kameran mot koden öppnas den här zonen direkt – ingen letande i kartan.",
+    tanker: "Tänker …", kunde_inte_lasa_filen: "kunde inte läsa filen", kunde_inte_tolka_bilden: "kunde inte tolka bilden",
+    kompass_norr: "Norr (0°)", kompass_nordost: "Nordost (45°)", kompass_oster: "Öster (90°)", kompass_sydost: "Sydost (135°)",
+    kompass_soder: "Söder (180°)", kompass_sydvast: "Sydväst (225°)", kompass_vaster: "Väster (270°)", kompass_nordvast: "Nordväst (315°)",
+    vaderstreck_norr: "norr", vaderstreck_nordost: "nordost", vaderstreck_oster: "öster", vaderstreck_sydost: "sydost",
+    vaderstreck_soder: "söder", vaderstreck_sydvast: "sydväst", vaderstreck_vaster: "väster", vaderstreck_nordvast: "nordväst",
+    solen_over_horisonten: "Solen {grader}° över horisonten, i {riktning}", solen_nere: "Solen är nere",
+    notiser_hjalp: "Skickas när en odling når sin skördemånad. Ntfy-ämnet och webhooken sparas här i panelen – ingen SSH eller docker-compose behövs. (Den separata nattliga frostvarningen på GitHub Actions har egna secrets och styrs inte härifrån.)",
+    kartans_lage_hjalp: "Koordinaterna styr väderprognosen, frostvarningen och solkartan. Utanför Norden används automatiskt en global väderkälla istället för SMHI. Solkartan räknar dessutom ut solens bana från koordinaterna och ritar skuggorna som växthus och lådor kastar - för att de ska peka åt rätt håll och bli rätt långa behöver den även veta hur kartan är vriden och hur stor den är i verkligheten.",
+    latitud: "Latitud", longitud: "Longitud", kompassgrader_label: "Vad pekar uppåt på kartan? (kompassgrader)",
+    kartans_bredd: "Kartans bredd i meter",
     forslag_fran_ai: "Förslag från AI", letar_monster: "Letar efter mönster i din trädgård …",
     avfarda_forslag: "Avfärda förslaget", lagg_till_schemat: "Lägg till schemat",
     schema_zon_saknas: "Lägg till en zon på Översikt först.",
@@ -2392,6 +2407,21 @@ const SPRAK_TEXT = {
     flytta_upp: "Move up", flytta_ner: "Move down", flytta_annan_kolumn: "Move to the other column",
     ta_bort_block: "Delete block", farre: "Fewer", fler: "More", ta_bort_planta_titel: "Delete plant",
     ej_nabar: "Unreachable", ansluten: "Connected",
+    i_niva_med: "level with", temp_over: "above", temp_under: "below",
+    kunde_inte_hamta_bild: "Couldn't fetch image – check entity_id and HA_TOKEN.",
+    uppdaterad_prefix: "Updated", uppdatera_bild: "Refresh image", visa_fullskarm: "View fullscreen",
+    ingen_kameraentitet_vald: "No camera entity selected.", inga_entiteter_valda_block: "No entities selected for this block.",
+    qr_instruktion: "Print it and put it on the bed. Point the camera at the code and this zone opens directly - no hunting through the map.",
+    tanker: "Thinking …", kunde_inte_lasa_filen: "couldn't read the file", kunde_inte_tolka_bilden: "couldn't parse the image",
+    kompass_norr: "North (0°)", kompass_nordost: "Northeast (45°)", kompass_oster: "East (90°)", kompass_sydost: "Southeast (135°)",
+    kompass_soder: "South (180°)", kompass_sydvast: "Southwest (225°)", kompass_vaster: "West (270°)", kompass_nordvast: "Northwest (315°)",
+    vaderstreck_norr: "north", vaderstreck_nordost: "northeast", vaderstreck_oster: "east", vaderstreck_sydost: "southeast",
+    vaderstreck_soder: "south", vaderstreck_sydvast: "southwest", vaderstreck_vaster: "west", vaderstreck_nordvast: "northwest",
+    solen_over_horisonten: "The sun is {grader}° above the horizon, in the {riktning}", solen_nere: "The sun is down",
+    notiser_hjalp: "Sent when a planting reaches its harvest month. The ntfy topic and webhook are saved here in the panel - no SSH or docker-compose needed. (The separate nightly frost warning on GitHub Actions has its own secrets and isn't controlled from here.)",
+    kartans_lage_hjalp: "The coordinates drive the weather forecast, frost warning, and sun map. Outside the Nordics a global weather source is used automatically instead of SMHI. The sun map also works out the sun's path from the coordinates and draws the shadows greenhouses and beds cast - to point the right way and be the right length, it also needs to know how the map is rotated and how big it is in reality.",
+    latitud: "Latitude", longitud: "Longitude", kompassgrader_label: "What's facing up on the map? (compass degrees)",
+    kartans_bredd: "Map width in meters",
     forslag_fran_ai: "Suggested by AI", letar_monster: "Looking for patterns in your garden …",
     avfarda_forslag: "Dismiss suggestion", lagg_till_schemat: "Add this schedule",
     schema_zon_saknas: "Add a zone on Overview first.",
@@ -2569,9 +2599,9 @@ function temperaturGivare(enhetIds) {
   return null;
 }
 function offsetText(offset) {
-  const v = Math.abs(offset).toFixed(1).replace(".", ",");
-  if (Math.abs(offset) < 0.3) return "i nivå med";
-  return `${v}° ${offset > 0 ? "över" : "under"}`;
+  const v = sprak === "en" ? Math.abs(offset).toFixed(1) : Math.abs(offset).toFixed(1).replace(".", ",");
+  if (Math.abs(offset) < 0.3) return t("i_niva_med");
+  return `${v}° ${offset > 0 ? t("temp_over") : t("temp_under")}`;
 }
 function frostPerZon() {
   const prognosMin = senasteVader?.dagar?.[0]?.min;
@@ -2607,8 +2637,8 @@ async function laddaBevattning() {
     const res = await fetch(`${BAS}api/watering`, { cache: "no-store" });
     const data = await res.json();
     if (data.text) {
-      const kl = new Date(data.tid).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
-      html = `<span>${formatAiText(data.text)}<div class="ai-tid">Uppdaterad ${kl}</div></span>`;
+      const kl = new Date(data.tid).toLocaleTimeString(sprak === "en" ? "en-US" : "sv-SE", { hour: "2-digit", minute: "2-digit" });
+      html = `<span>${formatAiText(data.text)}<div class="ai-tid">${t("uppdaterad_prefix")} ${kl}</div></span>`;
     }
   } catch { /* faller igenom till heuristiken nedan */ }
   html ??= bevattningHeuristik(senasteVader);
@@ -3198,10 +3228,11 @@ function renderaSol() {
     return;
   }
   const { hojd, azimut } = solPosition(tid, geoLat, geoLon);
-  const vader = ["norr", "nordost", "öster", "sydost", "söder", "sydväst", "väster", "nordväst"][Math.round(azimut / 45) % 8];
+  const riktningNycklar = ["vaderstreck_norr", "vaderstreck_nordost", "vaderstreck_oster", "vaderstreck_sydost", "vaderstreck_soder", "vaderstreck_sydvast", "vaderstreck_vaster", "vaderstreck_nordvast"];
+  const riktning = t(riktningNycklar[Math.round(azimut / 45) % 8]);
   $("solInfo").textContent = hojd > 0
-    ? `Solen ${Math.round(hojd)}° över horisonten, i ${vader}`
-    : "Solen är nere";
+    ? t("solen_over_horisonten").replace("{grader}", Math.round(hojd)).replace("{riktning}", riktning)
+    : t("solen_nere");
   const lista = skuggor(tid);
   const svg = hamtaSolSvg();
   const svgNs = "http://www.w3.org/2000/svg";
@@ -3861,16 +3892,16 @@ function widgetKortHtml(w, index, antal) {
         ? `<div class="kamera-wrap" data-entity="${esc(w.entityId)}">
             <img class="widget-kamera" alt="${esc(w.titel)}" src="${BAS}api/camera?entityId=${encodeURIComponent(w.entityId)}&t=${Date.now()}"
                  onerror="this.closest('.kamera-wrap').classList.add('kamera-fel')">
-            <div class="kamera-fel-text">Kunde inte hämta bild – kontrollera entity_id och HA_TOKEN.</div>
+            <div class="kamera-fel-text">${t("kunde_inte_hamta_bild")}</div>
             <div class="kamera-kontroller">
-              <span class="kamera-tid">Uppdaterad ${nu.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}</span>
+              <span class="kamera-tid">${t("uppdaterad_prefix")} ${nu.toLocaleTimeString(sprak === "en" ? "en-US" : "sv-SE", { hour: "2-digit", minute: "2-digit" })}</span>
               <div class="kamera-knappar">
-                <button class="kamera-knapp kamera-uppdatera" title="Uppdatera bild">${IKON_UPPDATERA}</button>
-                <button class="kamera-knapp kamera-fullskarm" title="Visa i fullskärm">${IKON_FULLSKARM}</button>
+                <button class="kamera-knapp kamera-uppdatera" title="${t("uppdatera_bild")}">${IKON_UPPDATERA}</button>
+                <button class="kamera-knapp kamera-fullskarm" title="${t("visa_fullskarm")}">${IKON_FULLSKARM}</button>
               </div>
             </div>
           </div>`
-        : '<div class="tom">Ingen kameraentitet vald.</div>';
+        : `<div class="tom">${t("ingen_kameraentitet_vald")}</div>`;
     } else {
       const kopplade = entiteterFor(w.enhetIds);
       innehall = kopplade.length
@@ -3885,7 +3916,7 @@ function widgetKortHtml(w, index, antal) {
               <div class="enhet-namn">${esc(e.namn)}</div>
             </div>`;
           }).join("")}</div>`
-        : '<div class="tom">Inga entiteter valda för det här blocket.</div>';
+        : `<div class="tom">${t("inga_entiteter_valda_block")}</div>`;
     }
     return `<div class="card">
       <div class="widget-head">
@@ -4755,12 +4786,12 @@ function kopplaEntiteterHtml(idLista) {
   const forhandsvisning = oppenKamera ? `<div class="kamera-wrap kamera-forhandsvisning" data-entity="${esc(oppenKamera.entityId)}">
       <img class="widget-kamera" alt="${esc(oppenKamera.namn)}" src="${BAS}api/camera?entityId=${encodeURIComponent(oppenKamera.entityId)}&t=${Date.now()}"
            onerror="this.closest('.kamera-wrap').classList.add('kamera-fel')">
-      <div class="kamera-fel-text">Kunde inte hämta bild – kontrollera entity_id och HA_TOKEN.</div>
+      <div class="kamera-fel-text">${t("kunde_inte_hamta_bild")}</div>
       <div class="kamera-kontroller">
-        <span class="kamera-tid">Uppdaterad ${new Date().toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}</span>
+        <span class="kamera-tid">${t("uppdaterad_prefix")} ${new Date().toLocaleTimeString(sprak === "en" ? "en-US" : "sv-SE", { hour: "2-digit", minute: "2-digit" })}</span>
         <div class="kamera-knappar">
-          <button class="kamera-knapp kamera-uppdatera" title="Uppdatera bild">${IKON_UPPDATERA}</button>
-          <button class="kamera-knapp kamera-fullskarm" title="Visa i fullskärm">${IKON_FULLSKARM}</button>
+          <button class="kamera-knapp kamera-uppdatera" title="${t("uppdatera_bild")}">${IKON_UPPDATERA}</button>
+          <button class="kamera-knapp kamera-fullskarm" title="${t("visa_fullskarm")}">${IKON_FULLSKARM}</button>
         </div>
       </div>
     </div>` : "";
@@ -4912,8 +4943,7 @@ function renderaModal() {
         ${kod}
         <div class="qr-namn">${esc(z.namn)}</div>
       </div>
-      <p class="lbl qr-dolj-vid-utskrift" style="margin-top:16px">Skriv ut och sätt på lådan. Riktar ni kameran mot
-        koden öppnas den här zonen direkt – ingen letande i kartan.</p>
+      <p class="lbl qr-dolj-vid-utskrift" style="margin-top:16px">${t("qr_instruktion")}</p>
       <p class="lbl qr-dolj-vid-utskrift" style="word-break:break-all; opacity:.7">${esc(url)}</p>
       <button class="qr-dolj-vid-utskrift" id="qrSkrivUtBtn" style="margin-top:8px">Skriv ut</button>`;
     return;
@@ -6032,7 +6062,7 @@ document.addEventListener("click", async (e) => {
     knapp.classList.add("laddar");
     img.src = `${BAS}api/camera?entityId=${encodeURIComponent(wrap.dataset.entity)}&t=${Date.now()}`;
     img.onload = img.onerror = () => knapp.classList.remove("laddar");
-    wrap.querySelector(".kamera-tid").textContent = `Uppdaterad ${new Date().toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}`;
+    wrap.querySelector(".kamera-tid").textContent = `${t("uppdaterad_prefix")} ${new Date().toLocaleTimeString(sprak === "en" ? "en-US" : "sv-SE", { hour: "2-digit", minute: "2-digit" })}`;
     return;
   }
   const kameraFullskarm = e.target.closest(".kamera-fullskarm");
@@ -6993,7 +7023,7 @@ function renderaChatt() {
     (m.bild ? `<img src="data:${esc(m.bild.typ)};base64,${m.bild.data}" alt="Bifogat foto">` : "") +
     (m.roll === "ai" ? formatAiText(m.text) : esc(m.text)) +
     `</div></div>`).join("") +
-    (chattVantar ? '<div class="chatt-rad fran-ai"><div class="chatt-bubbla">Tänker …</div></div>' : "");
+    (chattVantar ? `<div class="chatt-rad fran-ai"><div class="chatt-bubbla">${t("tanker")}</div></div>` : "");
   $("chattLogg").scrollTop = $("chattLogg").scrollHeight;
 }
 
@@ -7002,10 +7032,10 @@ function renderaChatt() {
 function laddaBild(fil, maxKant = 1600) {
   return new Promise((resolve, reject) => {
     const lasare = new FileReader();
-    lasare.onerror = () => reject(new Error("kunde inte läsa filen"));
+    lasare.onerror = () => reject(new Error(t("kunde_inte_lasa_filen")));
     lasare.onload = () => {
       const bild = new Image();
-      bild.onerror = () => reject(new Error("kunde inte tolka bilden"));
+      bild.onerror = () => reject(new Error(t("kunde_inte_tolka_bilden")));
       bild.onload = () => {
         const max = maxKant;
         const skala = Math.min(1, max / Math.max(bild.width, bild.height));
